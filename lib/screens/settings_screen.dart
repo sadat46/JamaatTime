@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
 import '../main.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,11 +17,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _themeIndex = 0; // 0: White, 1: Light, 2: Dark
   String _madhab = 'hanafi';
   int _notificationSoundMode = 0; // 0: Custom, 1: System, 2: None
+  String _version = '';
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadVersion();
   }
 
   Future<void> _loadSettings() async {
@@ -34,11 +37,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = 'v ${info.version} ( ${info.buildNumber})';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        color: const Color(0xFFE8F5E9), // light green background
+    return Scaffold(
+      backgroundColor: const Color(0xFFE8F5E9),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF388E3C),
+        foregroundColor: Colors.white,
+        elevation: 2,
+      ),
+      body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
           child: SingleChildScrollView(
@@ -129,6 +146,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
+                  if (_version.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Text(
+                        'App Version:  $_version',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   const Text(
                     'Copyright (c) 2025 sadat46\nAll rights reserved.',
                     textAlign: TextAlign.center,
