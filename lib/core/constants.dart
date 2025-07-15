@@ -1,0 +1,31 @@
+class AppConstants {
+  // Default coordinates (Dhaka, Bangladesh)
+  static const double defaultLatitude = 23.8376;
+  static const double defaultLongitude = 90.2820;
+  
+  // Time zone
+  static const String defaultTimeZone = 'Asia/Dhaka';
+  
+  // Default city
+  static const String defaultCity = 'Savar Cantt';
+  
+  // Prayer time adjustments
+  static const Map<String, int> defaultAdjustments = {
+    'asr': 1,
+    'isha': 2,
+  };
+  
+  // Cantt names
+  static const List<String> canttNames = [
+    'Kumilla Cantt',
+    'Bogra Cantt',
+    'Rangpur Cantt',
+    'Ramu Cantt',
+    'Sylhet Cantt',
+    'Jashore Cantt',
+    'Savar Cantt',
+    'Dhaka Cantt',
+    'Chittagong Cantt',
+    'Padma Cantt',
+  ];
+} 

@@ -6,42 +6,40 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/settings_service.dart';
+import 'services/notification_service.dart';
 import 'themes/white_theme.dart';
 import 'themes/light_theme.dart';
 import 'themes/dark_theme.dart';
 import 'themes/green_theme.dart';
 
-final ValueNotifier<int> themeIndexNotifier = ValueNotifier(0); // 0: White, 1: Light, 2: Dark, 3: Green
+final ValueNotifier<int> themeIndexNotifier = ValueNotifier(
+  0,
+); // 0: White, 1: Light, 2: Dark, 3: Green
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
-    // Initialize Firebase
-    if (kIsWeb) {
-      // For web platform, use a default Firebase configuration or skip initialization
-      await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          apiKey: "REDACTED_FIREBASE_API_KEY",
-          authDomain: "jaamattime.firebaseapp.com",
-          projectId: "jaamattime",
-          storageBucket: "jaamattime.firebasestorage.app",
-          messagingSenderId: "148161891333",
-          appId: "1:148161891333:web:your-web-app-id",
-        ),
-      );
-    } else {
-      // For mobile platforms, use the generated options
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    }
+    // Initialize Firebase for all platforms
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     // Handle initialization errors gracefully
-    debugPrint("Firebase initialization error: $e");
+    debugPrint('Firebase initialization error: $e');
     // Continue with the app even if Firebase fails to initialize
   }
-  
+
+  // Initialize notification service
+  try {
+    final notificationService = NotificationService();
+    await notificationService.initialize(null);
+    debugPrint('Notification service initialized successfully');
+  } catch (e) {
+    debugPrint('Notification service initialization error: $e');
+    // Continue with the app even if notification service fails to initialize
+  }
+
   final settingsService = SettingsService();
   final idx = await settingsService.getThemeIndex();
   themeIndexNotifier.value = idx;
@@ -56,7 +54,12 @@ class MyApp extends StatelessWidget {
     return ValueListenableBuilder<int>(
       valueListenable: themeIndexNotifier,
       builder: (context, idx, _) {
-        final themes = [whiteTheme, popularLightTheme, popularDarkTheme, greenTheme];
+        final themes = [
+          whiteTheme,
+          popularLightTheme,
+          popularDarkTheme,
+          greenTheme,
+        ];
         return MaterialApp(
           title: 'Jamaat Time',
           theme: themes[idx],

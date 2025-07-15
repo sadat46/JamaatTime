@@ -10,6 +10,7 @@ import '../services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
+import '../core/constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,18 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoadingJamaat = false;
   String? jamaatError;
 
-  final List<String> canttNames = [
-    'Kumilla Cantt',
-    'Bogra Cantt',
-    'Rangpur Cantt',
-    'Ramu Cantt',
-    'Sylhet Cantt',
-    'Jashore Cantt',
-    'Savar Cantt',
-    'Dhaka Cantt',
-    'Chittagong Cantt',
-    'Padma Cantt',
-  ];
+  final List<String> canttNames = AppConstants.canttNames;
   String? selectedCity;
 
   final SettingsService _settingsService = SettingsService();
@@ -50,17 +40,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? currentPlaceName;
   bool isFetchingPlaceName = false;
-  
+
   // Add notification scheduling control
   bool _notificationsScheduled = false;
-  DateTime _lastScheduledDate = DateTime.now().subtract(const Duration(days: 1));
+  DateTime _lastScheduledDate = DateTime.now().subtract(
+    const Duration(days: 1),
+  );
 
   @override
   void initState() {
     super.initState();
     developer.log('HomeScreen initState', name: 'HomeScreen');
     tzdata.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
+    tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
     // Ensure notification service is initialized with context
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().initialize(context);
@@ -71,32 +63,32 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initializeApp() async {
     developer.log('Initializing app', name: 'HomeScreen');
     developer.log('Notifications initialized', name: 'HomeScreen');
-    
+
     // Use more accurate parameters for Bangladesh
     // Start with Muslim World League method which is generally more accurate for South Asia
     params = CalculationMethod.muslimWorldLeague();
     // Load madhab setting immediately to ensure correct Asr calculation
     final madhab = await _settingsService.getMadhab();
     params.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-    
+
     // Set prayer time adjustments
     // In adhan_dart, adjustments is a Map<String, int>
-    params.adjustments = {
-      'asr': 1,    // Small adjustment for Asr time
-      'isha': 2,   // Small adjustment for Isha time
-    };
-    
-    selectedCity = 'Savar Cantt';
-    
+    params.adjustments = Map.from(AppConstants.defaultAdjustments);
+
+    selectedCity = AppConstants.defaultCity;
+
     // Initialize times with default values to avoid null issues
-    final coords = Coordinates(23.8376, 90.2820); // Default coordinates
+    final coords = Coordinates(
+      AppConstants.defaultLatitude,
+      AppConstants.defaultLongitude,
+    ); // Default coordinates
     prayerTimes = PrayerTimes(
       coordinates: coords,
       date: _now,
       calculationParameters: params,
       precision: true,
     );
-    
+
     // Initialize times map
     times = {
       'Fajr': prayerTimes.fajr,
@@ -107,17 +99,17 @@ class _HomeScreenState extends State<HomeScreen> {
       'Maghrib': prayerTimes.maghrib,
       'Isha': prayerTimes.isha,
     };
-    
+
     await _fetchJamaatTimes(selectedCity!);
     await _loadLastLocation();
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _now = DateTime.now();
         _updatePrayerTimes();
       });
     });
-    
+
     _settingsService.onSettingsChanged.listen((_) => _loadMadhab());
   }
 
@@ -158,7 +150,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updatePrayerTimes() {
-    final coords = _coords ?? Coordinates(23.8376, 90.2820);
+    final coords =
+        _coords ??
+        Coordinates(
+          AppConstants.defaultLatitude,
+          AppConstants.defaultLongitude,
+        );
     prayerTimes = PrayerTimes(
       coordinates: coords,
       date: _now,
@@ -176,7 +173,9 @@ class _HomeScreenState extends State<HomeScreen> {
     DateTime? dahwaKubrah;
     if (sunrise != null && dhuhr != null) {
       final diff = dhuhr.difference(sunrise);
-      dahwaKubrah = sunrise.add(Duration(milliseconds: diff.inMilliseconds ~/ 2));
+      dahwaKubrah = sunrise.add(
+        Duration(milliseconds: diff.inMilliseconds ~/ 2),
+      );
     }
 
     times = {
@@ -188,22 +187,48 @@ class _HomeScreenState extends State<HomeScreen> {
       'Maghrib': maghrib,
       'Isha': isha,
     };
-    
+
+    // Update the widget with real data
+    try {
+      final currentPrayer = _getCurrentPrayerName();
+      final nextPrayerDuration = _getTimeToNextPrayer();
+      final remainingTime = nextPrayerDuration.isNegative
+          ? '--:--'
+          : '${nextPrayerDuration.inHours.toString().padLeft(2, '0')}:${(nextPrayerDuration.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
+      // WidgetService.updatePrayerWidget(
+      //   currentPrayerName: currentPrayer,
+      //   currentPrayerTime: times[currentPrayer]?.toString() ?? '-',
+      //   remainingLabel: 'Remaining Time',
+      //   remainingTime: remainingTime,
+      //   fajrTime: fajr != null ? DateFormat('HH:mm').format(fajr) : '-',
+      //   asrTime: asr != null ? DateFormat('HH:mm').format(asr) : '-',
+      //   maghribTime: maghrib != null ? DateFormat('HH:mm').format(maghrib) : '-',
+      //   ishaTime: isha != null ? DateFormat('HH:mm').format(isha) : '-',
+      //   islamicDate: DateFormat('d MMMM, yyyy').format(_now),
+      //   location: currentPlaceName ?? selectedCity ?? '-',
+      // );
+    } catch (e) {
+      developer.log('Error updating widget: $e', name: 'HomeScreen');
+    }
+
     // Only schedule notifications once per day or when jamaatTimes changes
     _scheduleNotificationsIfNeeded();
   }
-  
+
   Future<void> _scheduleNotificationsIfNeeded() async {
     if (jamaatTimes == null) return;
-    
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     // Schedule notifications if:
     // 1. Not scheduled yet today, OR
     // 2. Last scheduled date is different from today
     if (!_notificationsScheduled || _lastScheduledDate.isBefore(today)) {
-      developer.log('Scheduling notifications for today: ${today.toString()}', name: 'HomeScreen');
+      developer.log(
+        'Scheduling notifications for today: ${today.toString()}',
+        name: 'HomeScreen',
+      );
       await _notificationService.scheduleAllNotifications(times, jamaatTimes);
       _notificationsScheduled = true;
       _lastScheduledDate = today;
@@ -215,23 +240,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final madhab = await _settingsService.getMadhab();
     setState(() {
       params.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-      
+
       // Set prayer time adjustments
       // In adhan_dart, adjustments is a Map<String, int>
       if (madhab == 'hanafi') {
         // For Hanafi, we might need a slight adjustment for more accuracy
-        params.adjustments = {
-          'asr': 1,    // Small adjustment for Asr time
-          'isha': 2,   // Small adjustment for Isha time
-        };
+        params.adjustments = Map.from(AppConstants.defaultAdjustments);
       } else {
         // For Shafi, reset asr adjustment but keep isha adjustment
         params.adjustments = {
-          'asr': 0,    // No adjustment for Asr time
-          'isha': 2,   // Small adjustment for Isha time
+          'asr': 0, // No adjustment for Asr time
+          'isha': 2, // Small adjustment for Isha time
         };
       }
-      
+
       _updatePrayerTimes();
     });
   }
@@ -390,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final timeStr = DateFormat('HH:mm:ss').format(_now);
     final currentPrayer = _getCurrentPrayerName();
     final timeToNext = _getTimeToNextPrayer();
-    
+
     // Customize countdown text based on prayer name
     String countdownText;
     if (currentPrayer == 'Sunrise') {
@@ -473,7 +495,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                             });
                                           },
                                         ),
-
                                       ],
                                     ),
                                     const SizedBox(height: 4),
@@ -489,15 +510,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         Row(
                                           children: [
-                                            const Icon(Icons.access_time, size: 20),
+                                            const Icon(
+                                              Icons.access_time,
+                                              size: 20,
+                                            ),
                                             const SizedBox(width: 4),
                                             Padding(
-                                              padding: const EdgeInsets.only(right: 12.0),
+                                              padding: const EdgeInsets.only(
+                                                right: 12.0,
+                                              ),
                                               child: Text(
                                                 timeStr,
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyLarge
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                               ),
                                             ),
                                           ],
@@ -511,15 +541,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Padding(
-                                            padding: const EdgeInsets.only(right: 24.0),
+                                            padding: const EdgeInsets.only(
+                                              right: 24.0,
+                                            ),
                                             child: FittedBox(
                                               fit: BoxFit.scaleDown,
                                               alignment: Alignment.centerLeft,
                                               child: Text(
                                                 countdownText,
                                                 style: TextStyle(
-                                                  fontSize: currentPrayer == 'Sunrise' || currentPrayer == 'Dahwah-e-kubrah' 
-                                                      ? 16 : 24,
+                                                  fontSize:
+                                                      currentPrayer ==
+                                                              'Sunrise' ||
+                                                          currentPrayer ==
+                                                              'Dahwah-e-kubrah'
+                                                      ? 16
+                                                      : 24,
                                                   fontWeight: FontWeight.bold,
                                                   color: Color(0xFF1B5E20),
                                                 ),
@@ -579,8 +616,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
-                    
-
                     Text(
                       'Prayer Times',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -609,7 +644,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         TableRow(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF145A32)
                                 : const Color(0xFF43A047),
                           ),
@@ -638,13 +674,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         ...[
-                          "Fajr",
-                          "Sunrise",
-                          "Dahwah-e-kubrah",
-                          "Dhuhr",
-                          "Asr",
-                          "Maghrib",
-                          "Isha",
+                          'Fajr',
+                          'Sunrise',
+                          'Dahwah-e-kubrah',
+                          'Dhuhr',
+                          'Asr',
+                          'Maghrib',
+                          'Isha',
                         ].map((name) {
                           final t = times[name];
                           final timeStr = t != null
@@ -658,7 +694,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           final jamaatStr =
                               (jamaatTimes != null &&
                                   jamaatTimes![name.toLowerCase()] != null)
-                              ? _formatJamaatTime(jamaatTimes![name.toLowerCase()].toString())
+                              ? _formatJamaatTime(
+                                  jamaatTimes![name.toLowerCase()].toString(),
+                                )
                               : '-';
                           final isCurrent = name == _getCurrentPrayerName();
                           return TableRow(
@@ -695,6 +733,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         }),
                       ],
                     ),
+                    // Remove the widget test button and WidgetService usage
                   ],
                 ),
               ),

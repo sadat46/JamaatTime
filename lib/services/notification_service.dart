@@ -21,100 +21,107 @@ class NotificationService {
   /// Call this at app startup to ensure notifications are ready before scheduling.
   Future<void> initialize(BuildContext? context) async {
     if (_isInitialized) return;
-    developer.log(
-      'Initializing notification service',
-      name: 'NotificationService',
-    );
-    tzdata.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
-
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    final DarwinInitializationSettings initializationSettingsIOS =
-        const DarwinInitializationSettings();
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsIOS,
-        );
-
-    final bool? initialized = await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        developer.log(
-          'Notification tapped: ${response.payload}',
-          name: 'NotificationService',
-        );
-      },
-    );
-
-    developer.log(
-      'Notification plugin initialized: $initialized',
-      name: 'NotificationService',
-    );
-
-    // Create notification channel for Android
-    if (Platform.isAndroid) {
-      await _createNotificationChannel();
-    }
-
-    // Request notification permissions for Android 13+ and iOS
+    
     try {
+      developer.log(
+        'Initializing notification service',
+        name: 'NotificationService',
+      );
+      
+      tzdata.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
+
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      final DarwinInitializationSettings initializationSettingsIOS =
+          const DarwinInitializationSettings();
+      final InitializationSettings initializationSettings =
+          InitializationSettings(
+            android: initializationSettingsAndroid,
+            iOS: initializationSettingsIOS,
+          );
+
+      final bool? initialized = await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          developer.log(
+            'Notification tapped: ${response.payload}',
+            name: 'NotificationService',
+          );
+        },
+      );
+
+      developer.log(
+        'Notification plugin initialized: $initialized',
+        name: 'NotificationService',
+      );
+
+      // Create notification channel for Android
       if (Platform.isAndroid) {
-        final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-            flutterLocalNotificationsPlugin
-                .resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin
-                >();
-        if (androidImplementation != null) {
-          final granted = await androidImplementation
-              .requestNotificationsPermission();
-          developer.log(
-            'Android notification permission granted: $granted',
-            name: 'NotificationService',
-          );
-          if (context != null && granted != true && context.mounted) {
-            _showPermissionDialog(context);
-          }
-        }
-      } else if (Platform.isIOS) {
-        final IOSFlutterLocalNotificationsPlugin? iosImplementation =
-            flutterLocalNotificationsPlugin
-                .resolvePlatformSpecificImplementation<
-                  IOSFlutterLocalNotificationsPlugin
-                >();
-        if (iosImplementation != null) {
-          final granted = await iosImplementation.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
-          developer.log(
-            'iOS notification permission granted: $granted',
-            name: 'NotificationService',
-          );
-          if (context != null && granted != true && context.mounted) {
-            _showPermissionDialog(context);
-          }
-        }
+        await _createNotificationChannel();
       }
+
+      // Request notification permissions for Android 13+ and iOS
+      try {
+        if (Platform.isAndroid) {
+          final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+              flutterLocalNotificationsPlugin
+                  .resolvePlatformSpecificImplementation<
+                    AndroidFlutterLocalNotificationsPlugin
+                  >();
+          if (androidImplementation != null) {
+            final granted = await androidImplementation
+                .requestNotificationsPermission();
+            developer.log(
+              'Android notification permission granted: $granted',
+              name: 'NotificationService',
+            );
+            if (context != null && granted != true && context.mounted) {
+              _showPermissionDialog(context);
+            }
+          }
+        } else if (Platform.isIOS) {
+          final IOSFlutterLocalNotificationsPlugin? iosImplementation =
+              flutterLocalNotificationsPlugin
+                  .resolvePlatformSpecificImplementation<
+                    IOSFlutterLocalNotificationsPlugin
+                  >();
+          if (iosImplementation != null) {
+            final granted = await iosImplementation.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+            developer.log(
+              'iOS notification permission granted: $granted',
+              name: 'NotificationService',
+            );
+            if (context != null && granted != true && context.mounted) {
+              _showPermissionDialog(context);
+            }
+          }
+        }
+      } catch (e) {
+        developer.log(
+          'Error requesting notification permissions: $e',
+          name: 'NotificationService',
+          error: e,
+        );
+      }
+
+      _isInitialized = true;
+      developer.log(
+        'Notification service initialized successfully',
+        name: 'NotificationService',
+      );
     } catch (e) {
       developer.log(
-        'Error requesting notification permissions: $e',
+        'Error initializing notification service: $e',
         name: 'NotificationService',
         error: e,
       );
+      // Don't set _isInitialized to true if initialization failed
     }
-
-    _isInitialized = true;
-    developer.log(
-      'Notification service initialized',
-      name: 'NotificationService',
-    );
-    developer.log(
-      'Custom adhan sound configured: adhan.mp3',
-      name: 'NotificationService',
-    );
   }
 
   /// Create notification channel for Android
@@ -208,6 +215,39 @@ class NotificationService {
           name: 'NotificationService',
           error: fallbackError,
         );
+        // Final fallback: create basic channel
+        try {
+          const AndroidNotificationChannel basicChannel =
+              AndroidNotificationChannel(
+                'prayer_channel',
+                'Prayer Times',
+                description: 'Notifications for prayer and Jamaat times',
+                importance: Importance.high,
+                playSound: true,
+                enableVibration: true,
+                showBadge: true,
+              );
+
+          final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+              flutterLocalNotificationsPlugin
+                  .resolvePlatformSpecificImplementation<
+                    AndroidFlutterLocalNotificationsPlugin
+                  >();
+
+          if (androidImplementation != null) {
+            await androidImplementation.createNotificationChannel(basicChannel);
+            developer.log(
+              'Basic notification channel created as final fallback',
+              name: 'NotificationService',
+            );
+          }
+        } catch (basicError) {
+          developer.log(
+            'Failed to create even basic notification channel: $basicError',
+            name: 'NotificationService',
+            error: basicError,
+          );
+        }
       }
     }
   }
@@ -299,6 +339,15 @@ class NotificationService {
     required DateTime scheduledTime,
   }) async {
     try {
+      // Check if service is initialized
+      if (!_isInitialized) {
+        developer.log(
+          'Notification service not initialized, skipping notification: $title',
+          name: 'NotificationService',
+        );
+        return;
+      }
+
       if (scheduledTime.isBefore(DateTime.now())) {
         developer.log(
           'Skipping past notification: $title at ${scheduledTime.toString()}',
@@ -352,6 +401,20 @@ class NotificationService {
         name: 'NotificationService',
         error: e,
       );
+      // Try to recreate notification channel if scheduling fails
+      try {
+        await recreateNotificationChannel();
+        developer.log(
+          'Attempted to recreate notification channel after scheduling error',
+          name: 'NotificationService',
+        );
+      } catch (recreateError) {
+        developer.log(
+          'Failed to recreate notification channel: $recreateError',
+          name: 'NotificationService',
+          error: recreateError,
+        );
+      }
     }
   }
 
@@ -683,6 +746,66 @@ class NotificationService {
         error: e,
       );
       return false;
+    }
+  }
+
+  /// Check if notification service is properly initialized
+  bool get isInitialized => _isInitialized;
+
+  /// Force reinitialize the notification service
+  Future<void> reinitialize(BuildContext? context) async {
+    _isInitialized = false;
+    await initialize(context);
+  }
+
+  /// Test notification for debugging
+  Future<void> testNotification() async {
+    try {
+      if (!_isInitialized) {
+        developer.log(
+          'Cannot test notification - service not initialized',
+          name: 'NotificationService',
+        );
+        return;
+      }
+
+      developer.log(
+        'Testing notification...',
+        name: 'NotificationService',
+      );
+
+      final androidDetails = await _androidDetails(
+        channelId: 'prayer_channel',
+        channelName: 'Prayer Times',
+        channelDescription: 'Notifications for prayer and Jamaat times',
+        color: const Color(0xFF43A047),
+        vibrationPattern: Int64List.fromList([0, 5000]),
+      );
+
+      await flutterLocalNotificationsPlugin.show(
+        999,
+        'Test Notification',
+        'This is a test notification from Jamaat Time app',
+        NotificationDetails(
+          android: androidDetails,
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+      );
+
+      developer.log(
+        'Test notification sent successfully',
+        name: 'NotificationService',
+      );
+    } catch (e) {
+      developer.log(
+        'Error sending test notification: $e',
+        name: 'NotificationService',
+        error: e,
+      );
     }
   }
 
