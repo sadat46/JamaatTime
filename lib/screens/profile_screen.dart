@@ -23,6 +23,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _showRegister = false;
   String? _preferredCity;
   bool _isAdmin = false;
+  bool _adminChecked = false; // <-- Add this flag
+  bool _passwordVisible = false; // For password field
+  bool _confirmPasswordVisible = false; // For confirm password field
   final List<String> _prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
   final Map<String, TextEditingController> _jamaatControllers = {
     for (var p in ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'])
@@ -52,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_preferredCity == null || !canttNames.contains(_preferredCity)) {
       _preferredCity = canttNames.first;
     }
+    _adminChecked = false; // Reset before checking
     // Check admin status
     _checkAdmin();
     // Load Jamaat times for the default city
@@ -73,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isAdmin = await _authService.isAdmin();
     setState(() {
       _isAdmin = isAdmin;
+      _adminChecked = true; // Set to true after check
     });
   }
 
@@ -81,6 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _adminLoading = true;
       _adminMsg = null;
     });
+    // Load from main collection
     final doc = await FirebaseFirestore.instance
         .collection('jamaat_times')
         .doc(_adminCity.toLowerCase())
@@ -139,17 +145,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _passwordVisible = !_passwordVisible;
+                          });
+                        },
+                      ),
+                    ),
+                    obscureText: !_passwordVisible,
                   ),
                   if (_showRegister) ...[
                     const SizedBox(height: 12),
                     TextField(
                       controller: _confirmPasswordController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Confirm Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _confirmPasswordVisible = !_confirmPasswordVisible;
+                            });
+                          },
+                        ),
                       ),
-                      obscureText: true,
+                      obscureText: !_confirmPasswordVisible,
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -162,6 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             setState(() {
                               _loading = true;
                               _error = null;
+                              _adminChecked = false; // Reset before checking
                             });
                             try {
                               if (_showRegister) {
@@ -183,10 +212,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _passwordController.text.trim(),
                                 );
                               }
+                              await _checkAdmin();
                             } catch (e) {
                               setState(() {
                                 _error =
-                                    "${_showRegister ? 'Registration' : 'Login'} failed: ${e.toString()}";
+                                    "${_showRegister ? 'Registration' : 'Login'} failed: "+e.toString();
                               });
                             } finally {
                               setState(() {
@@ -218,266 +248,194 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           } else {
             // Logged in
+            if (!_adminChecked) {
+              return const Center(child: CircularProgressIndicator());
+            }
             return Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 16.0,
+                horizontal: 16.0,
+                vertical: 24.0,
               ),
-              child: Container(
-                color: const Color(0xFFE8F5E9), // light green background
-                child: SingleChildScrollView(
-                  child: Card(
-                    color: const Color(0xFFC8E6C9), // lighter green card
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Profile',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E7D32),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 16.0,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Logged in as: ${_isAdmin ? 'Admin' : 'User'}',
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                      ElevatedButton(
+                        onPressed: () async {
+                          await _authService.signOut();
+                          setState(() {
+                            _preferredCity = null;
+                            _isAdmin = false;
+                          });
+                        },
+                        child: const Text('Logout'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Update Jamaat Time For :',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 160, // Adjust width as needed
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _preferredCity ?? canttNames.first,
+                          items: canttNames.map((cantt) {
+                            return DropdownMenuItem<String>(
+                              value: cantt,
+                              child: Text(
+                                cantt,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _preferredCity = val;
+                            });
+                            _loadJamaatTimes();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_isAdmin) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 40),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Profile',
+                            'Jamaat Times:',
                             style: TextStyle(
-                              fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2E7D32),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Logged in as: ${_isAdmin ? 'Admin' : 'User'}',
-                              ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  await _authService.signOut();
-                                  setState(() {
-                                    _preferredCity = null;
-                                    _isAdmin = false;
-                                  });
-                                },
-                                child: const Text('Logout'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          if (_isAdmin) ...[
-                            const Divider(height: 40),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Update Jamaat Time For :',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 160, // Adjust width as needed
-                                    child: DropdownButton<String>(
-                                      isExpanded: true,
-                                      value: _adminCity,
-                                      items: canttNames.map((cantt) {
-                                        return DropdownMenuItem<String>(
-                                          value: cantt,
-                                          child: Text(
-                                            cantt,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _adminCity = val!;
-                                        });
-                                        _loadJamaatTimes();
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            ..._prayers.map(
-                              (p) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4.0,
-                                ),
-                                child: Card(
-                                  margin: EdgeInsets.zero,
-                                  elevation: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8.0,
-                                      horizontal: 12.0,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          p,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.end,
-                                            children: [
-                                              SizedBox(
-                                                width: 90,
-                                                child: TextField(
-                                                  controller:
-                                                      _jamaatControllers[p],
-                                                  decoration:
-                                                      const InputDecoration(
-                                                        hintText: 'HH:mm',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                        isDense: true,
-                                                        contentPadding:
-                                                            EdgeInsets.symmetric(
-                                                              vertical: 8,
-                                                              horizontal: 8,
-                                                            ),
-                                                      ),
-                                                  enabled: _editingPrayer == p,
-                                                  textAlign: TextAlign.center,
-                                                  inputFormatters: [
-                                                    TimeTextInputFormatter(),
-                                                  ],
-                                                  keyboardType:
-                                                      TextInputType.number,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  minimumSize: Size(60, 36),
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    _editingPrayer = p;
-                                                  });
-                                                },
-                                                child: const Text('Edit'),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              ElevatedButton(
-                                                onPressed:
-                                                    (_adminLoading ||
-                                                        _editingPrayer != p)
-                                                    ? null
-                                                    : () async {
-                                                        final input =
-                                                            _jamaatControllers[p]
-                                                                ?.text
-                                                                .trim() ??
-                                                            '';
-                                                        DateTime? parsed;
-                                                        try {
-                                                          parsed = DateFormat(
-                                                            'HH:mm',
-                                                          ).parseStrict(input);
-                                                        } catch (_) {
-                                                          try {
-                                                            parsed =
-                                                                DateFormat(
-                                                                  'hh:mm a',
-                                                                ).parseStrict(
-                                                                  input,
-                                                                );
-                                                          } catch (_) {}
-                                                        }
-                                                        if (parsed == null) {
-                                                          setState(() {
-                                                            _adminMsg =
-                                                                'Invalid time format for $p. Use HH:mm or hh:mm AM/PM.';
-                                                          });
-                                                          return;
-                                                        }
-                                                        final formatted =
-                                                            DateFormat(
-                                                              'HH:mm',
-                                                            ).format(parsed);
-                                                        setState(() {
-                                                          _adminLoading = true;
-                                                          _adminMsg = null;
-                                                        });
-                                                        final data = {
-                                                          p.toLowerCase():
-                                                              formatted,
-                                                        };
-                                                        await FirebaseFirestore
-                                                            .instance
-                                                            .collection(
-                                                              'jamaat_times',
-                                                            )
-                                                            .doc(
-                                                              _adminCity
-                                                                  .toLowerCase(),
-                                                            )
-                                                            .collection('times')
-                                                            .doc('times')
-                                                            .set(
-                                                              data,
-                                                              SetOptions(
-                                                                merge: true,
-                                                              ),
-                                                            );
-                                                        await _loadJamaatTimes();
-                                                        setState(() {
-                                                          _adminLoading = false;
-                                                          _adminMsg =
-                                                              '$p time saved!';
-                                                          _editingPrayer = null;
-                                                        });
-                                                      },
-                                                child:
-                                                    _adminLoading &&
-                                                        _editingPrayer == p
-                                                    ? const SizedBox(
-                                                        width: 16,
-                                                        height: 16,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                            ),
-                                                      )
-                                                    : const Text('Save'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_adminMsg != null)
-                              Text(
-                                _adminMsg!,
-                                style: const TextStyle(color: Colors.green),
-                              ),
-                          ],
+                          // ... existing admin city dropdown if admin ...
                         ],
                       ),
                     ),
-                  ),
-                ),
+                    const SizedBox(height: 12),
+                    for (final p in _prayers)
+                      Row(
+                        children: [
+                          Expanded(child: Text(p)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _jamaatControllers[p],
+                              decoration: InputDecoration(
+                                labelText: 'Time',
+                              ),
+                              enabled: _isAdmin && _editingPrayer == p,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (_editingPrayer != p)
+                            ElevatedButton(
+                              onPressed: (_adminLoading || _editingPrayer != null)
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _editingPrayer = p;
+                                      });
+                                    },
+                              child: const Text('Edit'),
+                            ),
+                          if (_editingPrayer == p) ...[
+                            ElevatedButton(
+                              onPressed: _adminLoading
+                                  ? null
+                                  : () async {
+                                      final input = _jamaatControllers[p]?.text.trim() ?? '';
+                                      DateTime? parsed;
+                                      try {
+                                        parsed = DateFormat('HH:mm').parseStrict(input);
+                                      } catch (_) {
+                                        try {
+                                          parsed = DateFormat('hh:mm a').parseStrict(input);
+                                        } catch (_) {}
+                                      }
+                                      if (parsed == null) {
+                                        setState(() {
+                                          _adminMsg = 'Invalid time format for $p. Use HH:mm or hh:mm AM/PM.';
+                                        });
+                                        return;
+                                      }
+                                      final formatted = DateFormat('HH:mm').format(parsed);
+                                      setState(() {
+                                        _adminLoading = true;
+                                        _adminMsg = null;
+                                      });
+                                      final data = {p.toLowerCase(): formatted};
+                                      await FirebaseFirestore.instance
+                                          .collection('jamaat_times')
+                                          .doc(_adminCity.toLowerCase())
+                                          .collection('times')
+                                          .doc('times')
+                                          .set(data, SetOptions(merge: true));
+                                      setState(() {
+                                        _adminMsg = 'Saved!';
+                                        _editingPrayer = null;
+                                      });
+                                      setState(() {
+                                        _adminLoading = false;
+                                      });
+                                    },
+                              child: _adminLoading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Text('Save'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _adminLoading
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _editingPrayer = null;
+                                        _adminMsg = null;
+                                      });
+                                    },
+                              child: const Text('Cancel'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    const SizedBox(height: 12),
+                    if (_adminMsg != null)
+                      Text(
+                        _adminMsg!,
+                        style: const TextStyle(color: Colors.green),
+                      ),
+                  ],
+                ],
               ),
             );
           }

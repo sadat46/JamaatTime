@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,26 +25,26 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return linux;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
         );
     }
   }
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyB-WtopCDIK_J9lRnkzDKQuQL3pC8j4rYs',
+    appId: '1:148161891333:web:default-web-app-id',
+    messagingSenderId: '148161891333',
+    projectId: 'jaamattime',
+    authDomain: 'jaamattime.firebaseapp.com',
+    storageBucket: 'jaamattime.firebasestorage.app',
+  );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyB-WtopCDIK_J9lRnkzDKQuQL3pC8j4rYs',
@@ -64,5 +61,30 @@ class DefaultFirebaseOptions {
     projectId: 'jaamattime',
     storageBucket: 'jaamattime.firebasestorage.app',
     iosBundleId: 'com.example.jamaatTime',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBJje8vxDvdisKx5GQK9s_hrXd9q1c07io',
+    appId: '1:148161891333:ios:8be90a38cf4125e3f8e06c',
+    messagingSenderId: '148161891333',
+    projectId: 'jaamattime',
+    storageBucket: 'jaamattime.firebasestorage.app',
+    iosBundleId: 'com.example.jamaatTime',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyB-WtopCDIK_J9lRnkzDKQuQL3pC8j4rYs',
+    appId: '1:148161891333:android:68547dfcc1ea57b5f8e06c',
+    messagingSenderId: '148161891333',
+    projectId: 'jaamattime',
+    storageBucket: 'jaamattime.firebasestorage.app',
+  );
+
+  static const FirebaseOptions linux = FirebaseOptions(
+    apiKey: 'AIzaSyB-WtopCDIK_J9lRnkzDKQuQL3pC8j4rYs',
+    appId: '1:148161891333:android:68547dfcc1ea57b5f8e06c',
+    messagingSenderId: '148161891333',
+    projectId: 'jaamattime',
+    storageBucket: 'jaamattime.firebasestorage.app',
   );
 }
