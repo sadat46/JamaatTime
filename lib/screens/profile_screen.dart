@@ -355,13 +355,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(width: 8),
                           if (_editingPrayer != p)
-                            ElevatedButton(
-                              onPressed: (_adminLoading || _editingPrayer != null)
-                                  ? null
+                          ElevatedButton(
+                            onPressed: (_adminLoading || _editingPrayer != null)
+                                ? null
                                   : () {
-                                      setState(() {
-                                        _editingPrayer = p;
-                                      });
+                                    setState(() {
+                                      _editingPrayer = p;
+                                    });
                                     },
                               child: const Text('Edit'),
                             ),
@@ -370,27 +370,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onPressed: _adminLoading
                                   ? null
                                   : () async {
-                                      final input = _jamaatControllers[p]?.text.trim() ?? '';
-                                      DateTime? parsed;
+                                    final input = _jamaatControllers[p]?.text.trim() ?? '';
+                                    DateTime? parsed;
+                                    try {
+                                      parsed = DateFormat('HH:mm').parseStrict(input);
+                                    } catch (_) {
                                       try {
-                                        parsed = DateFormat('HH:mm').parseStrict(input);
-                                      } catch (_) {
-                                        try {
-                                          parsed = DateFormat('hh:mm a').parseStrict(input);
-                                        } catch (_) {}
-                                      }
-                                      if (parsed == null) {
-                                        setState(() {
-                                          _adminMsg = 'Invalid time format for $p. Use HH:mm or hh:mm AM/PM.';
-                                        });
-                                        return;
-                                      }
-                                      final formatted = DateFormat('HH:mm').format(parsed);
+                                        parsed = DateFormat('hh:mm a').parseStrict(input);
+                                      } catch (_) {}
+                                    }
+                                    if (parsed == null) {
                                       setState(() {
-                                        _adminLoading = true;
-                                        _adminMsg = null;
+                                        _adminMsg = 'Invalid time format for $p. Use HH:mm or hh:mm AM/PM.';
                                       });
-                                      final data = {p.toLowerCase(): formatted};
+                                      return;
+                                    }
+                                    final formatted = DateFormat('HH:mm').format(parsed);
+                                    setState(() {
+                                      _adminLoading = true;
+                                      _adminMsg = null;
+                                    });
+                                    final data = {p.toLowerCase(): formatted};
                                       await FirebaseFirestore.instance
                                           .collection('jamaat_times')
                                           .doc(_adminCity.toLowerCase())
@@ -401,18 +401,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         _adminMsg = 'Saved!';
                                         _editingPrayer = null;
                                       });
-                                      setState(() {
-                                        _adminLoading = false;
-                                      });
-                                    },
+                                    setState(() {
+                                      _adminLoading = false;
+                                    });
+                                  },
                               child: _adminLoading
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Text('Save'),
-                            ),
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Text('Save'),
+                          ),
                             const SizedBox(width: 8),
                             ElevatedButton(
                               onPressed: _adminLoading

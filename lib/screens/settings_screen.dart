@@ -44,6 +44,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  String _getSoundModeText(int mode) {
+    switch (mode) {
+      case 0:
+        return 'Custom Sound';
+      case 1:
+        return 'System Sound';
+      case 2:
+        return 'No Sound';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String _getChannelId(int mode) {
+    switch (mode) {
+      case 0:
+        return 'Custom Sound Channel';
+      case 1:
+        return 'System Sound Channel';
+      case 2:
+        return 'No Sound Channel';
+      default:
+        return 'Unknown Channel';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,6 +161,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   if (val != null) {
                                     await _settingsService.setNotificationSoundMode(val);
                                     setState(() => _notificationSoundMode = val);
+                                    
+                                    // Handle notification sound mode change
+                                    try {
+                                      await _notificationService.handleNotificationSoundModeChange();
+                                      
+                                      // Show success message
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Notification sound setting updated successfully!',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // Show error message
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error updating notification settings: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                            duration: const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      }
+                                    }
                                   }
                                 },
                               ),
@@ -145,30 +202,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text('Test Notifications'),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  try {
-                                    await _notificationService.testNotification();
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Test notification sent!'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                child: const Text('Test'),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      try {
+                                        await _notificationService.testNotification();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Test notification sent! (Sound Mode: ${_getSoundModeText(_notificationSoundMode)})',
+                                              ),
+                                              backgroundColor: Colors.green,
+                                              duration: const Duration(seconds: 3),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(seconds: 4),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: const Text('Test Now'),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      try {
+                                        await _notificationService.recreateNotificationChannel();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Notification channel recreated successfully!'),
+                                              backgroundColor: Colors.blue,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Channel recreation error: $e'),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(seconds: 3),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    ),
+                                    child: const Text('Recreate Channel', style: TextStyle(fontSize: 10)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Current: ${_getSoundModeText(_notificationSoundMode)}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Channel: ${_getChannelId(_notificationSoundMode)}',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -188,7 +302,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   const Text(
-                    'Copyright (c) 2025 sadat46\nAll rights reserved.',
+                    'Copyright (c) 2025 sadat46\nStatic Signal Coy,Savar\nAll rights reserved.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
