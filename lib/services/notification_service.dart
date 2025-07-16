@@ -58,7 +58,7 @@ class NotificationService {
 
       // Create notification channel for Android
       if (Platform.isAndroid) {
-        await _createNotificationChannel();
+        await _createAllNotificationChannels();
       }
 
       // Request notification permissions for Android 13+ and iOS
@@ -124,11 +124,26 @@ class NotificationService {
     }
   }
 
+  /// Get the appropriate channel ID based on sound mode
+  String _getChannelId(int soundMode) {
+    switch (soundMode) {
+      case 0:
+        return 'prayer_channel_custom';
+      case 1:
+        return 'prayer_channel_system';
+      case 2:
+        return 'prayer_channel_silent';
+      default:
+        return 'prayer_channel_custom';
+    }
+  }
+
   /// Create notification channel for Android
   Future<void> _createNotificationChannel() async {
     try {
       // Get user's sound mode preference
       final mode = await _settingsService.getNotificationSoundMode();
+      final channelId = _getChannelId(mode);
       RawResourceAndroidNotificationSound? customSound;
       bool playSound = mode != 2;
 
@@ -151,7 +166,7 @@ class NotificationService {
       }
 
       final AndroidNotificationChannel channel = AndroidNotificationChannel(
-        'prayer_channel',
+        channelId,
         'Prayer Times',
         description: 'Notifications for prayer and Jamaat times',
         importance: Importance.max,
@@ -170,7 +185,7 @@ class NotificationService {
       if (androidImplementation != null) {
         await androidImplementation.createNotificationChannel(channel);
         developer.log(
-          'Notification channel created successfully with sound mode: $mode',
+          'Notification channel created successfully with sound mode: $mode, channel ID: $channelId',
           name: 'NotificationService',
         );
       }
@@ -184,7 +199,7 @@ class NotificationService {
       try {
         const AndroidNotificationChannel fallbackChannel =
             AndroidNotificationChannel(
-              'prayer_channel',
+              'prayer_channel_system',
               'Prayer Times',
               description: 'Notifications for prayer and Jamaat times',
               importance: Importance.max,
@@ -219,7 +234,7 @@ class NotificationService {
         try {
           const AndroidNotificationChannel basicChannel =
               AndroidNotificationChannel(
-                'prayer_channel',
+                'prayer_channel_basic',
                 'Prayer Times',
                 description: 'Notifications for prayer and Jamaat times',
                 importance: Importance.high,
@@ -296,6 +311,7 @@ class NotificationService {
     Int64List? vibrationPattern,
   }) async {
     final mode = await _settingsService.getNotificationSoundMode();
+    final actualChannelId = _getChannelId(mode); // Use the correct channel ID based on sound mode
     RawResourceAndroidNotificationSound? customSound;
     bool playSound = mode != 2;
 
@@ -314,7 +330,7 @@ class NotificationService {
     }
 
     return AndroidNotificationDetails(
-      channelId,
+      actualChannelId, // Use the actual channel ID based on sound mode
       channelName,
       channelDescription: channelDescription,
       importance: Importance.max,
@@ -766,7 +782,7 @@ class NotificationService {
           'Cannot test notification - service not initialized',
           name: 'NotificationService',
         );
-        return;
+        throw Exception('Notification service not initialized');
       }
 
       developer.log(
@@ -774,8 +790,15 @@ class NotificationService {
         name: 'NotificationService',
       );
 
+      // Get current sound mode for testing
+      final mode = await _settingsService.getNotificationSoundMode();
+      developer.log(
+        'Current notification sound mode: $mode',
+        name: 'NotificationService',
+      );
+
       final androidDetails = await _androidDetails(
-        channelId: 'prayer_channel',
+        channelId: 'prayer_channel', // This will be overridden by _getChannelId
         channelName: 'Prayer Times',
         channelDescription: 'Notifications for prayer and Jamaat times',
         color: const Color(0xFF43A047),
@@ -784,8 +807,8 @@ class NotificationService {
 
       await flutterLocalNotificationsPlugin.show(
         999,
-        'Test Notification',
-        'This is a test notification from Jamaat Time app',
+        'Test Notification - Jamaat Time',
+        'This is a test notification to verify sound settings. Sound Mode: ${_getSoundModeText(mode)} (Channel: ${_getChannelId(mode)})',
         NotificationDetails(
           android: androidDetails,
           iOS: const DarwinNotificationDetails(
@@ -797,7 +820,7 @@ class NotificationService {
       );
 
       developer.log(
-        'Test notification sent successfully',
+        'Test notification sent successfully with sound mode: $mode',
         name: 'NotificationService',
       );
     } catch (e) {
@@ -806,6 +829,21 @@ class NotificationService {
         name: 'NotificationService',
         error: e,
       );
+      rethrow;
+    }
+  }
+
+  /// Helper method to get sound mode text
+  String _getSoundModeText(int mode) {
+    switch (mode) {
+      case 0:
+        return 'Custom Sound';
+      case 1:
+        return 'System Sound';
+      case 2:
+        return 'No Sound';
+      default:
+        return 'Unknown';
     }
   }
 
@@ -828,11 +866,10 @@ class NotificationService {
   Future<void> recreateNotificationChannel() async {
     try {
       developer.log(
-        'Recreating notification channel with user sound mode...',
+        'Recreating notification channels for all sound modes...',
         name: 'NotificationService',
       );
 
-      // Delete existing channels
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           flutterLocalNotificationsPlugin
               .resolvePlatformSpecificImplementation<
@@ -841,60 +878,130 @@ class NotificationService {
 
       if (androidImplementation != null) {
         // Delete all existing channels to ensure clean recreation
-        await androidImplementation.deleteNotificationChannel('prayer_channel');
+        await androidImplementation.deleteNotificationChannel('prayer_channel_custom');
+        await androidImplementation.deleteNotificationChannel('prayer_channel_system');
+        await androidImplementation.deleteNotificationChannel('prayer_channel_silent');
+        await androidImplementation.deleteNotificationChannel('prayer_channel'); // Legacy channel
+
         developer.log(
           'Deleted existing notification channels',
           name: 'NotificationService',
         );
 
-        // Get user's sound mode preference
-        final mode = await _settingsService.getNotificationSoundMode();
-        RawResourceAndroidNotificationSound? customSound;
-        bool playSound = mode != 2;
-
-        // Only use custom sound if mode is 0 (custom) and we're on Android
-        if (mode == 0 && Platform.isAndroid) {
-          try {
-            customSound = RawResourceAndroidNotificationSound('allahu_akbar');
-            developer.log(
-              'Custom sound configured for channel recreation: allahu_akbar',
-              name: 'NotificationService',
-            );
-          } catch (e) {
-            developer.log(
-              'Error configuring custom sound for channel recreation: $e',
-              name: 'NotificationService',
-              error: e,
-            );
-            customSound = null;
-          }
-        }
-
-        // Create new prayer channel with user sound mode
-        final AndroidNotificationChannel prayerChannel =
-            AndroidNotificationChannel(
-              'prayer_channel',
-              'Prayer Times',
-              description: 'Notifications for prayer and Jamaat times',
-              importance: Importance.max,
-              playSound: playSound,
-              enableVibration: playSound,
-              showBadge: true,
-              sound: customSound,
-            );
-
-        await androidImplementation.createNotificationChannel(prayerChannel);
+        // Create channels for all sound modes
+        await _createAllNotificationChannels();
+        
         developer.log(
-          'Created new prayer channel with sound mode: $mode',
+          'All notification channels recreated successfully',
           name: 'NotificationService',
         );
       }
     } catch (e) {
       developer.log(
-        'Error recreating notification channel: $e',
+        'Error recreating notification channels: $e',
         name: 'NotificationService',
         error: e,
       );
+    }
+  }
+
+  /// Create all notification channels for different sound modes
+  Future<void> _createAllNotificationChannels() async {
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+
+      if (androidImplementation != null) {
+        // Create custom sound channel
+        final customChannel = AndroidNotificationChannel(
+          'prayer_channel_custom',
+          'Prayer Times (Custom Sound)',
+          description: 'Notifications with custom adhan sound',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('allahu_akbar'),
+        );
+
+        // Create system sound channel
+        const systemChannel = AndroidNotificationChannel(
+          'prayer_channel_system',
+          'Prayer Times (System Sound)',
+          description: 'Notifications with system default sound',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: null,
+        );
+
+        // Create silent channel
+        const silentChannel = AndroidNotificationChannel(
+          'prayer_channel_silent',
+          'Prayer Times (Silent)',
+          description: 'Notifications without sound',
+          importance: Importance.max,
+          playSound: false,
+          enableVibration: false,
+          showBadge: true,
+          sound: null,
+        );
+
+        // Create all channels
+        await androidImplementation.createNotificationChannel(customChannel);
+        await androidImplementation.createNotificationChannel(systemChannel);
+        await androidImplementation.createNotificationChannel(silentChannel);
+
+        developer.log(
+          'All notification channels created successfully',
+          name: 'NotificationService',
+        );
+      }
+    } catch (e) {
+      developer.log(
+        'Error creating all notification channels: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+      rethrow;
+    }
+  }
+
+  /// Handle notification sound mode change - recreate channel and reschedule notifications
+  Future<void> handleNotificationSoundModeChange() async {
+    try {
+      developer.log(
+        'Handling notification sound mode change...',
+        name: 'NotificationService',
+      );
+
+      // First, recreate the notification channel with new settings
+      await recreateNotificationChannel();
+
+      // Cancel all existing notifications to ensure they use the new channel settings
+      await cancelAllNotifications();
+      developer.log(
+        'Cancelled all existing notifications',
+        name: 'NotificationService',
+      );
+
+      // Note: We don't reschedule notifications here because we don't have access to prayer times
+      // The home screen will handle rescheduling when it detects the change
+      developer.log(
+        'Notification sound mode change handled successfully',
+        name: 'NotificationService',
+      );
+    } catch (e) {
+      developer.log(
+        'Error handling notification sound mode change: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+      rethrow;
     }
   }
 }

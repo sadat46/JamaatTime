@@ -111,6 +111,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     _settingsService.onSettingsChanged.listen((_) => _loadMadhab());
+    
+    // Listen for notification sound mode changes and reschedule notifications
+    _settingsService.onSettingsChanged.listen((_) async {
+      // Check if notification sound mode changed and reschedule if needed
+      await _handleNotificationSettingsChange();
+    });
   }
 
   Future<void> _fetchJamaatTimes(String city) async {
@@ -233,6 +239,34 @@ class _HomeScreenState extends State<HomeScreen> {
       _notificationsScheduled = true;
       _lastScheduledDate = today;
       developer.log('Notifications scheduled successfully', name: 'HomeScreen');
+    }
+  }
+
+  /// Handle notification settings changes (like sound mode)
+  Future<void> _handleNotificationSettingsChange() async {
+    try {
+      developer.log(
+        'Handling notification settings change...',
+        name: 'HomeScreen',
+      );
+
+      // Reset notification scheduling flag to force rescheduling
+      _notificationsScheduled = false;
+      
+      // Reschedule notifications with new settings
+      if (jamaatTimes != null) {
+        await _scheduleNotificationsIfNeeded();
+        developer.log(
+          'Notifications rescheduled after settings change',
+          name: 'HomeScreen',
+        );
+      }
+    } catch (e) {
+      developer.log(
+        'Error handling notification settings change: $e',
+        name: 'HomeScreen',
+        error: e,
+      );
     }
   }
 

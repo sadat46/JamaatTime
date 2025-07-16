@@ -51,5 +51,7 @@ class SettingsService {
   Future<void> setNotificationSoundMode(int mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyNotificationSoundMode, mode);
+    // Notify listeners that notification settings have changed
+    _controller.add(null);
   }
 } 
