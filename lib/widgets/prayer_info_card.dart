@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/widget_service.dart';
 
 class PrayerInfoCard extends StatelessWidget {
   final String currentPrayerName;
@@ -25,7 +24,7 @@ class PrayerInfoCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -91,32 +90,32 @@ class PrayerInfoCard extends StatelessWidget {
                         child: IconButton(
                           icon: const Icon(Icons.refresh, color: Colors.white),
                           onPressed: () {
-                            WidgetService.updatePrayerWidget(
-                              currentPrayerName: currentPrayerName,
-                              currentPrayerTime: currentPrayerTime,
-                              remainingLabel:
-                                  'Remaining Time of $currentPrayerName',
-                              remainingTime: remainingTime,
-                              fajrTime: prayerTimes['Fajr'] ?? '',
-                              asrTime: prayerTimes['Asr'] ?? '',
-                              maghribTime: prayerTimes['Maghrib'] ?? '',
-                              ishaTime: prayerTimes['Isha'] ?? '',
-                              islamicDate: islamicDate,
-                              location: location,
-                            );
+                            // WidgetService.updatePrayerWidget(
+                            //   currentPrayerName: currentPrayerName,
+                            //   currentPrayerTime: currentPrayerTime,
+                            //   remainingLabel:
+                            //       'Remaining Time of $currentPrayerName',
+                            //   remainingTime: remainingTime,
+                            //   fajrTime: prayerTimes['Fajr'] ?? '',
+                            //   asrTime: prayerTimes['Asr'] ?? '',
+                            //   maghribTime: prayerTimes['Maghrib'] ?? '',
+                            //   ishaTime: prayerTimes['Isha'] ?? '',
+                            //   islamicDate: islamicDate,
+                            //   location: location,
+                            // );
                           }, // You can add refresh logic
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.7),
+                          color: Colors.red.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
                           icon: const Icon(Icons.bug_report, color: Colors.white),
                           onPressed: () {
-                            WidgetService.testWidgetData();
+                            // WidgetService.testWidgetData();
                           },
                         ),
                       ),

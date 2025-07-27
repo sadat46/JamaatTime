@@ -7,10 +7,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/settings_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
+import '../services/jamaat_service.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
 import '../core/constants.dart';
+
+// Extension to get date part only
+extension DateTimeExtension on DateTime {
+  DateTime toDate() {
+    return DateTime(year, month, day);
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? jamaatTimes;
   bool isLoadingJamaat = false;
   String? jamaatError;
+  DateTime selectedDate = DateTime.now(); // Add selected date for jamaat times
 
   final List<String> canttNames = AppConstants.canttNames;
   String? selectedCity;
@@ -37,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final SettingsService _settingsService = SettingsService();
   final LocationService _locationService = LocationService();
   final NotificationService _notificationService = NotificationService();
+  final JamaatService _jamaatService = JamaatService();
 
   String? currentPlaceName;
   bool isFetchingPlaceName = false;
@@ -104,8 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadLastLocation();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final newNow = DateTime.now();
+      
       setState(() {
-        _now = DateTime.now();
+        _now = newNow;
         _updatePrayerTimes();
       });
     });
@@ -125,18 +138,25 @@ class _HomeScreenState extends State<HomeScreen> {
       jamaatError = null;
       jamaatTimes = null;
     });
+    
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('jamaat_times')
-          .doc(city.toLowerCase())
-          .collection('times')
-          .doc('times')
-          .get();
-      if (doc.exists) {
+      developer.log('Fetching jamaat times for city: $city, date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}', name: 'HomeScreen');
+      
+      // Use JamaatService for consistent data structure
+      final times = await _jamaatService.getJamaatTimes(
+        city: city,
+        date: selectedDate,
+      );
+      
+      if (times != null) {
+        developer.log('Loaded jamaat times for $city: $times', name: 'HomeScreen');
+        developer.log('Available keys: ${times.keys.toList()}', name: 'HomeScreen');
+        
         setState(() {
-          jamaatTimes = doc.data();
+          jamaatTimes = times;
           isLoadingJamaat = false;
         });
+        
         // Reset notification scheduling flag when jamaat times change
         _notificationsScheduled = false;
         await _scheduleNotificationsIfNeeded();
@@ -145,15 +165,19 @@ class _HomeScreenState extends State<HomeScreen> {
           jamaatTimes = null;
           isLoadingJamaat = false;
         });
+        developer.log('No jamaat times found for $city', name: 'HomeScreen');
       }
     } catch (e) {
       setState(() {
         jamaatTimes = null;
         isLoadingJamaat = false;
-        jamaatError = 'Error loading Jamaat times.';
+        jamaatError = 'Error loading Jamaat times: $e';
       });
+      developer.log('Error loading jamaat times for $city: $e', name: 'HomeScreen');
     }
   }
+
+
 
   void _updatePrayerTimes() {
     final coords =
@@ -162,9 +186,13 @@ class _HomeScreenState extends State<HomeScreen> {
           AppConstants.defaultLatitude,
           AppConstants.defaultLongitude,
         );
+    
+    // Use selectedDate for prayer times calculation instead of _now
+    final dateForCalculation = selectedDate;
+    
     prayerTimes = PrayerTimes(
       coordinates: coords,
-      date: _now,
+      date: dateForCalculation,
       calculationParameters: params,
       precision: true,
     );
@@ -194,18 +222,26 @@ class _HomeScreenState extends State<HomeScreen> {
       'Isha': isha,
     };
 
+    // Debug logging for prayer times
+    developer.log('Prayer times calculated for ${dateForCalculation.toString().split(' ')[0]}:', name: 'HomeScreen');
+    for (final entry in times.entries) {
+      if (entry.value != null) {
+        developer.log(
+          '${entry.key}: ${entry.value!.toString()} (${entry.value!.hour}:${entry.value!.minute.toString().padLeft(2, '0')})',
+          name: 'HomeScreen',
+        );
+      }
+    }
+
     // Update the widget with real data
     try {
-      final currentPrayer = _getCurrentPrayerName();
-      final nextPrayerDuration = _getTimeToNextPrayer();
-      final remainingTime = nextPrayerDuration.isNegative
-          ? '--:--'
-          : '${nextPrayerDuration.inHours.toString().padLeft(2, '0')}:${(nextPrayerDuration.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
       // WidgetService.updatePrayerWidget(
-      //   currentPrayerName: currentPrayer,
-      //   currentPrayerTime: times[currentPrayer]?.toString() ?? '-',
+      //   currentPrayerName: _getCurrentPrayerName(),
+      //   currentPrayerTime: times[_getCurrentPrayerName()]?.toString() ?? '-',
       //   remainingLabel: 'Remaining Time',
-      //   remainingTime: remainingTime,
+      //   remainingTime: _getTimeToNextPrayer().isNegative
+      //       ? '--:--'
+      //       : '${_getTimeToNextPrayer().inHours.toString().padLeft(2, '0')}:${(_getTimeToNextPrayer().inMinutes.remainder(60)).toString().padLeft(2, '0')}',
       //   fajrTime: fajr != null ? DateFormat('HH:mm').format(fajr) : '-',
       //   asrTime: asr != null ? DateFormat('HH:mm').format(asr) : '-',
       //   maghribTime: maghrib != null ? DateFormat('HH:mm').format(maghrib) : '-',
@@ -219,6 +255,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Only schedule notifications once per day or when jamaatTimes changes
     _scheduleNotificationsIfNeeded();
+    
+    // Debug: Log current notification scheduling status
+    developer.log(
+      'Notification scheduling status - Scheduled: $_notificationsScheduled, Last date: ${_lastScheduledDate.toString()}',
+      name: 'HomeScreen',
+    );
   }
 
   Future<void> _scheduleNotificationsIfNeeded() async {
@@ -382,14 +424,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getCurrentPrayerName() {
-    final current = prayerTimes.currentPrayer(date: _now);
-    if (current == Prayer.fajr) return 'Fajr';
-    if (current == Prayer.sunrise) return 'Sunrise';
-    if (current == Prayer.dhuhr) return 'Dhuhr';
-    if (current == Prayer.asr) return 'Asr';
-    if (current == Prayer.maghrib) return 'Maghrib';
-    if (current == Prayer.isha) return 'Isha';
-    return 'Fajr';
+    // For selected date, we need to determine which prayer is current
+    // If viewing a past date, show the last prayer of that day
+    // If viewing today, show current prayer
+    // If viewing future date, show first prayer (Fajr)
+    
+    final now = DateTime.now();
+    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final todayOnly = DateTime(now.year, now.month, now.day);
+    
+    if (selectedDateOnly.isBefore(todayOnly)) {
+      // Past date - show last prayer (Isha)
+      return 'Isha';
+    } else if (selectedDateOnly.isAfter(todayOnly)) {
+      // Future date - show first prayer (Fajr)
+      return 'Fajr';
+    } else {
+      // Today - show current prayer
+      final current = prayerTimes.currentPrayer(date: _now);
+      if (current == Prayer.fajr) return 'Fajr';
+      if (current == Prayer.sunrise) return 'Sunrise';
+      if (current == Prayer.dhuhr) return 'Dhuhr';
+      if (current == Prayer.asr) return 'Asr';
+      if (current == Prayer.maghrib) return 'Maghrib';
+      if (current == Prayer.isha) return 'Isha';
+      return 'Fajr';
+    }
   }
 
   Duration _getTimeToNextPrayer() {
@@ -440,24 +500,77 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Get Maghrib offset in minutes based on cantt name
+  int _getMaghribOffset(String city) {
+    switch (city) {
+      case 'Savar Cantt':
+      case 'Dhaka Cantt':
+      case 'Kumilla Cantt':
+        return 13;
+      case 'Rangpur Cantt':
+      case 'Jashore Cantt':
+      case 'Bogra Cantt':
+        return 10;
+      default:
+        return 7;
+    }
+  }
+
+  /// Calculate Maghrib jamaat time from prayer time with cantt-specific offset
+  String _calculateMaghribJamaatTime() {
+    final maghribPrayerTime = times['Maghrib'];
+    if (maghribPrayerTime != null && selectedCity != null) {
+      final offset = _getMaghribOffset(selectedCity!);
+      
+      // Debug logging
+      developer.log('Maghrib prayer time: $maghribPrayerTime (type: ${maghribPrayerTime.runtimeType})', name: 'HomeScreen');
+      developer.log('Maghrib prayer time formatted: ${DateFormat('HH:mm').format(maghribPrayerTime)}', name: 'HomeScreen');
+      developer.log('Offset for $selectedCity: $offset minutes', name: 'HomeScreen');
+      
+      // Convert to local time before adding offset
+      final localMaghribTime = maghribPrayerTime.toLocal();
+      final maghribJamaatTime = localMaghribTime.add(Duration(minutes: offset));
+      
+      developer.log('Local Maghrib prayer time: $localMaghribTime', name: 'HomeScreen');
+      developer.log('Calculated Maghrib jamaat time: $maghribJamaatTime', name: 'HomeScreen');
+      developer.log('Formatted Maghrib jamaat time: ${DateFormat('HH:mm').format(maghribJamaatTime)}', name: 'HomeScreen');
+      
+      return DateFormat('HH:mm').format(maghribJamaatTime);
+    }
+    return '-';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('EEE, d MMM, yyyy').format(_now);
+    final dateStr = DateFormat('EEE, d MMM, yyyy').format(selectedDate);
     final timeStr = DateFormat('HH:mm:ss').format(_now);
     final currentPrayer = _getCurrentPrayerName();
     final timeToNext = _getTimeToNextPrayer();
 
-    // Customize countdown text based on prayer name
+    // Customize countdown text based on prayer name and selected date
     String countdownText;
-    if (currentPrayer == 'Sunrise') {
-      countdownText = 'Coming Dahwa-e-kubrah';
-    } else if (currentPrayer == 'Dahwah-e-kubrah') {
-      countdownText = 'Coming Dhuhr';
+    final now = DateTime.now();
+    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final todayOnly = DateTime(now.year, now.month, now.day);
+    
+    if (selectedDateOnly.isBefore(todayOnly)) {
+      // Past date
+      countdownText = 'Viewing past date: ${DateFormat('dd MMM yyyy').format(selectedDate)}';
+    } else if (selectedDateOnly.isAfter(todayOnly)) {
+      // Future date
+      countdownText = 'Viewing future date: ${DateFormat('dd MMM yyyy').format(selectedDate)}';
     } else {
-      String countdown = timeToNext.isNegative
-          ? '--:--'
-          : '${timeToNext.inHours.toString().padLeft(2, '0')}:${(timeToNext.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
-      countdownText = '$currentPrayer time remaining: $countdown';
+      // Today
+      if (currentPrayer == 'Sunrise') {
+        countdownText = 'Coming Dahwa-e-kubrah';
+      } else if (currentPrayer == 'Dahwah-e-kubrah') {
+        countdownText = 'Coming Dhuhr';
+      } else {
+        String countdown = timeToNext.isNegative
+            ? '--:--'
+            : '${timeToNext.inHours.toString().padLeft(2, '0')}:${(timeToNext.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
+        countdownText = '$currentPrayer time remaining: $countdown';
+      }
     }
 
     return LayoutBuilder(
@@ -524,13 +637,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                           onChanged: (value) {
                                             setState(() {
                                               selectedCity = value;
+                                            });
+                                            if (selectedCity != null) {
                                               _fetchJamaatTimes(selectedCity!);
                                               _updatePrayerTimes();
-                                            });
+                                            }
                                           },
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 8),
+
                                     const SizedBox(height: 4),
                                     Row(
                                       mainAxisAlignment:
@@ -569,6 +686,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
+                                    // Jamaat times status
+                                    if (isLoadingJamaat)
+                                      const Row(
+                                        children: [
+                                          SizedBox(width: 16),
+                                          SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text('Loading jamaat times...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                        ],
+                                      ),
+                                    if (jamaatError != null)
+                                      Row(
+                                        children: [
+                                          const SizedBox(width: 16),
+                                          const Icon(Icons.error, size: 16, color: Colors.red),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              jamaatError!,
+                                              style: const TextStyle(fontSize: 12, color: Colors.red),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+
+                                    const SizedBox(height: 8),
                                     Row(
                                       children: [
                                         const Icon(Icons.access_time, size: 18),
@@ -596,6 +744,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ),
                                               ),
                                             ),
+                                          ),
+                                        ),
+                                        // Debug button
+                                        TextButton(
+                                          onPressed: () {
+                                            if (selectedCity != null) {
+                                              _fetchJamaatTimes(selectedCity!);
+                                            }
+                                          },
+                                          child: const Text(
+                                            'Debug Fetch',
+                                            style: TextStyle(fontSize: 12, color: Colors.blue),
                                           ),
                                         ),
                                       ],
@@ -725,13 +885,59 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 )
                               : '-';
-                          final jamaatStr =
-                              (jamaatTimes != null &&
-                                  jamaatTimes![name.toLowerCase()] != null)
-                              ? _formatJamaatTime(
-                                  jamaatTimes![name.toLowerCase()].toString(),
-                                )
-                              : '-';
+                          // Map prayer names to jamaat time keys
+                          String jamaatKey;
+                          switch (name) {
+                            case 'Fajr':
+                              jamaatKey = 'fajr';
+                              break;
+                            case 'Dhuhr':
+                              jamaatKey = 'dhuhr';
+                              break;
+                            case 'Asr':
+                              jamaatKey = 'asr';
+                              break;
+                            case 'Maghrib':
+                              jamaatKey = 'maghrib';
+                              break;
+                            case 'Isha':
+                              jamaatKey = 'isha';
+                              break;
+                            case 'Sunrise':
+                            case 'Dahwah-e-kubrah':
+                              jamaatKey = name.toLowerCase();
+                              break;
+                            default:
+                              jamaatKey = name.toLowerCase();
+                          }
+                          
+                          // Debug logging for jamaat times mapping
+                          if (jamaatTimes != null) {
+                            developer.log('For $name - Looking for key: $jamaatKey, available keys: ${jamaatTimes!.keys.toList()}', name: 'HomeScreen');
+                            developer.log('Value for $jamaatKey: ${jamaatTimes![jamaatKey]}', name: 'HomeScreen');
+                          }
+                          
+                          String jamaatStr = '-';
+                          if (name == 'Maghrib') {
+                            // For Maghrib, use calculated time from prayer time
+                            jamaatStr = _calculateMaghribJamaatTime();
+                            developer.log('Calculated Maghrib jamaat time: $jamaatStr (offset: ${_getMaghribOffset(selectedCity ?? '')} min)', name: 'HomeScreen');
+                          } else if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
+                            final value = jamaatTimes![jamaatKey];
+                            developer.log('Raw value for $jamaatKey: $value (type: ${value.runtimeType})', name: 'HomeScreen');
+                            if (value != null && value.toString().isNotEmpty) {
+                              jamaatStr = _formatJamaatTime(value.toString());
+                              developer.log('Formatted jamaat time for $jamaatKey: $jamaatStr', name: 'HomeScreen');
+                            }
+                          } else {
+                            developer.log('No jamaat time found for key: $jamaatKey', name: 'HomeScreen');
+                          }
+                          
+                          // Debug logging for jamaat times
+                          if (jamaatTimes != null && (name == 'Fajr' || name == 'Maghrib')) {
+                            developer.log('For $name - Looking for key: $jamaatKey, found: ${jamaatTimes![jamaatKey]}', name: 'HomeScreen');
+                            developer.log('All available keys: ${jamaatTimes!.keys.toList()}', name: 'HomeScreen');
+                          }
                           final isCurrent = name == _getCurrentPrayerName();
                           return TableRow(
                             decoration: isCurrent
@@ -754,11 +960,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Center(
-                                  child: Text(
-                                    jamaatStr,
-                                    style: jamaatStr == '-'
-                                        ? const TextStyle(color: Colors.grey)
-                                        : null,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        jamaatStr,
+                                        style: jamaatStr == '-'
+                                            ? const TextStyle(color: Colors.grey)
+                                            : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                                      ),
+                                      if (jamaatStr != '-') ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.mosque, size: 12, color: Colors.green),
+                                      ],
+                                    ],
                                   ),
                                 ),
                               ),

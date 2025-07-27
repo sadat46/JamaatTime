@@ -138,6 +138,83 @@ class NotificationService {
     }
   }
 
+  /// Get the appropriate channel ID for prayer notifications
+  String _getPrayerChannelId(int soundMode) {
+    switch (soundMode) {
+      case 0:
+        return 'prayer_channel_custom';
+      case 1:
+        return 'prayer_channel_system';
+      case 2:
+        return 'prayer_channel_silent';
+      default:
+        return 'prayer_channel_custom';
+    }
+  }
+
+  /// Get the appropriate channel ID for jamaat notifications
+  String _getJamaatChannelId(int soundMode) {
+    switch (soundMode) {
+      case 0:
+        return 'jamaat_channel_custom';
+      case 1:
+        return 'jamaat_channel_system';
+      case 2:
+        return 'jamaat_channel_silent';
+      default:
+        return 'jamaat_channel_custom';
+    }
+  }
+
+  /// Get notification sound mode text for display
+  String _getSoundModeText(int mode) {
+    switch (mode) {
+      case 0:
+        return 'Custom Sound';
+      case 1:
+        return 'System Sound';
+      case 2:
+        return 'No Sound';
+      default:
+        return 'Custom Sound';
+    }
+  }
+
+  /// Get notification configuration based on type and sound mode
+  Map<String, dynamic> _getNotificationConfig({
+    required String notificationType,
+    required int soundMode,
+  }) {
+    final isPrayer = notificationType == 'prayer';
+    final channelId = isPrayer 
+        ? _getPrayerChannelId(soundMode) 
+        : _getJamaatChannelId(soundMode);
+    
+    return {
+      'channelId': channelId,
+      'channelName': isPrayer ? 'Prayer Notifications' : 'Jamaat Notifications',
+      'channelDescription': isPrayer 
+          ? 'Notifications for prayer times' 
+          : 'Notifications for jamaat times',
+      'playSound': soundMode != 2,
+      'enableVibration': soundMode != 2,
+      'customSound': soundMode == 0 ? 'allahu_akbar' : null,
+    };
+  }
+
+  /// Log notification scheduling details
+  void _logNotificationScheduling({
+    required String notificationType,
+    required String title,
+    required DateTime scheduledTime,
+    required int soundMode,
+  }) {
+    developer.log(
+      'Scheduling $notificationType notification: $title at ${scheduledTime.toString()} with ${_getSoundModeText(soundMode)}',
+      name: 'NotificationService',
+    );
+  }
+
   /// Create notification channel for Android
   Future<void> _createNotificationChannel() async {
     try {
@@ -310,27 +387,38 @@ class NotificationService {
     Color? color,
     Int64List? vibrationPattern,
   }) async {
-    final mode = await _settingsService.getNotificationSoundMode();
-    final actualChannelId = _getChannelId(mode); // Use the correct channel ID based on sound mode
+    // Determine sound mode based on channel ID
+    int soundMode;
+    bool playSound;
     RawResourceAndroidNotificationSound? customSound;
-    bool playSound = mode != 2;
-
-    // Only use custom sound if mode is 0 (custom) and we're on Android
-    if (mode == 0 && Platform.isAndroid) {
-      try {
-        customSound = RawResourceAndroidNotificationSound('allahu_akbar');
-      } catch (e) {
-        developer.log(
-          'Error configuring custom sound in _androidDetails: $e',
-          name: 'NotificationService',
-          error: e,
-        );
-        customSound = null;
+    
+    if (channelId.contains('custom')) {
+      soundMode = 0;
+      playSound = true;
+      if (Platform.isAndroid) {
+        try {
+          customSound = RawResourceAndroidNotificationSound('allahu_akbar');
+        } catch (e) {
+          developer.log(
+            'Error configuring custom sound in _androidDetails: $e',
+            name: 'NotificationService',
+            error: e,
+          );
+          customSound = null;
+        }
       }
+    } else if (channelId.contains('system')) {
+      soundMode = 1;
+      playSound = true;
+      customSound = null;
+    } else {
+      soundMode = 2;
+      playSound = false;
+      customSound = null;
     }
 
     return AndroidNotificationDetails(
-      actualChannelId, // Use the actual channel ID based on sound mode
+      channelId,
       channelName,
       channelDescription: channelDescription,
       importance: Importance.max,
@@ -340,7 +428,7 @@ class NotificationService {
       playSound: playSound,
       icon: '@mipmap/launcher_icon',
       color: color,
-      sound: (mode == 1 || mode == 2) ? null : customSound,
+      sound: customSound,
       vibrationPattern: playSound
           ? (vibrationPattern ?? Int64List.fromList([0, 5000]))
           : null,
@@ -353,6 +441,7 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime scheduledTime,
+    String notificationType = 'prayer', // 'prayer' or 'jamaat'
   }) async {
     try {
       // Check if service is initialized
@@ -372,6 +461,14 @@ class NotificationService {
         return;
       }
 
+      // Additional check for reasonable notification times
+      if (scheduledTime.hour >= 22 || scheduledTime.hour <= 4) {
+        developer.log(
+          'WARNING: Scheduling notification at unusual time: $title at ${scheduledTime.toString()}',
+          name: 'NotificationService',
+        );
+      }
+
       final tz.TZDateTime scheduledDate = tz.TZDateTime.from(
         scheduledTime,
         tz.local,
@@ -380,11 +477,37 @@ class NotificationService {
         'Scheduling notification: $title at ${scheduledDate.toString()}',
         name: 'NotificationService',
       );
+      developer.log(
+        'Notification details - ID: $id, Title: $title, Time: ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}',
+        name: 'NotificationService',
+      );
+
+      // Get the appropriate sound mode based on notification type
+      int soundMode;
+      if (notificationType == 'jamaat') {
+        soundMode = await _settingsService.getJamaatNotificationSoundMode();
+      } else {
+        soundMode = await _settingsService.getPrayerNotificationSoundMode();
+      }
+      
+      // Get notification configuration
+      final config = _getNotificationConfig(
+        notificationType: notificationType,
+        soundMode: soundMode,
+      );
+
+      // Log notification scheduling
+      _logNotificationScheduling(
+        notificationType: notificationType,
+        title: title,
+        scheduledTime: scheduledTime,
+        soundMode: soundMode,
+      );
 
       final androidDetails = await _androidDetails(
-        channelId: 'prayer_channel',
-        channelName: 'Prayer Times',
-        channelDescription: 'Notifications for prayer and Jamaat times',
+        channelId: config['channelId'],
+        channelName: config['channelName'],
+        channelDescription: config['channelDescription'],
         color: const Color(0xFF43A047),
         vibrationPattern: Int64List.fromList([0, 5000]),
       );
@@ -405,7 +528,8 @@ class NotificationService {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
+        // Remove matchDateTimeComponents to prevent daily repetition
+        // matchDateTimeComponents: DateTimeComponents.time,
       );
       developer.log(
         'Notification scheduled successfully: $title at ${scheduledDate.toString()}',
@@ -448,7 +572,8 @@ class NotificationService {
     }
   }
 
-  /// Schedule prayer notifications
+  /// Schedule prayer notifications with separate sound settings
+  /// Each prayer notification is triggered 20 minutes before the NEXT prayer
   Future<void> schedulePrayerNotifications(
     Map<String, DateTime?> prayerTimes,
   ) async {
@@ -460,61 +585,64 @@ class NotificationService {
       int scheduledCount = 0;
       final now = DateTime.now();
 
-      for (final entry in prayerTimes.entries) {
-        final name = entry.key;
-        final time = entry.value;
+      // Define the 5 main prayers in order
+      final mainPrayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      
+      // Create a map of prayer times for easier lookup
+      final Map<String, DateTime> prayerTimeMap = {};
+      for (final prayer in mainPrayers) {
+        final time = prayerTimes[prayer];
         if (time != null) {
-          final notifyTime = time.subtract(const Duration(minutes: 20));
-
-          // Check if notification time is in the future (within next 24 hours)
+          prayerTimeMap[prayer] = DateTime(
+            now.year,
+            now.month,
+            now.day,
+            time.hour,
+            time.minute,
+          );
+        }
+      }
+      
+      // Schedule notifications for each prayer (triggered 20 minutes before next prayer)
+      for (int i = 0; i < mainPrayers.length; i++) {
+        final currentPrayer = mainPrayers[i];
+        final nextPrayer = mainPrayers[(i + 1) % mainPrayers.length]; // Wrap around for Isha -> Fajr
+        
+        final currentPrayerTime = prayerTimeMap[currentPrayer];
+        final nextPrayerTime = prayerTimeMap[nextPrayer];
+        
+        if (currentPrayerTime != null && nextPrayerTime != null) {
+          // Calculate notification time (20 minutes before next prayer)
+          final notifyTime = nextPrayerTime.subtract(const Duration(minutes: 20));
+          
+          // Only schedule if notification time is in the future
           if (notifyTime.isAfter(now)) {
             await scheduleNotification(
-              id: name.hashCode,
-              title: '$name Prayer',
-              body: '$name prayer is in 20 minutes.',
+              id: currentPrayer.hashCode,
+              title: '$currentPrayer Prayer',
+              body: '$currentPrayer time remaining 20 minutes.',
               scheduledTime: notifyTime,
+              notificationType: 'prayer',
             );
             scheduledCount++;
             developer.log(
-              'Scheduled $name prayer notification for ${notifyTime.toString()}',
+              'Scheduled $currentPrayer prayer notification for ${notifyTime.toString()} (20 min before $nextPrayer)',
               name: 'NotificationService',
             );
           } else {
-            // Check if prayer time is today but notification time has passed
-            final prayerTimeToday = DateTime(
-              now.year,
-              now.month,
-              now.day,
-              time.hour,
-              time.minute,
+            developer.log(
+              'Skipping $currentPrayer prayer notification - notification time already passed (${notifyTime.toString()})',
+              name: 'NotificationService',
             );
-            if (prayerTimeToday.isAfter(now)) {
-              // Prayer is still today, schedule notification for next prayer
-              final nextNotifyTime = prayerTimeToday.subtract(
-                const Duration(minutes: 20),
-              );
-              if (nextNotifyTime.isAfter(now)) {
-                await scheduleNotification(
-                  id: name.hashCode,
-                  title: '$name Prayer',
-                  body: '$name prayer is in 20 minutes.',
-                  scheduledTime: nextNotifyTime,
-                );
-                scheduledCount++;
-                developer.log(
-                  'Scheduled $name prayer notification for today: ${nextNotifyTime.toString()}',
-                  name: 'NotificationService',
-                );
-              }
-            } else {
-              developer.log(
-                'Skipping $name prayer notification - prayer time already passed today',
-                name: 'NotificationService',
-              );
-            }
           }
+        } else {
+          developer.log(
+            'Skipping $currentPrayer prayer notification - missing prayer time data',
+            name: 'NotificationService',
+          );
         }
       }
+      
       developer.log(
         'Scheduled $scheduledCount prayer notifications',
         name: 'NotificationService',
@@ -528,7 +656,7 @@ class NotificationService {
     }
   }
 
-  /// Schedule Jamaat notifications
+  /// Schedule Jamaat notifications with separate sound settings
   Future<void> scheduleJamaatNotifications(
     Map<String, dynamic>? jamaatTimes,
   ) async {
@@ -562,13 +690,14 @@ class NotificationService {
                   const Duration(minutes: 10),
                 );
 
-                // Check if notification time is in the future
+                // Only schedule if notification time is in the future
                 if (notifyTime.isAfter(now)) {
                   await scheduleNotification(
                     id: name.hashCode + 1000,
                     title: '$name Jamaat',
                     body: '$name Jamaat is in 10 minutes.',
                     scheduledTime: notifyTime,
+                    notificationType: 'jamaat',
                   );
                   scheduledCount++;
                   developer.log(
@@ -576,31 +705,10 @@ class NotificationService {
                     name: 'NotificationService',
                   );
                 } else {
-                  // Check if jamaat time is today but notification time has passed
-                  if (jamaatTime.isAfter(now)) {
-                    // Jamaat is still today, schedule notification
-                    final nextNotifyTime = jamaatTime.subtract(
-                      const Duration(minutes: 10),
-                    );
-                    if (nextNotifyTime.isAfter(now)) {
-                      await scheduleNotification(
-                        id: name.hashCode + 1000,
-                        title: '$name Jamaat',
-                        body: '$name Jamaat is in 10 minutes.',
-                        scheduledTime: nextNotifyTime,
-                      );
-                      scheduledCount++;
-                      developer.log(
-                        'Scheduled $name Jamaat notification for today: ${nextNotifyTime.toString()}',
-                        name: 'NotificationService',
-                      );
-                    }
-                  } else {
-                    developer.log(
-                      'Skipping $name Jamaat notification - jamaat time already passed today',
-                      name: 'NotificationService',
-                    );
-                  }
+                  developer.log(
+                    'Skipping $name Jamaat notification - notification time already passed (${notifyTime.toString()})',
+                    name: 'NotificationService',
+                  );
                 }
               }
             } catch (e) {
@@ -790,17 +898,18 @@ class NotificationService {
         name: 'NotificationService',
       );
 
-      // Get current sound mode for testing
-      final mode = await _settingsService.getNotificationSoundMode();
+      // Get current prayer sound mode for testing
+      final prayerMode = await _settingsService.getPrayerNotificationSoundMode();
+      final jamaatMode = await _settingsService.getJamaatNotificationSoundMode();
       developer.log(
-        'Current notification sound mode: $mode',
+        'Current prayer notification sound mode: $prayerMode, jamaat mode: $jamaatMode',
         name: 'NotificationService',
       );
 
       final androidDetails = await _androidDetails(
-        channelId: 'prayer_channel', // This will be overridden by _getChannelId
-        channelName: 'Prayer Times',
-        channelDescription: 'Notifications for prayer and Jamaat times',
+        channelId: _getPrayerChannelId(prayerMode),
+        channelName: 'Prayer Notifications',
+        channelDescription: 'Test notification for prayer times',
         color: const Color(0xFF43A047),
         vibrationPattern: Int64List.fromList([0, 5000]),
       );
@@ -808,7 +917,7 @@ class NotificationService {
       await flutterLocalNotificationsPlugin.show(
         999,
         'Test Notification - Jamaat Time',
-        'This is a test notification to verify sound settings. Sound Mode: ${_getSoundModeText(mode)} (Channel: ${_getChannelId(mode)})',
+        'This is a test notification to verify sound settings. Prayer Mode: ${_getSoundModeText(prayerMode)}, Jamaat Mode: ${_getSoundModeText(jamaatMode)}',
         NotificationDetails(
           android: androidDetails,
           iOS: const DarwinNotificationDetails(
@@ -820,7 +929,7 @@ class NotificationService {
       );
 
       developer.log(
-        'Test notification sent successfully with sound mode: $mode',
+        'Test notification sent successfully with prayer sound mode: $prayerMode, jamaat sound mode: $jamaatMode',
         name: 'NotificationService',
       );
     } catch (e) {
@@ -833,19 +942,7 @@ class NotificationService {
     }
   }
 
-  /// Helper method to get sound mode text
-  String _getSoundModeText(int mode) {
-    switch (mode) {
-      case 0:
-        return 'Custom Sound';
-      case 1:
-        return 'System Sound';
-      case 2:
-        return 'No Sound';
-      default:
-        return 'Unknown';
-    }
-  }
+
 
   /// Get system information for debugging
   Future<String> getSystemInfo() async {
@@ -881,6 +978,9 @@ class NotificationService {
         await androidImplementation.deleteNotificationChannel('prayer_channel_custom');
         await androidImplementation.deleteNotificationChannel('prayer_channel_system');
         await androidImplementation.deleteNotificationChannel('prayer_channel_silent');
+        await androidImplementation.deleteNotificationChannel('jamaat_channel_custom');
+        await androidImplementation.deleteNotificationChannel('jamaat_channel_system');
+        await androidImplementation.deleteNotificationChannel('jamaat_channel_silent');
         await androidImplementation.deleteNotificationChannel('prayer_channel'); // Legacy channel
 
         developer.log(
@@ -915,11 +1015,11 @@ class NotificationService {
               >();
 
       if (androidImplementation != null) {
-        // Create custom sound channel
-        final customChannel = AndroidNotificationChannel(
+        // Create prayer notification channels
+        final prayerCustomChannel = AndroidNotificationChannel(
           'prayer_channel_custom',
-          'Prayer Times (Custom Sound)',
-          description: 'Notifications with custom adhan sound',
+          'Prayer Notifications (Custom Sound)',
+          description: 'Prayer notifications with custom adhan sound',
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
@@ -927,11 +1027,10 @@ class NotificationService {
           sound: RawResourceAndroidNotificationSound('allahu_akbar'),
         );
 
-        // Create system sound channel
-        const systemChannel = AndroidNotificationChannel(
+        const prayerSystemChannel = AndroidNotificationChannel(
           'prayer_channel_system',
-          'Prayer Times (System Sound)',
-          description: 'Notifications with system default sound',
+          'Prayer Notifications (System Sound)',
+          description: 'Prayer notifications with system default sound',
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
@@ -939,11 +1038,44 @@ class NotificationService {
           sound: null,
         );
 
-        // Create silent channel
-        const silentChannel = AndroidNotificationChannel(
+        const prayerSilentChannel = AndroidNotificationChannel(
           'prayer_channel_silent',
-          'Prayer Times (Silent)',
-          description: 'Notifications without sound',
+          'Prayer Notifications (Silent)',
+          description: 'Prayer notifications without sound',
+          importance: Importance.max,
+          playSound: false,
+          enableVibration: false,
+          showBadge: true,
+          sound: null,
+        );
+
+        // Create jamaat notification channels
+        final jamaatCustomChannel = AndroidNotificationChannel(
+          'jamaat_channel_custom',
+          'Jamaat Notifications (Custom Sound)',
+          description: 'Jamaat notifications with custom adhan sound',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('allahu_akbar'),
+        );
+
+        const jamaatSystemChannel = AndroidNotificationChannel(
+          'jamaat_channel_system',
+          'Jamaat Notifications (System Sound)',
+          description: 'Jamaat notifications with system default sound',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: null,
+        );
+
+        const jamaatSilentChannel = AndroidNotificationChannel(
+          'jamaat_channel_silent',
+          'Jamaat Notifications (Silent)',
+          description: 'Jamaat notifications without sound',
           importance: Importance.max,
           playSound: false,
           enableVibration: false,
@@ -952,9 +1084,12 @@ class NotificationService {
         );
 
         // Create all channels
-        await androidImplementation.createNotificationChannel(customChannel);
-        await androidImplementation.createNotificationChannel(systemChannel);
-        await androidImplementation.createNotificationChannel(silentChannel);
+        await androidImplementation.createNotificationChannel(prayerCustomChannel);
+        await androidImplementation.createNotificationChannel(prayerSystemChannel);
+        await androidImplementation.createNotificationChannel(prayerSilentChannel);
+        await androidImplementation.createNotificationChannel(jamaatCustomChannel);
+        await androidImplementation.createNotificationChannel(jamaatSystemChannel);
+        await androidImplementation.createNotificationChannel(jamaatSilentChannel);
 
         developer.log(
           'All notification channels created successfully',

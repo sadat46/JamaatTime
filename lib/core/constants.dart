@@ -17,15 +17,16 @@ class AppConstants {
   
   // Cantt names
   static const List<String> canttNames = [
-    'Kumilla Cantt',
+    'Barishal Cantt',
     'Bogra Cantt',
-    'Rangpur Cantt',
-    'Ramu Cantt',
-    'Sylhet Cantt',
-    'Jashore Cantt',
-    'Savar Cantt',
-    'Dhaka Cantt',
     'Chittagong Cantt',
-    'Padma Cantt',
+    'Dhaka Cantt',
+    'Ghatail Cantt',
+    'Jashore Cantt',
+    'Kumilla Cantt',
+    'Ramu Cantt',
+    'Rangpur Cantt',
+    'Savar Cantt',
+    'Sylhet Cantt',
   ];
 } 
