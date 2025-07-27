@@ -6,6 +6,8 @@ class SettingsService {
   static const String _madhabKey = 'madhab';
   static const String _themeIndexKey = 'theme_index';
   static const String _keyNotificationSoundMode = 'notification_sound_mode';
+  static const String _keyPrayerNotificationSoundMode = 'prayer_notification_sound_mode';
+  static const String _keyJamaatNotificationSoundMode = 'jamaat_notification_sound_mode';
   final StreamController<void> _controller = StreamController.broadcast();
 
   Stream<void> get onSettingsChanged => _controller.stream;
@@ -51,6 +53,32 @@ class SettingsService {
   Future<void> setNotificationSoundMode(int mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyNotificationSoundMode, mode);
+    // Notify listeners that notification settings have changed
+    _controller.add(null);
+  }
+
+  // Prayer notification sound mode methods
+  Future<int> getPrayerNotificationSoundMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyPrayerNotificationSoundMode) ?? 0; // default: custom
+  }
+
+  Future<void> setPrayerNotificationSoundMode(int mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPrayerNotificationSoundMode, mode);
+    // Notify listeners that notification settings have changed
+    _controller.add(null);
+  }
+
+  // Jamaat notification sound mode methods
+  Future<int> getJamaatNotificationSoundMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyJamaatNotificationSoundMode) ?? 0; // default: custom
+  }
+
+  Future<void> setJamaatNotificationSoundMode(int mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyJamaatNotificationSoundMode, mode);
     // Notify listeners that notification settings have changed
     _controller.add(null);
   }

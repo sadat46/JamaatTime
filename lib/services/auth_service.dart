@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart'; // Added for debugPrint
+
+enum UserRole { user, admin, superadmin }
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -15,6 +18,17 @@ class AuthService {
 
   Future<User?> register(String email, String password) async {
     final result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    
+    // Set default role as user for new registrations
+    if (result.user != null) {
+      await _firestore.collection('users').doc(result.user!.uid).set({
+        'email': email,
+        'role': 'user',
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+    
     return result.user;
   }
 
@@ -25,7 +39,10 @@ class AuthService {
   Future<void> savePreferredCity(String city) async {
     final user = _auth.currentUser;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({'preferred_city': city}, SetOptions(merge: true));
+      await _firestore.collection('users').doc(user.uid).set({
+        'preferred_city': city,
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
   }
 
@@ -38,16 +55,240 @@ class AuthService {
     return null;
   }
 
-  Future<bool> isAdmin() async {
+  /// Get current user's role
+  Future<UserRole> getUserRole() async {
     final user = _auth.currentUser;
-    if (user == null) return false;
-    // Option 1: Check Firestore field
+    if (user == null) return UserRole.user;
+    
+    // Check Firestore for role
     final doc = await _firestore.collection('users').doc(user.uid).get();
-    if (doc.exists && doc.data()?['isAdmin'] == true) return true;
-    // Option 2: Hardcoded admin email list
+    if (doc.exists) {
+      final role = doc.data()?['role'] as String?;
+      switch (role) {
+        case 'superadmin':
+          return UserRole.superadmin;
+        case 'admin':
+          return UserRole.admin;
+        case 'user':
+        default:
+          return UserRole.user;
+      }
+    }
+    
+    // Fallback to hardcoded admin emails (legacy support)
     const adminEmails = [
-      'sadat46@gmail.com', // replace with your admin email(s)
+      'test@gmail.com', // replace with your admin email(s)
     ];
-    return adminEmails.contains(user.email);
+    const superadminEmails = [
+      'sadat46@gmail.com', // replace with your superadmin email(s)
+    ];
+    
+    if (superadminEmails.contains(user.email)) {
+      return UserRole.superadmin;
+    }
+    if (adminEmails.contains(user.email)) {
+      return UserRole.admin;
+    }
+    
+    return UserRole.user;
+  }
+
+  /// Check if current user is admin (includes superadmin)
+  Future<bool> isAdmin() async {
+    final role = await getUserRole();
+    return role == UserRole.admin || role == UserRole.superadmin;
+  }
+
+  /// Check if current user is superadmin
+  Future<bool> isSuperAdmin() async {
+    final role = await getUserRole();
+    return role == UserRole.superadmin;
+  }
+
+  /// Get all users (superadmin only)
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    if (!await isSuperAdmin()) {
+      throw Exception('Only superadmins can view all users');
+    }
+    
+    debugPrint('=== FIRESTORE QUERY DEBUG ===');
+    final querySnapshot = await _firestore.collection('users').get();
+    debugPrint('Firestore query returned ${querySnapshot.docs.length} documents');
+    
+    final users = querySnapshot.docs.map((doc) {
+      final data = doc.data();
+      debugPrint('Document ${doc.id}: ${data}');
+      return {
+        'uid': doc.id,
+        'email': data['email'] ?? '',
+        'role': data['role'] ?? 'user',
+        'preferred_city': data['preferred_city'] ?? '',
+        'created_at': data['created_at'],
+        'updated_at': data['updated_at'],
+      };
+    }).toList();
+    
+    debugPrint('Processed ${users.length} users');
+    debugPrint('=== END FIRESTORE QUERY DEBUG ===');
+    
+    return users;
+  }
+
+  /// Update user role (superadmin only)
+  Future<void> updateUserRole(String userId, UserRole newRole) async {
+    if (!await isSuperAdmin()) {
+      throw Exception('Only superadmins can update user roles');
+    }
+    
+    // Prevent superadmin from changing their own role
+    if (userId == _auth.currentUser?.uid) {
+      throw Exception('Cannot change your own role');
+    }
+    
+    // Prevent superadmin from changing other superadmins
+    final targetUserDoc = await _firestore.collection('users').doc(userId).get();
+    if (targetUserDoc.exists && targetUserDoc.data()?['role'] == 'superadmin') {
+      throw Exception('Cannot change another superadmin\'s role');
+    }
+    
+    await _firestore.collection('users').doc(userId).update({
+      'role': newRole.name,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Delete user (superadmin only)
+  Future<void> deleteUser(String userId) async {
+    if (!await isSuperAdmin()) {
+      throw Exception('Only superadmins can delete users');
+    }
+    
+    // Prevent superadmin from deleting themselves
+    if (userId == _auth.currentUser?.uid) {
+      throw Exception('Cannot delete your own account');
+    }
+    
+    // Prevent superadmin from deleting other superadmins
+    final targetUserDoc = await _firestore.collection('users').doc(userId).get();
+    if (targetUserDoc.exists && targetUserDoc.data()?['role'] == 'superadmin') {
+      throw Exception('Cannot delete another superadmin');
+    }
+    
+    await _firestore.collection('users').doc(userId).delete();
+  }
+
+  /// Get user statistics (superadmin only)
+  Future<Map<String, dynamic>> getUserStats() async {
+    if (!await isSuperAdmin()) {
+      throw Exception('Only superadmins can view user statistics');
+    }
+    
+    final querySnapshot = await _firestore.collection('users').get();
+    final users = querySnapshot.docs;
+    
+    int userCount = 0;
+    int adminCount = 0;
+    int superadminCount = 0;
+    
+    for (final doc in users) {
+      final role = doc.data()['role'] as String? ?? 'user';
+      switch (role) {
+        case 'user':
+          userCount++;
+          break;
+        case 'admin':
+          adminCount++;
+          break;
+        case 'superadmin':
+          superadminCount++;
+          break;
+      }
+    }
+    
+    return {
+      'total_users': users.length,
+      'users': userCount,
+      'admins': adminCount,
+      'superadmins': superadminCount,
+    };
+  }
+
+  /// Temporary debug function to force superadmin role
+  /// Remove this after testing
+  Future<void> forceSuperAdminRole() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).set({
+        'email': user.email,
+        'role': 'superadmin',
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+  }
+
+  /// Migrate existing Firebase Auth users to Firestore
+  /// This helps with users who registered before Firestore integration
+  Future<void> migrateExistingUsers() async {
+    if (!await isSuperAdmin()) {
+      throw Exception('Only superadmins can migrate users');
+    }
+    
+    debugPrint('=== MIGRATING EXISTING USERS ===');
+    
+    try {
+      // Get all users from Firestore to see what exists
+      final existingDocs = await _firestore.collection('users').get();
+      final existingUserIds = existingDocs.docs.map((doc) => doc.id).toSet();
+      
+      debugPrint('Existing Firestore users: ${existingUserIds.length}');
+      debugPrint('Existing user IDs: $existingUserIds');
+      
+      // For now, we'll create a document for the current user if it doesn't exist
+      // and provide instructions for manual migration
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+        if (!userDoc.exists) {
+          debugPrint('Creating missing document for current user: ${currentUser.email}');
+          await _firestore.collection('users').doc(currentUser.uid).set({
+            'email': currentUser.email,
+            'role': await getUserRole() == UserRole.superadmin ? 'superadmin' : 'user',
+            'created_at': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      
+      // Create a helper method to manually add users
+      debugPrint('=== MANUAL MIGRATION INSTRUCTIONS ===');
+      debugPrint('To add missing users, call:');
+      debugPrint('await _authService.addUserToFirestore(userId, email, role)');
+      debugPrint('Example:');
+      debugPrint('await _authService.addUserToFirestore("user123", "user@example.com", "user")');
+      
+      debugPrint('=== MIGRATION COMPLETE ===');
+    } catch (e) {
+      debugPrint('Migration error: $e');
+      throw Exception('Error migrating users: $e');
+    }
+  }
+
+  /// Manually add a user to Firestore (for migration purposes)
+  Future<void> addUserToFirestore(String userId, String email, String role) async {
+    if (!await isSuperAdmin()) {
+      throw Exception('Only superadmins can add users to Firestore');
+    }
+    
+    debugPrint('Adding user to Firestore: $email ($role)');
+    
+    await _firestore.collection('users').doc(userId).set({
+      'email': email,
+      'role': role,
+      'created_at': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+    
+    debugPrint('User added successfully: $email');
   }
 } 

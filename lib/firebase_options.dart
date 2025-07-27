@@ -38,8 +38,8 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB-WtopCDIK_J9lRnkzDKQuQL3pC8j4rYs',
-    appId: '1:148161891333:web:default-web-app-id',
+    apiKey: 'AIzaSyCVUYyuYNl3KMJ6Hs4GnEd8vDkk10N9jmM',
+    appId: '1:148161891333:web:925e0bf8e8ec5c06f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
     authDomain: 'jaamattime.firebaseapp.com',
@@ -73,10 +73,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyB-WtopCDIK_J9lRnkzDKQuQL3pC8j4rYs',
-    appId: '1:148161891333:android:68547dfcc1ea57b5f8e06c',
+    apiKey: 'AIzaSyCVUYyuYNl3KMJ6Hs4GnEd8vDkk10N9jmM',
+    appId: '1:148161891333:web:89892e9de4b4de09f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
+    authDomain: 'jaamattime.firebaseapp.com',
     storageBucket: 'jaamattime.firebasestorage.app',
   );
 

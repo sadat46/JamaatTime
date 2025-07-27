@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/services.dart';
+import 'user_management_screen.dart';
+import 'admin_jamaat_panel.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,45 +20,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _error;
   bool _loading = false;
   bool _showRegister = false;
-  String? _preferredCity;
   bool _isAdmin = false;
+  bool _isSuperAdmin = false;
   bool _adminChecked = false; // <-- Add this flag
   bool _passwordVisible = false; // For password field
   bool _confirmPasswordVisible = false; // For confirm password field
-  final List<String> _prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-  final Map<String, TextEditingController> _jamaatControllers = {
-    for (var p in ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'])
-      p: TextEditingController(),
-  };
-  String _adminCity = 'Savar Cantt';
-  bool _adminLoading = false;
-  String? _adminMsg;
-  final List<String> canttNames = [
-    'Kumilla Cantt',
-    'Bogra Cantt',
-    'Rangpur Cantt',
-    'Ramu Cantt',
-    'Sylhet Cantt',
-    'Jashore Cantt',
-    'Savar Cantt',
-    'Dhaka Cantt',
-    'Chittagong Cantt',
-    'Padma Cantt',
-  ];
-  String? _editingPrayer;
 
   @override
   void initState() {
     super.initState();
-    // Set default city if needed
-    if (_preferredCity == null || !canttNames.contains(_preferredCity)) {
-      _preferredCity = canttNames.first;
-    }
     _adminChecked = false; // Reset before checking
     // Check admin status
     _checkAdmin();
-    // Load Jamaat times for the default city
-    _loadJamaatTimes();
   }
 
   @override
@@ -67,46 +39,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    for (final c in _jamaatControllers.values) {
-      c.dispose();
-    }
     super.dispose();
   }
 
   Future<void> _checkAdmin() async {
     final isAdmin = await _authService.isAdmin();
+    final isSuperAdmin = await _authService.isSuperAdmin();
+    
+    // Debug: Print role information
+    final userRole = await _authService.getUserRole();
+    debugPrint('=== ROLE DEBUG INFO ===');
+    debugPrint('User Email: ${_authService.currentUser?.email}');
+    debugPrint('User Role: $userRole');
+    debugPrint('Is Admin: $isAdmin');
+    debugPrint('Is SuperAdmin: $isSuperAdmin');
+    debugPrint('======================');
+    
     setState(() {
       _isAdmin = isAdmin;
+      _isSuperAdmin = isSuperAdmin;
       _adminChecked = true; // Set to true after check
     });
   }
 
-  Future<void> _loadJamaatTimes() async {
-    setState(() {
-      _adminLoading = true;
-      _adminMsg = null;
-    });
-    // Load from main collection
-    final doc = await FirebaseFirestore.instance
-        .collection('jamaat_times')
-        .doc(_adminCity.toLowerCase())
-        .collection('times')
-        .doc('times')
-        .get();
-    if (doc.exists) {
-      final data = doc.data() ?? {};
-      for (final p in _prayers) {
-        _jamaatControllers[p]?.text = data[p.toLowerCase()]?.toString() ?? '';
-      }
-    } else {
-      for (final p in _prayers) {
-        _jamaatControllers[p]?.text = '';
-      }
-    }
-    setState(() {
-      _adminLoading = false;
-    });
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             } catch (e) {
                               setState(() {
                                 _error =
-                                    "${_showRegister ? 'Registration' : 'Login'} failed: "+e.toString();
+                                    "${_showRegister ? 'Registration' : 'Login'} failed: ${e.toString()}";
                               });
                             } finally {
                               setState(() {
@@ -251,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (!_adminChecked) {
               return const Center(child: CircularProgressIndicator());
             }
-            return Padding(
+            return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
                 vertical: 24.0,
@@ -271,169 +227,226 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Logged in as: ${_isSuperAdmin ? 'Superadmin' : _isAdmin ? 'Admin' : 'User'}',
+                          ),
+                          if (_isSuperAdmin || _isAdmin)
                       Text(
-                        'Logged in as: ${_isAdmin ? 'Admin' : 'User'}',
+                              'Role: ${_isSuperAdmin ? 'Superadmin' : 'Admin'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _isSuperAdmin ? Colors.red : Colors.orange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                        ],
                       ),
+                      Column(
+                        children: [
                       ElevatedButton(
                         onPressed: () async {
                           await _authService.signOut();
                           setState(() {
-                            _preferredCity = null;
                             _isAdmin = false;
+                            _isSuperAdmin = false;
                           });
                         },
                         child: const Text('Logout'),
+                          ),
+                          const SizedBox(height: 4),
+                          // Debug buttons in a more compact layout
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: () async {
+                                  await _checkAdmin();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Role check completed. Check debug console for details.'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'Debug Role',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  try {
+                                    await _authService.forceSuperAdminRole();
+                                    await _checkAdmin();
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Superadmin role forced! Please refresh.'),
+                                          backgroundColor: Colors.green,
+                                          duration: Duration(seconds: 3),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                          duration: const Duration(seconds: 3),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: const Text(
+                                  'Force Super',
+                                  style: TextStyle(fontSize: 10, color: Colors.orange),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Update Jamaat Time For :',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  
+                  // Superadmin User Management Section
+                  if (_isSuperAdmin) ...[
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      SizedBox(
-                        width: 160, // Adjust width as needed
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: _preferredCity ?? canttNames.first,
-                          items: canttNames.map((cantt) {
-                            return DropdownMenuItem<String>(
-                              value: cantt,
-                              child: Text(
-                                cantt,
-                                overflow: TextOverflow.ellipsis,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.admin_panel_settings,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Superadmin Controls',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const UserManagementScreen(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.people),
+                              label: const Text('Manage Users'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _preferredCity = val;
-                            });
-                            _loadJamaatTimes();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_isAdmin) ...[
-                    const SizedBox(height: 12),
-                    const Divider(height: 40),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Jamaat Times:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                          // ... existing admin city dropdown if admin ...
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    for (final p in _prayers)
-                      Row(
-                        children: [
-                          Expanded(child: Text(p)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _jamaatControllers[p],
-                              decoration: InputDecoration(
-                                labelText: 'Time',
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Manage user roles, view statistics, and control access',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
                               ),
-                              enabled: _isAdmin && _editingPrayer == p,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (_editingPrayer != p)
-                          ElevatedButton(
-                            onPressed: (_adminLoading || _editingPrayer != null)
-                                ? null
-                                  : () {
-                                    setState(() {
-                                      _editingPrayer = p;
-                                    });
-                                    },
-                              child: const Text('Edit'),
-                            ),
-                          if (_editingPrayer == p) ...[
-                            ElevatedButton(
-                              onPressed: _adminLoading
-                                  ? null
-                                  : () async {
-                                    final input = _jamaatControllers[p]?.text.trim() ?? '';
-                                    DateTime? parsed;
-                                    try {
-                                      parsed = DateFormat('HH:mm').parseStrict(input);
-                                    } catch (_) {
-                                      try {
-                                        parsed = DateFormat('hh:mm a').parseStrict(input);
-                                      } catch (_) {}
-                                    }
-                                    if (parsed == null) {
-                                      setState(() {
-                                        _adminMsg = 'Invalid time format for $p. Use HH:mm or hh:mm AM/PM.';
-                                      });
-                                      return;
-                                    }
-                                    final formatted = DateFormat('HH:mm').format(parsed);
-                                    setState(() {
-                                      _adminLoading = true;
-                                      _adminMsg = null;
-                                    });
-                                    final data = {p.toLowerCase(): formatted};
-                                      await FirebaseFirestore.instance
-                                          .collection('jamaat_times')
-                                          .doc(_adminCity.toLowerCase())
-                                          .collection('times')
-                                          .doc('times')
-                                          .set(data, SetOptions(merge: true));
-                                      setState(() {
-                                        _adminMsg = 'Saved!';
-                                        _editingPrayer = null;
-                                      });
-                                    setState(() {
-                                      _adminLoading = false;
-                                    });
-                                  },
-                              child: _adminLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Text('Save'),
-                          ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: _adminLoading
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _editingPrayer = null;
-                                        _adminMsg = null;
-                                      });
-                                    },
-                              child: const Text('Cancel'),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    const SizedBox(height: 12),
-                    if (_adminMsg != null)
-                      Text(
-                        _adminMsg!,
-                        style: const TextStyle(color: Colors.green),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Admin Jamaat Management Section
+                  if (_isAdmin) ...[
+                    // Admin Controls Card
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.admin_panel_settings,
+                                  color: Colors.orange,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Admin Controls',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const AdminJamaatPanel(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.file_upload),
+                                    label: const Text('Edit/Import Data'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'CSV Import/Export, Bulk Operations, Yearly Data',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Add bottom padding to prevent overflow
+                    const SizedBox(height: 100),
                   ],
                 ],
               ),
@@ -445,24 +458,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class TimeTextInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.length > 4) digits = digits.substring(0, 4);
 
-    String formatted = '';
-    for (int i = 0; i < digits.length; i++) {
-      if (i == 2) formatted += ':';
-      formatted += digits[i];
-    }
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}

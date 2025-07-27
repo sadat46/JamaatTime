@@ -16,7 +16,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final NotificationService _notificationService = NotificationService();
   int _themeIndex = 0; // 0: White, 1: Light, 2: Dark
   String _madhab = 'hanafi';
-  int _notificationSoundMode = 0; // 0: Custom, 1: System, 2: None
+  int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
+  int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   String _version = '';
 
   @override
@@ -29,11 +30,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final idx = await _settingsService.getThemeIndex();
     final madhab = await _settingsService.getMadhab();
-    final soundMode = await _settingsService.getNotificationSoundMode();
+    final prayerSoundMode = await _settingsService.getPrayerNotificationSoundMode();
+    final jamaatSoundMode = await _settingsService.getJamaatNotificationSoundMode();
     setState(() {
       _themeIndex = idx;
       _madhab = madhab;
-      _notificationSoundMode = soundMode;
+      _prayerNotificationSoundMode = prayerSoundMode;
+      _jamaatNotificationSoundMode = jamaatSoundMode;
     });
   }
 
@@ -42,32 +45,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _version = 'v ${info.version} ( ${info.buildNumber})';
     });
-  }
-
-  String _getSoundModeText(int mode) {
-    switch (mode) {
-      case 0:
-        return 'Custom Sound';
-      case 1:
-        return 'System Sound';
-      case 2:
-        return 'No Sound';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  String _getChannelId(int mode) {
-    switch (mode) {
-      case 0:
-        return 'Custom Sound Channel';
-      case 1:
-        return 'System Sound Channel';
-      case 2:
-        return 'No Sound Channel';
-      default:
-        return 'Unknown Channel';
-    }
   }
 
   @override
@@ -149,9 +126,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Notification Sound'),
+                              const Text('Prayer Notification'),
                               DropdownButton<int>(
-                                value: _notificationSoundMode,
+                                value: _prayerNotificationSoundMode,
                                 items: const [
                                   DropdownMenuItem(value: 0, child: Text('Custom Sound')),
                                   DropdownMenuItem(value: 1, child: Text('System Sound')),
@@ -159,8 +136,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ],
                                 onChanged: (val) async {
                                   if (val != null) {
-                                    await _settingsService.setNotificationSoundMode(val);
-                                    setState(() => _notificationSoundMode = val);
+                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                    await _settingsService.setPrayerNotificationSoundMode(val);
+                                    setState(() => _prayerNotificationSoundMode = val);
                                     
                                     // Handle notification sound mode change
                                     try {
@@ -168,10 +146,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       
                                       // Show success message
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        scaffoldMessenger.showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Notification sound setting updated successfully!',
+                                              'Prayer notification sound setting updated successfully!',
                                             ),
                                             backgroundColor: Colors.green,
                                             duration: const Duration(seconds: 2),
@@ -181,10 +159,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     } catch (e) {
                                       // Show error message
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        scaffoldMessenger.showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Error updating notification settings: $e',
+                                              'Error updating prayer notification settings: $e',
                                             ),
                                             backgroundColor: Colors.red,
                                             duration: const Duration(seconds: 3),
@@ -201,88 +179,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Test Notifications'),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      try {
-                                        await _notificationService.testNotification();
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Test notification sent! (Sound Mode: ${_getSoundModeText(_notificationSoundMode)})',
-                                              ),
-                                              backgroundColor: Colors.green,
-                                              duration: const Duration(seconds: 3),
-                                            ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Error: $e'),
-                                              backgroundColor: Colors.red,
-                                              duration: const Duration(seconds: 4),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    child: const Text('Test Now'),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      try {
-                                        await _notificationService.recreateNotificationChannel();
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Notification channel recreated successfully!'),
-                                              backgroundColor: Colors.blue,
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Channel recreation error: $e'),
-                                              backgroundColor: Colors.red,
-                                              duration: const Duration(seconds: 3),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    ),
-                                    child: const Text('Recreate Channel', style: TextStyle(fontSize: 10)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Current: ${_getSoundModeText(_notificationSoundMode)}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Channel: ${_getChannelId(_notificationSoundMode)}',
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      color: Colors.grey[500],
-                                    ),
-                                  ),
+                              const Text('Jamaat Notification'),
+                              DropdownButton<int>(
+                                value: _jamaatNotificationSoundMode,
+                                items: const [
+                                  DropdownMenuItem(value: 0, child: Text('Custom Sound')),
+                                  DropdownMenuItem(value: 1, child: Text('System Sound')),
+                                  DropdownMenuItem(value: 2, child: Text('No Sound')),
                                 ],
+                                onChanged: (val) async {
+                                  if (val != null) {
+                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                    await _settingsService.setJamaatNotificationSoundMode(val);
+                                    setState(() => _jamaatNotificationSoundMode = val);
+                                    
+                                    // Handle notification sound mode change
+                                    try {
+                                      await _notificationService.handleNotificationSoundModeChange();
+                                      
+                                      // Show success message
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Jamaat notification sound setting updated successfully!',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // Show error message
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error updating jamaat notification settings: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                            duration: const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
                               ),
                             ],
                           ),
