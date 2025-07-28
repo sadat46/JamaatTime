@@ -61,49 +61,46 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       _adminLoading = true;
       _adminMsg = null;
     });
-    
-    debugPrint('Loading jamaat times for city: $_selectedCity, date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}');
-    
+
     try {
-      // Use JamaatService for consistent data structure
       final times = await _jamaatService.getJamaatTimes(
         city: _selectedCity,
         date: _selectedDate,
       );
-      
+
       if (times != null) {
-        debugPrint('Loaded jamaat times for $_selectedCity: $times');
-        debugPrint('Available keys: ${times.keys.toList()}');
-        
+        // Auto-calculate Maghrib jamaat time if not present
+        if (!times.containsKey('maghrib') || times['maghrib'] == null || times['maghrib'] == '-') {
+          final calculatedMaghrib = _calculateMaghribJamaatTime();
+          times['maghrib'] = calculatedMaghrib;
+        }
+
+        // Update controllers with loaded times
         for (final prayer in _prayers) {
-          if (prayer == 'Maghrib') {
-            // For Maghrib, always calculate from prayer time
-            final calculatedMaghrib = _calculateMaghribJamaatTime();
-            _jamaatControllers[prayer]?.text = calculatedMaghrib;
-            debugPrint('Auto-calculated Maghrib jamaat time: $calculatedMaghrib (offset: ${_getMaghribOffset(_selectedCity)} min)');
-          } else {
-            final time = times[prayer.toLowerCase()];
-            if (time != null && time.isNotEmpty) {
-              _jamaatControllers[prayer]?.text = time;
+          final key = prayer.toLowerCase();
+          final controller = _jamaatControllers[prayer];
+          if (controller != null && times.containsKey(key)) {
+            final time = times[key];
+            if (time != null && time.toString().isNotEmpty && time != '-') {
+              controller.text = time.toString();
             } else {
-              _jamaatControllers[prayer]?.clear();
+              controller.clear();
             }
           }
         }
+
+        setState(() {
+          _adminLoading = false;
+        });
       } else {
-        debugPrint('No jamaat times found for $_selectedCity');
-        for (final controller in _jamaatControllers.values) {
-          controller.clear();
-        }
+        setState(() {
+          _adminLoading = false;
+        });
       }
     } catch (e) {
-      debugPrint('Error loading jamaat times: $e');
-      setState(() {
-        _adminMsg = 'Error loading jamaat times: $e';
-      });
-    } finally {
       setState(() {
         _adminLoading = false;
+        _adminMsg = 'Error loading jamaat times: $e';
       });
     }
   }
@@ -131,18 +128,33 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       }
 
       // Use JamaatService for consistent data structure
-      await _jamaatService.saveJamaatTimes(
-        city: _selectedCity,
-        date: _selectedDate,
-        times: times,
-      );
+      try {
+        await _jamaatService.saveJamaatTimes(
+          city: _selectedCity,
+          date: _selectedDate,
+          times: times,
+        );
 
-      debugPrint('Saved jamaat times for $_selectedCity on ${DateFormat('yyyy-MM-dd').format(_selectedDate)}: $times');
+        setState(() {
+          _isSuccess = true;
+          _message = 'Jamaat times saved successfully for $_selectedCity on ${DateFormat('MMM dd, yyyy').format(_selectedDate)}';
+        });
 
-      setState(() {
-        _message = 'Jamaat times saved successfully for $_selectedCity on ${_formatDate(_selectedDate)}';
-        _isSuccess = true;
-      });
+        // Clear success message after 3 seconds
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              _isSuccess = false;
+              _message = null;
+            });
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _isSuccess = false;
+          _message = 'Error saving jamaat times: $e';
+        });
+      }
     } catch (e) {
       debugPrint('Error saving jamaat times: $e');
       setState(() {
@@ -205,7 +217,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
         // Check CSV format and determine column mapping
         final header = csvData[0];
-        developer.log('CSV Header: $header', name: 'AdminJamaatPanel');
         
         // Determine column indices based on header
         int dateIndex = -1;
@@ -218,38 +229,28 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         
         for (int i = 0; i < header.length; i++) {
           final column = header[i].toString().toLowerCase().trim();
-          developer.log('Checking column $i: "$column"', name: 'AdminJamaatPanel');
           if (column.contains('date')) {
             dateIndex = i;
-            developer.log('Found Date column at index $i', name: 'AdminJamaatPanel');
           }
           else if (column.contains('fajr')) {
             fajrIndex = i;
-            developer.log('Found Fajr column at index $i', name: 'AdminJamaatPanel');
           }
           else if (column.contains('dhuhr') || column.contains('zuhr')) {
             dhuhrIndex = i;
-            developer.log('Found Dhuhr column at index $i', name: 'AdminJamaatPanel');
           }
           else if (column.contains('asr')) {
             asrIndex = i;
-            developer.log('Found Asr column at index $i', name: 'AdminJamaatPanel');
           }
           else if (column.contains('maghrib') || column.contains('magrib')) {
             maghribIndex = i;
-            developer.log('Found Maghrib column at index $i', name: 'AdminJamaatPanel');
           }
           else if (column.contains('sunset')) {
             sunsetIndex = i;
-            developer.log('Found Sunset column at index $i', name: 'AdminJamaatPanel');
           }
           else if (column.contains('isha')) {
             ishaIndex = i;
-            developer.log('Found Isha column at index $i', name: 'AdminJamaatPanel');
           }
         }
-        
-        developer.log('Column mapping: Date=$dateIndex, Fajr=$fajrIndex, Dhuhr=$dhuhrIndex, Asr=$asrIndex, Maghrib=$maghribIndex, Sunset=$sunsetIndex, Isha=$ishaIndex', name: 'AdminJamaatPanel');
         
         if (dateIndex == -1) {
           setState(() {
@@ -261,15 +262,12 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
         // Process CSV data
         int importedCount = 0;
-        developer.log('Total CSV rows to process: ${csvData.length - 1}', name: 'AdminJamaatPanel');
         for (int i = 1; i < csvData.length; i++) {
           final row = csvData[i];
-          developer.log('Processing row $i: $row', name: 'AdminJamaatPanel');
           if (row.length > dateIndex) {
             // Handle null values safely
             final date = row[dateIndex]?.toString() ?? '';
             if (date.isEmpty) {
-              developer.log('Skipping row $i: Empty date', name: 'AdminJamaatPanel');
               continue;
             }
 
@@ -297,7 +295,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                 row[sunsetIndex] != null && row[sunsetIndex].toString().trim().isNotEmpty) {
               final sunsetTime = row[sunsetIndex].toString().trim();
               times['maghrib'] = _calculateMaghribFromSunset(sunsetTime);
-              developer.log('Calculated Maghrib from sunset: $sunsetTime -> ${times['maghrib']}', name: 'AdminJamaatPanel');
             } else if (maghribIndex >= 0 && maghribIndex < row.length && 
                        row[maghribIndex] != null && row[maghribIndex].toString().trim().isNotEmpty) {
               times['maghrib'] = row[maghribIndex].toString().trim();
@@ -308,30 +305,21 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
               times['isha'] = row[ishaIndex].toString().trim();
             }
 
-            developer.log('Times found for row $i: $times', name: 'AdminJamaatPanel');
-
             // Only save if we have at least one time
             if (times.isNotEmpty) {
               try {
-                developer.log('Attempting to parse date: "$date"', name: 'AdminJamaatPanel');
                 final parsedDate = _parseDate(date);
                 if (parsedDate != null) {
-                  developer.log('Successfully parsed date: $parsedDate', name: 'AdminJamaatPanel');
                   await _jamaatService.saveJamaatTimes(
                     city: _selectedCity,
                     date: parsedDate,
                     times: times,
                   );
                   importedCount++;
-                  developer.log('Imported row $i: $date with ${times.length} times: $times', name: 'AdminJamaatPanel');
-                } else {
-                  developer.log('Error importing row $i: Invalid date format: $date', name: 'AdminJamaatPanel');
                 }
               } catch (e) {
-                developer.log('Error importing row $i: $e', name: 'AdminJamaatPanel');
+                debugPrint('Error importing row $i: $e');
               }
-            } else {
-              developer.log('Skipping row $i: No valid times found', name: 'AdminJamaatPanel');
             }
           }
         }
@@ -465,9 +453,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
     });
 
     try {
-      developer.log('Starting Savar Cantt generation for $_selectedYear', name: 'AdminJamaatPanel');
-      developer.log('Overwrite existing: $_overwriteExisting', name: 'AdminJamaatPanel');
-      developer.log('Selected city: $_selectedCity', name: 'AdminJamaatPanel');
       int generatedCount = 0;
       DateTime currentDate = DateTime(_selectedYear, 1, 1);
       final endDate = DateTime(_selectedYear, 12, 31);
@@ -480,7 +465,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
             date: currentDate,
           );
           if (existingTimes != null) {
-            developer.log('Skipping ${_formatDate(currentDate)} - data already exists', name: 'AdminJamaatPanel');
             currentDate = currentDate.add(const Duration(days: 1));
             continue;
           }
@@ -489,8 +473,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         // Get times based on date ranges for Savar Cantt
         final times = _getSavarCanttTimes(currentDate);
         
-        developer.log('Generated times for ${_formatDate(currentDate)}: $times', name: 'AdminJamaatPanel');
-
         await _jamaatService.saveJamaatTimes(
           city: _selectedCity,
           date: currentDate,
@@ -638,18 +620,9 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
     if (maghribPrayerTime != null) {
       final offset = _getMaghribOffset(_selectedCity);
       
-      // Debug logging
-      developer.log('Admin Panel - Maghrib prayer time: $maghribPrayerTime (type: ${maghribPrayerTime.runtimeType})', name: 'AdminJamaatPanel');
-      developer.log('Admin Panel - Maghrib prayer time formatted: ${DateFormat('HH:mm').format(maghribPrayerTime)}', name: 'AdminJamaatPanel');
-      developer.log('Admin Panel - Offset for $_selectedCity: $offset minutes', name: 'AdminJamaatPanel');
-      
       // Convert to local time before adding offset
       final localMaghribTime = maghribPrayerTime.toLocal();
       final maghribJamaatTime = localMaghribTime.add(Duration(minutes: offset));
-      
-      developer.log('Admin Panel - Local Maghrib prayer time: $localMaghribTime', name: 'AdminJamaatPanel');
-      developer.log('Admin Panel - Calculated Maghrib jamaat time: $maghribJamaatTime', name: 'AdminJamaatPanel');
-      developer.log('Admin Panel - Formatted Maghrib jamaat time: ${DateFormat('HH:mm').format(maghribJamaatTime)}', name: 'AdminJamaatPanel');
       
       return DateFormat('HH:mm').format(maghribJamaatTime);
     }
@@ -663,60 +636,47 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       final maghrib = sunset.add(const Duration(minutes: 3));
       return '${maghrib.hour.toString().padLeft(2, '0')}:${maghrib.minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      developer.log('Error calculating Maghrib from sunset $sunsetTime: $e', name: 'AdminJamaatPanel');
       return sunsetTime; // Return original time if parsing fails
     }
   }
 
   /// Parse date from various formats
   DateTime? _parseDate(String dateString) {
-    final trimmed = dateString.trim();
-    developer.log('Parsing date: "$trimmed"', name: 'AdminJamaatPanel');
     
     try {
       // Try ISO format first (YYYY-MM-DD)
-      final result = DateTime.parse(trimmed);
-      developer.log('Successfully parsed as ISO format: $result', name: 'AdminJamaatPanel');
+      final result = DateTime.parse(dateString);
       return result;
     } catch (e) {
-      developer.log('ISO format failed: $e', name: 'AdminJamaatPanel');
       // Try DD-MM-YYYY format (13-01-2025)
-      if (trimmed.contains('-') && trimmed.split('-').length == 3) {
-        final parts = trimmed.split('-');
-        developer.log('Trying DD-MM-YYYY format, parts: $parts', name: 'AdminJamaatPanel');
+      if (dateString.contains('-') && dateString.split('-').length == 3) {
+        final parts = dateString.split('-');
         if (parts.length == 3) {
           final day = int.tryParse(parts[0]);
           final month = int.tryParse(parts[1]);
           final year = int.tryParse(parts[2]);
-          developer.log('Parsed parts: day=$day, month=$month, year=$year', name: 'AdminJamaatPanel');
           if (day != null && month != null && year != null) {
-            final result = DateTime(year, month, day);
-            developer.log('Successfully parsed as DD-MM-YYYY: $result', name: 'AdminJamaatPanel');
-            return result;
+            return DateTime(year, month, day);
           }
         }
       }
       
       // Try DD/MM/YYYY format (8/1/2025)
-      if (trimmed.contains('/') && trimmed.split('/').length == 3) {
-        final parts = trimmed.split('/');
-        developer.log('Trying DD/MM/YYYY format, parts: $parts', name: 'AdminJamaatPanel');
+      if (dateString.contains('/') && dateString.split('/').length == 3) {
+        final parts = dateString.split('/');
         if (parts.length == 3) {
           final day = int.tryParse(parts[0]);
           final month = int.tryParse(parts[1]);
           final year = int.tryParse(parts[2]);
-          developer.log('Parsed parts: day=$day, month=$month, year=$year', name: 'AdminJamaatPanel');
           if (day != null && month != null && year != null) {
-            final result = DateTime(year, month, day);
-            developer.log('Successfully parsed as DD/MM/YYYY: $result', name: 'AdminJamaatPanel');
-            return result;
+            return DateTime(year, month, day);
           }
         }
       }
       
       // Try MM/DD/YYYY format (1/8/2025)
-      if (trimmed.contains('/') && trimmed.split('/').length == 3) {
-        final parts = trimmed.split('/');
+      if (dateString.contains('/') && dateString.split('/').length == 3) {
+        final parts = dateString.split('/');
         if (parts.length == 3) {
           final month = int.tryParse(parts[0]);
           final day = int.tryParse(parts[1]);
@@ -727,7 +687,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         }
       }
       
-      developer.log('Could not parse date: $trimmed', name: 'AdminJamaatPanel');
       return null;
     }
   }
@@ -821,7 +780,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                                     if (_jamaatControllers['Maghrib'] != null) {
                                       final calculatedMaghrib = _calculateMaghribJamaatTime();
                                       _jamaatControllers['Maghrib']!.text = calculatedMaghrib;
-                                      debugPrint('Updated Maghrib jamaat time for $_selectedCity: $calculatedMaghrib');
                                     }
                                   }
                                 },
@@ -844,7 +802,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                                     if (_jamaatControllers['Maghrib'] != null) {
                                       final calculatedMaghrib = _calculateMaghribJamaatTime();
                                       _jamaatControllers['Maghrib']!.text = calculatedMaghrib;
-                                      debugPrint('Updated Maghrib jamaat time for ${DateFormat('yyyy-MM-dd').format(_selectedDate)}: $calculatedMaghrib');
                                     }
                                   }
                                 },
