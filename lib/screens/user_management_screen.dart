@@ -55,22 +55,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         _error = null;
       });
 
-      debugPrint('=== LOADING USERS DEBUG ===');
       final users = await _authService.getAllUsers();
-      debugPrint('Total users loaded: ${users.length}');
-      
-      for (int i = 0; i < users.length; i++) {
-        final user = users[i];
-        debugPrint('User $i: ${user['email']} (${user['role']}) - UID: ${user['uid']}');
-      }
-      debugPrint('=== END LOADING USERS DEBUG ===');
 
       setState(() {
         _users = users;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading users: $e');
       setState(() {
         _error = 'Error loading users: $e';
         _isLoading = false;
@@ -86,7 +77,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       });
     } catch (e) {
       // Don't show error for stats, just log it
-      debugPrint('Error loading user stats: $e');
     }
   }
 
@@ -446,7 +436,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       });
     } catch (e) {
       // Handle error
-      debugPrint('Error updating user role: $e');
     }
   }
 

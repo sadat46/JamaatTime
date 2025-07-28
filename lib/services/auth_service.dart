@@ -111,13 +111,10 @@ class AuthService {
       throw Exception('Only superadmins can view all users');
     }
     
-    debugPrint('=== FIRESTORE QUERY DEBUG ===');
     final querySnapshot = await _firestore.collection('users').get();
-    debugPrint('Firestore query returned ${querySnapshot.docs.length} documents');
     
     final users = querySnapshot.docs.map((doc) {
       final data = doc.data();
-      debugPrint('Document ${doc.id}: ${data}');
       return {
         'uid': doc.id,
         'email': data['email'] ?? '',
@@ -127,9 +124,6 @@ class AuthService {
         'updated_at': data['updated_at'],
       };
     }).toList();
-    
-    debugPrint('Processed ${users.length} users');
-    debugPrint('=== END FIRESTORE QUERY DEBUG ===');
     
     return users;
   }
@@ -220,15 +214,10 @@ class AuthService {
       throw Exception('Only superadmins can migrate users');
     }
     
-    debugPrint('=== MIGRATING EXISTING USERS ===');
-    
     try {
       // Get all users from Firestore to see what exists
       final existingDocs = await _firestore.collection('users').get();
       final existingUserIds = existingDocs.docs.map((doc) => doc.id).toSet();
-      
-      debugPrint('Existing Firestore users: ${existingUserIds.length}');
-      debugPrint('Existing user IDs: $existingUserIds');
       
       // For now, we'll create a document for the current user if it doesn't exist
       // and provide instructions for manual migration
@@ -236,7 +225,6 @@ class AuthService {
       if (currentUser != null) {
         final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
         if (!userDoc.exists) {
-          debugPrint('Creating missing document for current user: ${currentUser.email}');
           await _firestore.collection('users').doc(currentUser.uid).set({
             'email': currentUser.email,
             'role': await getUserRole() == UserRole.superadmin ? 'superadmin' : 'user',
@@ -247,15 +235,12 @@ class AuthService {
       }
       
       // Create a helper method to manually add users
-      debugPrint('=== MANUAL MIGRATION INSTRUCTIONS ===');
-      debugPrint('To add missing users, call:');
-      debugPrint('await _authService.addUserToFirestore(userId, email, role)');
-      debugPrint('Example:');
-      debugPrint('await _authService.addUserToFirestore("user123", "user@example.com", "user")');
+      // To add missing users, call:
+      // await _authService.addUserToFirestore(userId, email, role)
+      // Example:
+      // await _authService.addUserToFirestore("user123", "user@example.com", "user")
       
-      debugPrint('=== MIGRATION COMPLETE ===');
     } catch (e) {
-      debugPrint('Migration error: $e');
       throw Exception('Error migrating users: $e');
     }
   }
@@ -266,15 +251,11 @@ class AuthService {
       throw Exception('Only superadmins can add users to Firestore');
     }
     
-    debugPrint('Adding user to Firestore: $email ($role)');
-    
     await _firestore.collection('users').doc(userId).set({
       'email': email,
       'role': role,
       'created_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
     });
-    
-    debugPrint('User added successfully: $email');
   }
 } 

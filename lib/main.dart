@@ -25,7 +25,6 @@ void main() async {
     );
   } catch (e) {
     // Handle initialization errors gracefully
-    debugPrint('Firebase initialization error: $e');
     // Continue with the app even if Firebase fails to initialize
   }
 
@@ -33,9 +32,7 @@ void main() async {
   try {
     final notificationService = NotificationService();
     await notificationService.initialize(null);
-    debugPrint('Notification service initialized successfully');
   } catch (e) {
-    debugPrint('Notification service initialization error: $e');
     // Continue with the app even if notification service fails to initialize
   }
 

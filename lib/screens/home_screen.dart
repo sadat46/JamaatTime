@@ -61,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    developer.log('HomeScreen initState', name: 'HomeScreen');
     tzdata.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
     // Ensure notification service is initialized with context
@@ -72,9 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeApp() async {
-    developer.log('Initializing app', name: 'HomeScreen');
-    developer.log('Notifications initialized', name: 'HomeScreen');
-
     // Use more accurate parameters for Bangladesh
     // Start with Muslim World League method which is generally more accurate for South Asia
     params = CalculationMethod.muslimWorldLeague();
@@ -114,12 +110,17 @@ class _HomeScreenState extends State<HomeScreen> {
     await _fetchJamaatTimes(selectedCity!);
     await _loadLastLocation();
 
+    // Initial prayer times calculation and notification scheduling
+    _updatePrayerTimes();
+    await _scheduleNotificationsIfNeeded();
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final newNow = DateTime.now();
       
       setState(() {
         _now = newNow;
-        _updatePrayerTimes();
+        // Only update the current time, don't trigger notification scheduling
+        // _updatePrayerTimes() is called elsewhere when needed
       });
     });
 
@@ -140,7 +141,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     
     try {
-      developer.log('Fetching jamaat times for city: $city, date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}', name: 'HomeScreen');
       
       // Use JamaatService for consistent data structure
       final times = await _jamaatService.getJamaatTimes(
@@ -149,8 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       
       if (times != null) {
-        developer.log('Loaded jamaat times for $city: $times', name: 'HomeScreen');
-        developer.log('Available keys: ${times.keys.toList()}', name: 'HomeScreen');
         
         setState(() {
           jamaatTimes = times;
@@ -165,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
           jamaatTimes = null;
           isLoadingJamaat = false;
         });
-        developer.log('No jamaat times found for $city', name: 'HomeScreen');
       }
     } catch (e) {
       setState(() {
@@ -173,7 +170,6 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoadingJamaat = false;
         jamaatError = 'Error loading Jamaat times: $e';
       });
-      developer.log('Error loading jamaat times for $city: $e', name: 'HomeScreen');
     }
   }
 
@@ -222,45 +218,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'Isha': isha,
     };
 
-    // Debug logging for prayer times
-    developer.log('Prayer times calculated for ${dateForCalculation.toString().split(' ')[0]}:', name: 'HomeScreen');
-    for (final entry in times.entries) {
-      if (entry.value != null) {
-        developer.log(
-          '${entry.key}: ${entry.value!.toString()} (${entry.value!.hour}:${entry.value!.minute.toString().padLeft(2, '0')})',
-          name: 'HomeScreen',
-        );
-      }
-    }
-
-    // Update the widget with real data
-    try {
-      // WidgetService.updatePrayerWidget(
-      //   currentPrayerName: _getCurrentPrayerName(),
-      //   currentPrayerTime: times[_getCurrentPrayerName()]?.toString() ?? '-',
-      //   remainingLabel: 'Remaining Time',
-      //   remainingTime: _getTimeToNextPrayer().isNegative
-      //       ? '--:--'
-      //       : '${_getTimeToNextPrayer().inHours.toString().padLeft(2, '0')}:${(_getTimeToNextPrayer().inMinutes.remainder(60)).toString().padLeft(2, '0')}',
-      //   fajrTime: fajr != null ? DateFormat('HH:mm').format(fajr) : '-',
-      //   asrTime: asr != null ? DateFormat('HH:mm').format(asr) : '-',
-      //   maghribTime: maghrib != null ? DateFormat('HH:mm').format(maghrib) : '-',
-      //   ishaTime: isha != null ? DateFormat('HH:mm').format(isha) : '-',
-      //   islamicDate: DateFormat('d MMMM, yyyy').format(_now),
-      //   location: currentPlaceName ?? selectedCity ?? '-',
-      // );
-    } catch (e) {
-      developer.log('Error updating widget: $e', name: 'HomeScreen');
-    }
-
-    // Only schedule notifications once per day or when jamaatTimes changes
-    _scheduleNotificationsIfNeeded();
-    
-    // Debug: Log current notification scheduling status
-    developer.log(
-      'Notification scheduling status - Scheduled: $_notificationsScheduled, Last date: ${_lastScheduledDate.toString()}',
-      name: 'HomeScreen',
-    );
   }
 
   Future<void> _scheduleNotificationsIfNeeded() async {
@@ -273,42 +230,24 @@ class _HomeScreenState extends State<HomeScreen> {
     // 1. Not scheduled yet today, OR
     // 2. Last scheduled date is different from today
     if (!_notificationsScheduled || _lastScheduledDate.isBefore(today)) {
-      developer.log(
-        'Scheduling notifications for today: ${today.toString()}',
-        name: 'HomeScreen',
-      );
       await _notificationService.scheduleAllNotifications(times, jamaatTimes);
       _notificationsScheduled = true;
       _lastScheduledDate = today;
-      developer.log('Notifications scheduled successfully', name: 'HomeScreen');
     }
   }
 
   /// Handle notification settings changes (like sound mode)
   Future<void> _handleNotificationSettingsChange() async {
     try {
-      developer.log(
-        'Handling notification settings change...',
-        name: 'HomeScreen',
-      );
-
+      
       // Reset notification scheduling flag to force rescheduling
       _notificationsScheduled = false;
       
       // Reschedule notifications with new settings
       if (jamaatTimes != null) {
         await _scheduleNotificationsIfNeeded();
-        developer.log(
-          'Notifications rescheduled after settings change',
-          name: 'HomeScreen',
-        );
       }
     } catch (e) {
-      developer.log(
-        'Error handling notification settings change: $e',
-        name: 'HomeScreen',
-        error: e,
-      );
     }
   }
 
@@ -522,18 +461,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (maghribPrayerTime != null && selectedCity != null) {
       final offset = _getMaghribOffset(selectedCity!);
       
-      // Debug logging
-      developer.log('Maghrib prayer time: $maghribPrayerTime (type: ${maghribPrayerTime.runtimeType})', name: 'HomeScreen');
-      developer.log('Maghrib prayer time formatted: ${DateFormat('HH:mm').format(maghribPrayerTime)}', name: 'HomeScreen');
-      developer.log('Offset for $selectedCity: $offset minutes', name: 'HomeScreen');
-      
       // Convert to local time before adding offset
       final localMaghribTime = maghribPrayerTime.toLocal();
       final maghribJamaatTime = localMaghribTime.add(Duration(minutes: offset));
-      
-      developer.log('Local Maghrib prayer time: $localMaghribTime', name: 'HomeScreen');
-      developer.log('Calculated Maghrib jamaat time: $maghribJamaatTime', name: 'HomeScreen');
-      developer.log('Formatted Maghrib jamaat time: ${DateFormat('HH:mm').format(maghribJamaatTime)}', name: 'HomeScreen');
       
       return DateFormat('HH:mm').format(maghribJamaatTime);
     }
@@ -899,32 +829,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               jamaatKey = name.toLowerCase();
                           }
                           
-                          // Debug logging for jamaat times mapping
-                          if (jamaatTimes != null) {
-                            developer.log('For $name - Looking for key: $jamaatKey, available keys: ${jamaatTimes!.keys.toList()}', name: 'HomeScreen');
-                            developer.log('Value for $jamaatKey: ${jamaatTimes![jamaatKey]}', name: 'HomeScreen');
-                          }
-                          
                           String jamaatStr = '-';
                           if (name == 'Maghrib') {
                             // For Maghrib, use calculated time from prayer time
                             jamaatStr = _calculateMaghribJamaatTime();
-                            developer.log('Calculated Maghrib jamaat time: $jamaatStr (offset: ${_getMaghribOffset(selectedCity ?? '')} min)', name: 'HomeScreen');
                           } else if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
                             final value = jamaatTimes![jamaatKey];
-                            developer.log('Raw value for $jamaatKey: $value (type: ${value.runtimeType})', name: 'HomeScreen');
                             if (value != null && value.toString().isNotEmpty) {
                               jamaatStr = _formatJamaatTime(value.toString());
-                              developer.log('Formatted jamaat time for $jamaatKey: $jamaatStr', name: 'HomeScreen');
                             }
-                          } else {
-                            developer.log('No jamaat time found for key: $jamaatKey', name: 'HomeScreen');
-                          }
-                          
-                          // Debug logging for jamaat times
-                          if (jamaatTimes != null && (name == 'Fajr' || name == 'Maghrib')) {
-                            developer.log('For $name - Looking for key: $jamaatKey, found: ${jamaatTimes![jamaatKey]}', name: 'HomeScreen');
-                            developer.log('All available keys: ${jamaatTimes!.keys.toList()}', name: 'HomeScreen');
                           }
                           final isCurrent = name == _getCurrentPrayerName();
                           return TableRow(

@@ -23,11 +23,6 @@ class NotificationService {
     if (_isInitialized) return;
     
     try {
-      developer.log(
-        'Initializing notification service',
-        name: 'NotificationService',
-      );
-      
       tzdata.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
 
@@ -44,16 +39,8 @@ class NotificationService {
       final bool? initialized = await flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          developer.log(
-            'Notification tapped: ${response.payload}',
-            name: 'NotificationService',
-          );
+          // Handle notification tap
         },
-      );
-
-      developer.log(
-        'Notification plugin initialized: $initialized',
-        name: 'NotificationService',
       );
 
       // Create notification channel for Android
@@ -62,64 +49,19 @@ class NotificationService {
       }
 
       // Request notification permissions for Android 13+ and iOS
-      try {
-        if (Platform.isAndroid) {
-          final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-              flutterLocalNotificationsPlugin
-                  .resolvePlatformSpecificImplementation<
-                    AndroidFlutterLocalNotificationsPlugin
-                  >();
-          if (androidImplementation != null) {
-            final granted = await androidImplementation
-                .requestNotificationsPermission();
-            developer.log(
-              'Android notification permission granted: $granted',
-              name: 'NotificationService',
-            );
-            if (context != null && granted != true && context.mounted) {
-              _showPermissionDialog(context);
-            }
-          }
-        } else if (Platform.isIOS) {
-          final IOSFlutterLocalNotificationsPlugin? iosImplementation =
-              flutterLocalNotificationsPlugin
-                  .resolvePlatformSpecificImplementation<
-                    IOSFlutterLocalNotificationsPlugin
-                  >();
-          if (iosImplementation != null) {
-            final granted = await iosImplementation.requestPermissions(
-              alert: true,
-              badge: true,
-              sound: true,
-            );
-            developer.log(
-              'iOS notification permission granted: $granted',
-              name: 'NotificationService',
-            );
-            if (context != null && granted != true && context.mounted) {
-              _showPermissionDialog(context);
-            }
-          }
+      if (Platform.isAndroid) {
+        final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+            flutterLocalNotificationsPlugin
+                .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin
+                >();
+        if (androidImplementation != null) {
+          await androidImplementation.requestNotificationsPermission();
         }
-      } catch (e) {
-        developer.log(
-          'Error requesting notification permissions: $e',
-          name: 'NotificationService',
-          error: e,
-        );
       }
 
       _isInitialized = true;
-      developer.log(
-        'Notification service initialized successfully',
-        name: 'NotificationService',
-      );
     } catch (e) {
-      developer.log(
-        'Error initializing notification service: $e',
-        name: 'NotificationService',
-        error: e,
-      );
       // Don't set _isInitialized to true if initialization failed
     }
   }
@@ -578,10 +520,6 @@ class NotificationService {
     Map<String, DateTime?> prayerTimes,
   ) async {
     try {
-      developer.log(
-        'Scheduling prayer notifications for ${prayerTimes.length} prayers',
-        name: 'NotificationService',
-      );
       int scheduledCount = 0;
       final now = DateTime.now();
 
@@ -593,10 +531,11 @@ class NotificationService {
       for (final prayer in mainPrayers) {
         final time = prayerTimes[prayer];
         if (time != null) {
+          // Use the actual date from the prayer time, not the current date
           prayerTimeMap[prayer] = DateTime(
-            now.year,
-            now.month,
-            now.day,
+            time.year,
+            time.month,
+            time.day,
             time.hour,
             time.minute,
           );
@@ -625,34 +564,11 @@ class NotificationService {
               notificationType: 'prayer',
             );
             scheduledCount++;
-            developer.log(
-              'Scheduled $currentPrayer prayer notification for ${notifyTime.toString()} (20 min before $nextPrayer)',
-              name: 'NotificationService',
-            );
-          } else {
-            developer.log(
-              'Skipping $currentPrayer prayer notification - notification time already passed (${notifyTime.toString()})',
-              name: 'NotificationService',
-            );
           }
-        } else {
-          developer.log(
-            'Skipping $currentPrayer prayer notification - missing prayer time data',
-            name: 'NotificationService',
-          );
         }
       }
-      
-      developer.log(
-        'Scheduled $scheduledCount prayer notifications',
-        name: 'NotificationService',
-      );
     } catch (e) {
-      developer.log(
-        'Error scheduling prayer notifications: $e',
-        name: 'NotificationService',
-        error: e,
-      );
+      // Handle error silently
     }
   }
 
@@ -661,10 +577,6 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
-      developer.log(
-        'Scheduling Jamaat notifications',
-        name: 'NotificationService',
-      );
       if (jamaatTimes != null) {
         int scheduledCount = 0;
         final now = DateTime.now();
@@ -700,37 +612,16 @@ class NotificationService {
                     notificationType: 'jamaat',
                   );
                   scheduledCount++;
-                  developer.log(
-                    'Scheduled $name Jamaat notification for ${notifyTime.toString()}',
-                    name: 'NotificationService',
-                  );
-                } else {
-                  developer.log(
-                    'Skipping $name Jamaat notification - notification time already passed (${notifyTime.toString()})',
-                    name: 'NotificationService',
-                  );
                 }
               }
             } catch (e) {
-              developer.log(
-                'Error parsing Jamaat time for $name: $e',
-                name: 'NotificationService',
-                error: e,
-              );
+              // Handle parsing error silently
             }
           }
         }
-        developer.log(
-          'Scheduled $scheduledCount Jamaat notifications',
-          name: 'NotificationService',
-        );
       }
     } catch (e) {
-      developer.log(
-        'Error scheduling Jamaat notifications: $e',
-        name: 'NotificationService',
-        error: e,
-      );
+      // Handle error silently
     }
   }
 
@@ -740,23 +631,11 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
-      developer.log(
-        'Starting to schedule all notifications',
-        name: 'NotificationService',
-      );
       await cancelAllNotifications();
       await schedulePrayerNotifications(prayerTimes);
       await scheduleJamaatNotifications(jamaatTimes);
-      developer.log(
-        'All notifications scheduled successfully',
-        name: 'NotificationService',
-      );
     } catch (e) {
-      developer.log(
-        'Error in scheduleAllNotifications: $e',
-        name: 'NotificationService',
-        error: e,
-      );
+      // Handle error silently
     }
   }
 

@@ -46,15 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isAdmin = await _authService.isAdmin();
     final isSuperAdmin = await _authService.isSuperAdmin();
     
-    // Debug: Print role information
-    final userRole = await _authService.getUserRole();
-    debugPrint('=== ROLE DEBUG INFO ===');
-    debugPrint('User Email: ${_authService.currentUser?.email}');
-    debugPrint('User Role: $userRole');
-    debugPrint('Is Admin: $isAdmin');
-    debugPrint('Is SuperAdmin: $isSuperAdmin');
-    debugPrint('======================');
-    
     setState(() {
       _isAdmin = isAdmin;
       _isSuperAdmin = isSuperAdmin;
