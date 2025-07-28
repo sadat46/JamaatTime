@@ -213,20 +213,6 @@ class AuthService {
     };
   }
 
-  /// Temporary debug function to force superadmin role
-  /// Remove this after testing
-  Future<void> forceSuperAdminRole() async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'email': user.email,
-        'role': 'superadmin',
-        'created_at': FieldValue.serverTimestamp(),
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    }
-  }
-
   /// Migrate existing Firebase Auth users to Firestore
   /// This helps with users who registered before Firestore integration
   Future<void> migrateExistingUsers() async {

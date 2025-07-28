@@ -367,7 +367,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
 
     return DropdownButton<String>(
-      value: currentRole,
+      value: user['newRole'] ?? currentRole, // Use newRole if set, otherwise currentRole
       underline: Container(),
       style: const TextStyle(fontSize: 14),
       items: const [
@@ -375,11 +375,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         DropdownMenuItem(value: 'admin', child: Text('Admin')),
       ],
       onChanged: (newRole) {
-        if (newRole != null && newRole != currentRole) {
+        if (newRole != null) {
           setState(() {
-            // Update the user's role in the local list
-            user['role'] = newRole;
-            user['pendingUpdate'] = true; // Mark for update
+            // Store the new role separately from the current role
+            user['newRole'] = newRole;
+            user['pendingUpdate'] = newRole != currentRole; // Only mark for update if different
           });
         }
       },
@@ -412,7 +412,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ),
       ),
       child: Text(
-        hasPendingUpdate ? 'Update' : 'No Changes',
+        hasPendingUpdate ? 'Save' : 'No Changes',
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
@@ -421,15 +421,28 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Future<void> _updateUserRoleFromTable(Map<String, dynamic> user) async {
     final userId = user['uid'];
     final currentRole = user['role'] ?? 'user';
+    final newRoleString = user['newRole'] ?? currentRole;
     final email = user['email'] ?? 'Unknown';
     
     try {
-      final newRole = currentRole == 'admin' ? UserRole.user : UserRole.admin;
+      // Convert string role to UserRole enum
+      UserRole newRole;
+      switch (newRoleString) {
+        case 'admin':
+          newRole = UserRole.admin;
+          break;
+        case 'user':
+        default:
+          newRole = UserRole.user;
+          break;
+      }
+      
       await _updateUserRole(userId, currentRole, newRole);
       
-      // Clear the pending update flag
+      // Clear the pending update flag and newRole
       setState(() {
         user['pendingUpdate'] = false;
+        user['newRole'] = null;
       });
     } catch (e) {
       // Handle error
@@ -575,8 +588,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 Wrap(
-                                  spacing: 16,
-                                  runSpacing: 16,
+                                  spacing: 14,
+                                  runSpacing: 14,
                                   alignment: WrapAlignment.spaceEvenly,
                                   children: [
                                     _buildStatCard('Total Users', _userStats!['total_users'].toString(), Colors.blue),
@@ -676,6 +689,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                       ),
                                       DataColumn(
                                         label: Text(
+                                          'New Role',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      DataColumn(
+                                        label: Text(
                                           'Action',
                                           style: TextStyle(fontWeight: FontWeight.bold),
                                         ),
@@ -729,6 +748,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                             ),
                                           ),
                                           DataCell(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _getRoleColor(user['role'] ?? 'user').withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: _getRoleColor(user['role'] ?? 'user')),
+                                              ),
+                                              child: Text(
+                                                (user['role'] ?? 'user').toUpperCase(),
+                                                style: TextStyle(
+                                                  color: _getRoleColor(user['role'] ?? 'user'),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          DataCell(
                                             isCurrentUser
                                                 ? Container(
                                                     padding: const EdgeInsets.symmetric(
@@ -740,9 +780,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                       borderRadius: BorderRadius.circular(8),
                                                       border: Border.all(color: Colors.green),
                                                     ),
-                                                    child: Text(
-                                                      user['role']?.toUpperCase() ?? 'USER',
-                                                      style: const TextStyle(
+                                                    child: const Text(
+                                                      'CURRENT USER',
+                                                      style: TextStyle(
                                                         color: Colors.green,
                                                         fontWeight: FontWeight.bold,
                                                         fontSize: 12,
