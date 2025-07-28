@@ -746,18 +746,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                           ),
                                         ),
-                                        // Debug button
-                                        TextButton(
-                                          onPressed: () {
-                                            if (selectedCity != null) {
-                                              _fetchJamaatTimes(selectedCity!);
-                                            }
-                                          },
-                                          child: const Text(
-                                            'Debug Fetch',
-                                            style: TextStyle(fontSize: 12, color: Colors.blue),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 8),

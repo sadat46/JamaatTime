@@ -256,61 +256,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                         child: const Text('Logout'),
                           ),
-                          const SizedBox(height: 4),
-                          // Debug buttons in a more compact layout
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextButton(
-                                onPressed: () async {
-                                  await _checkAdmin();
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Role check completed. Check debug console for details.'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: const Text(
-                                  'Debug Role',
-                                  style: TextStyle(fontSize: 10, color: Colors.grey),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  try {
-                                    await _authService.forceSuperAdminRole();
-                                    await _checkAdmin();
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Superadmin role forced! Please refresh.'),
-                                          backgroundColor: Colors.green,
-                                          duration: Duration(seconds: 3),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
-                                          duration: const Duration(seconds: 3),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                child: const Text(
-                                  'Force Super',
-                                  style: TextStyle(fontSize: 10, color: Colors.orange),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ],
