@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -204,8 +202,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       backgroundColor: Colors.green,
                     ),
                   );
-                  
-                  // Refresh the user list
+                }
+                
+                // Refresh the user list
+                if (mounted) {
                   await _loadUsers();
                   await _loadUserStats();
                 }
@@ -231,10 +231,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     try {
       await _authService.updateUserRole(userId, newRole);
       
-      // Refresh data
-      await _loadUsers();
-      await _loadUserStats();
-      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -243,6 +239,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
+      }
+      
+      // Refresh data
+      if (mounted) {
+        await _loadUsers();
+        await _loadUserStats();
       }
     } catch (e) {
       if (mounted) {
@@ -257,6 +259,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
+  /// Note: This function is currently unused
+  /*
   Future<void> _deleteUser(String userId, String email) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -307,7 +311,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       }
     }
   }
+  */
 
+  /// Note: This function is currently unused
+  /*
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
     try {
@@ -319,6 +326,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       return 'N/A';
     }
   }
+  */
 
   Color _getRoleColor(String role) {
     switch (role) {
@@ -412,7 +420,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final userId = user['uid'];
     final currentRole = user['role'] ?? 'user';
     final newRoleString = user['newRole'] ?? currentRole;
-    final email = user['email'] ?? 'Unknown';
+    // final email = user['email'] ?? 'Unknown'; // Unused variable
     
     try {
       // Convert string role to UserRole enum
