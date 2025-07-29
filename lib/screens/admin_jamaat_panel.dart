@@ -510,13 +510,13 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         fajrTime = '05:35';
       } else {
         fajrTime = '05:20';
-      }
+    }
     } else if (month == 4) {
       if (day <= 15) {
         fajrTime = '05:00';
       } else {
         fajrTime = '04:45';
-      }
+    }
     } else if (month == 5) {
       fajrTime = '04:35';
     } else if (month == 6) {
@@ -555,7 +555,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         asrTime = '16:25';
       } else {
         asrTime = '16:15';
-      }
+    }
     } else if (month == 11 || month == 12) {
       asrTime = '16:05';
     }
@@ -571,13 +571,13 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         maghribTime = '18:45';
       } else {
         maghribTime = '19:00';
-      }
+    }
     } else if (month == 4) {
       if (day <= 15) {
         maghribTime = '19:15';
       } else {
         maghribTime = '19:30';
-      }
+    }
     } else if (month == 5) {
       maghribTime = '19:45';
     } else if (month == 6) {
@@ -591,13 +591,13 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         maghribTime = '18:45';
       } else {
         maghribTime = '18:30';
-      }
+    }
     } else if (month == 10) {
       if (day <= 15) {
         maghribTime = '18:15';
       } else {
         maghribTime = '18:00';
-      }
+    }
     } else if (month == 11) {
       maghribTime = '17:45';
     } else if (month == 12) {
