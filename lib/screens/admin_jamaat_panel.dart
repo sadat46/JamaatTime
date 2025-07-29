@@ -3,10 +3,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import '../services/jamaat_service.dart';
 import '../core/constants.dart';
-import 'dart:developer' as developer;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminJamaatPanel extends StatefulWidget {
   const AdminJamaatPanel({super.key});
@@ -502,76 +501,124 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
     // Fajr times
     String fajrTime = '05:50'; // Default
-    if (month == 1) fajrTime = '05:50';
-    else if (month == 2) fajrTime = '05:50';
-    else if (month == 3) {
-      if (day <= 15) fajrTime = '05:35';
-      else fajrTime = '05:20';
+    if (month == 1) {
+      fajrTime = '05:50';
+    } else if (month == 2) {
+      fajrTime = '05:50';
+    } else if (month == 3) {
+      if (day <= 15) {
+        fajrTime = '05:35';
+      } else {
+        fajrTime = '05:20';
+      }
+    } else if (month == 4) {
+      if (day <= 15) {
+        fajrTime = '05:00';
+      } else {
+        fajrTime = '04:45';
+      }
+    } else if (month == 5) {
+      fajrTime = '04:35';
+    } else if (month == 6) {
+      fajrTime = '04:35';
+    } else if (month == 8) {
+      fajrTime = '04:50';
+    } else if (month == 9) {
+      fajrTime = '05:05';
+    } else if (month == 10) {
+      fajrTime = '05:15';
+    } else if (month == 11) {
+      fajrTime = '05:35';
+    } else if (month == 12) {
+      fajrTime = '05:50';
     }
-    else if (month == 4) {
-      if (day <= 15) fajrTime = '05:00';
-      else fajrTime = '04:45';
-    }
-    else if (month == 5) fajrTime = '04:35';
-    else if (month == 6) fajrTime = '04:35';
-    else if (month == 8) fajrTime = '04:50';
-    else if (month == 9) fajrTime = '05:05';
-    else if (month == 10) fajrTime = '05:15';
-    else if (month == 11) fajrTime = '05:35';
-    else if (month == 12) fajrTime = '05:50';
 
     // Dhuhr time (same all year)
     const dhuhrTime = '13:15';
 
     // Asr times
     String asrTime = '16:25'; // Default
-    if (month == 1) asrTime = '16:25';
-    else if (month == 2) asrTime = '16:40';
-    else if (month == 3 || month == 4) asrTime = '16:50';
-    else if (month == 5 || (month == 6 && day <= 22)) asrTime = '17:00';
-    else if ((month == 6 && day >= 23) || month == 7 || month == 8) asrTime = '17:15';
-    else if (month == 9) asrTime = '16:45';
-    else if (month == 10) {
-      if (day <= 15) asrTime = '16:25';
-      else asrTime = '16:15';
+    if (month == 1) {
+      asrTime = '16:25';
+    } else if (month == 2) {
+      asrTime = '16:40';
+    } else if (month == 3 || month == 4) {
+      asrTime = '16:50';
+    } else if (month == 5 || (month == 6 && day <= 22)) {
+      asrTime = '17:00';
+    } else if ((month == 6 && day >= 23) || month == 7 || month == 8) {
+      asrTime = '17:15';
+    } else if (month == 9) {
+      asrTime = '16:45';
+    } else if (month == 10) {
+      if (day <= 15) {
+        asrTime = '16:25';
+      } else {
+        asrTime = '16:15';
+      }
+    } else if (month == 11 || month == 12) {
+      asrTime = '16:05';
     }
-    else if (month == 11 || month == 12) asrTime = '16:05';
 
     // Maghrib times (approximate based on sunset + 3 minutes)
     String maghribTime = '18:15'; // Default
-    if (month == 1) maghribTime = '18:15';
-    else if (month == 2) maghribTime = '18:30';
-    else if (month == 3) {
-      if (day <= 15) maghribTime = '18:45';
-      else maghribTime = '19:00';
+    if (month == 1) {
+      maghribTime = '18:15';
+    } else if (month == 2) {
+      maghribTime = '18:30';
+    } else if (month == 3) {
+      if (day <= 15) {
+        maghribTime = '18:45';
+      } else {
+        maghribTime = '19:00';
+      }
+    } else if (month == 4) {
+      if (day <= 15) {
+        maghribTime = '19:15';
+      } else {
+        maghribTime = '19:30';
+      }
+    } else if (month == 5) {
+      maghribTime = '19:45';
+    } else if (month == 6) {
+      maghribTime = '20:00';
+    } else if (month == 7) {
+      maghribTime = '19:45';
+    } else if (month == 8) {
+      maghribTime = '19:15';
+    } else if (month == 9) {
+      if (day <= 15) {
+        maghribTime = '18:45';
+      } else {
+        maghribTime = '18:30';
+      }
+    } else if (month == 10) {
+      if (day <= 15) {
+        maghribTime = '18:15';
+      } else {
+        maghribTime = '18:00';
+      }
+    } else if (month == 11) {
+      maghribTime = '17:45';
+    } else if (month == 12) {
+      maghribTime = '17:30';
     }
-    else if (month == 4) {
-      if (day <= 15) maghribTime = '19:15';
-      else maghribTime = '19:30';
-    }
-    else if (month == 5) maghribTime = '19:45';
-    else if (month == 6) maghribTime = '20:00';
-    else if (month == 7) maghribTime = '19:45';
-    else if (month == 8) maghribTime = '19:15';
-    else if (month == 9) {
-      if (day <= 15) maghribTime = '18:45';
-      else maghribTime = '18:30';
-    }
-    else if (month == 10) {
-      if (day <= 15) maghribTime = '18:15';
-      else maghribTime = '18:00';
-    }
-    else if (month == 11) maghribTime = '17:45';
-    else if (month == 12) maghribTime = '17:30';
 
     // Isha times
     String ishaTime = '19:45'; // Default
-    if ((month == 1) || (month == 2) || (month == 3 && day <= 15)) ishaTime = '19:45';
-    else if ((month == 3 && day >= 16) || (month == 4 && day <= 15)) ishaTime = '20:00';
-    else if ((month == 4 && day >= 16) || month == 5 || month == 6 || month == 7 || (month == 8 && day <= 15)) ishaTime = '20:35';
-    else if ((month == 8 && day >= 16) || (month == 9 && day <= 15)) ishaTime = '20:15';
-    else if ((month == 9 && day >= 16) || (month == 10 && day <= 15)) ishaTime = '19:35';
-    else if ((month == 10 && day >= 16) || month == 11 || month == 12) ishaTime = '19:15';
+    if ((month == 1) || (month == 2) || (month == 3 && day <= 15)) {
+      ishaTime = '19:45';
+    } else if ((month == 3 && day >= 16) || (month == 4 && day <= 15)) {
+      ishaTime = '20:00';
+    } else if ((month == 4 && day >= 16) || month == 5 || month == 6 || month == 7 || (month == 8 && day <= 15)) {
+      ishaTime = '20:35';
+    } else if ((month == 8 && day >= 16) || (month == 9 && day <= 15)) {
+      ishaTime = '20:15';
+    } else if ((month == 9 && day >= 16) || (month == 10 && day <= 15)) {
+      ishaTime = '19:35';
+    } else if ((month == 10 && day >= 16) || month == 11 || month == 12) {
+      ishaTime = '19:15';
+    }
 
     return {
       'fajr': fajrTime,
