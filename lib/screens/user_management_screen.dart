@@ -203,8 +203,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ),
                   );
                 }
-                
-                // Refresh the user list
+                  
+                  // Refresh the user list
                 if (mounted) {
                   await _loadUsers();
                   await _loadUserStats();

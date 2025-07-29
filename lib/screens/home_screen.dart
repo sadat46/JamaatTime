@@ -613,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               child: ValueListenableBuilder<DateTime>(
                                                 valueListenable: _timeNotifier,
                                                 builder: (context, time, child) {
-                                                  final timeStr = DateFormat('HH:mm:ss').format(time);
+                                                  final timeStr = DateFormat('HH:mm').format(time);
                                                   return Text(
                                                     timeStr,
                                                     style: Theme.of(context)

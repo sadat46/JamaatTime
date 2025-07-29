@@ -19,7 +19,7 @@ class NotificationService {
   /// Initialize notification service
   Future<void> initialize([BuildContext? context]) async {
     if (_isInitialized) return;
-
+    
     try {
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/launcher_icon');
@@ -33,9 +33,9 @@ class NotificationService {
 
       const InitializationSettings initializationSettings =
           InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: initializationSettingsIOS,
-      );
+            android: initializationSettingsAndroid,
+            iOS: initializationSettingsIOS,
+          );
 
       await flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
@@ -387,56 +387,210 @@ class NotificationService {
     }
   }
 
+  /// Calculate prayer notification times without scheduling them
+  /// Returns a map of prayer names to their notification times
+  Map<String, DateTime?> calculatePrayerNotificationTimes(
+    Map<String, DateTime?> prayerTimes,
+  ) {
+    try {
+      final now = DateTime.now();
+      final Map<String, DateTime?> notificationTimes = {};
+
+      // Convert prayer times to Bangladesh timezone before calculation
+      final Map<String, DateTime> localPrayerTimes = {};
+      for (final entry in prayerTimes.entries) {
+        if (entry.value != null) {
+          // Convert to Bangladesh timezone
+          final localTime = tz.TZDateTime.from(entry.value!, tz.getLocation('Asia/Dhaka'));
+          localPrayerTimes[entry.key] = localTime;
+        }
+      }
+
+      // Calculate notification times with correct logic using local prayer times:
+      // Fajr notification = 20 minutes before Sunrise
+      if (localPrayerTimes.containsKey('Fajr') && localPrayerTimes.containsKey('Sunrise')) {
+        final sunriseTime = localPrayerTimes['Sunrise']!;
+        final notifyTime = sunriseTime.subtract(const Duration(minutes: 20));
+        notificationTimes['Fajr'] = notifyTime;
+      }
+      
+      // Dhuhr notification = 20 minutes before Asr
+      if (localPrayerTimes.containsKey('Dhuhr') && localPrayerTimes.containsKey('Asr')) {
+        final asrTime = localPrayerTimes['Asr']!;
+        final notifyTime = asrTime.subtract(const Duration(minutes: 20));
+        notificationTimes['Dhuhr'] = notifyTime;
+      }
+      
+      // Asr notification = 20 minutes before Maghrib
+      if (localPrayerTimes.containsKey('Asr') && localPrayerTimes.containsKey('Maghrib')) {
+        final maghribTime = localPrayerTimes['Maghrib']!;
+        final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
+        notificationTimes['Asr'] = notifyTime;
+      }
+      
+      // Maghrib notification = 20 minutes before Isha
+      if (localPrayerTimes.containsKey('Maghrib') && localPrayerTimes.containsKey('Isha')) {
+        final ishaTime = localPrayerTimes['Isha']!;
+        final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
+        notificationTimes['Maghrib'] = notifyTime;
+      }
+      
+      // Isha notification = 20 minutes before next day's Fajr
+      if (localPrayerTimes.containsKey('Isha') && localPrayerTimes.containsKey('Fajr')) {
+        final fajrTime = localPrayerTimes['Fajr']!;
+        // Add 1 day to Fajr time for next day
+        final nextDayFajr = fajrTime.add(const Duration(days: 1));
+        final notifyTime = nextDayFajr.subtract(const Duration(minutes: 20));
+        notificationTimes['Isha'] = notifyTime;
+      }
+      
+      return notificationTimes;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// Calculate jamaat notification times without scheduling them
+  /// Returns a map of prayer names to their jamaat notification times
+  Map<String, DateTime?> calculateJamaatNotificationTimes(
+    Map<String, dynamic>? jamaatTimes,
+  ) {
+    try {
+      final now = DateTime.now();
+      final Map<String, DateTime?> notificationTimes = {};
+
+      if (jamaatTimes != null) {
+        for (final entry in jamaatTimes.entries) {
+          final name = entry.key;
+          final value = entry.value;
+          if (value != null && value is String && value.isNotEmpty && value != '-') {
+            try {
+              final parts = value.split(':');
+              if (parts.length == 2) {
+                final jamaatTime = DateTime(
+                  now.year,
+                  now.month,
+                  now.day,
+                  int.parse(parts[0]),
+                  int.parse(parts[1]),
+                );
+                final notifyTime = jamaatTime.subtract(
+                  const Duration(minutes: 10),
+                );
+
+                // Store the notification time (regardless of whether it's in the future)
+                notificationTimes[name] = notifyTime;
+              }
+            } catch (e) {
+              // Handle parsing error silently
+            }
+          }
+        }
+      }
+      
+      return notificationTimes;
+    } catch (e) {
+      return {};
+    }
+  }
+
   /// Schedule prayer notifications
   Future<void> schedulePrayerNotifications(
     Map<String, DateTime?> prayerTimes,
   ) async {
     try {
-      // int scheduledCount = 0; // Count for debugging if needed
       final now = DateTime.now();
-
-      // Define the 5 main prayers in order
-      final mainPrayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
       
-      // Create a map of prayer times for easier lookup
-      final Map<String, DateTime> prayerTimeMap = {};
-      for (final prayer in mainPrayers) {
-        final time = prayerTimes[prayer];
-        if (time != null) {
-          // Use the actual date from the prayer time, not the current date
-          prayerTimeMap[prayer] = DateTime(
-            time.year,
-            time.month,
-            time.day,
-            time.hour,
-            time.minute,
+      // Convert prayer times to Bangladesh timezone before calculation
+      final Map<String, DateTime> localPrayerTimes = {};
+      for (final entry in prayerTimes.entries) {
+        if (entry.value != null) {
+          // Convert to Bangladesh timezone
+          final localTime = tz.TZDateTime.from(entry.value!, tz.getLocation('Asia/Dhaka'));
+          localPrayerTimes[entry.key] = localTime;
+        }
+      }
+      
+      // Schedule notifications with correct logic using local prayer times:
+      // Fajr notification = 20 minutes before Sunrise
+      if (localPrayerTimes.containsKey('Fajr') && localPrayerTimes.containsKey('Sunrise')) {
+        final sunriseTime = localPrayerTimes['Sunrise']!;
+        final notifyTime = sunriseTime.subtract(const Duration(minutes: 20));
+        
+        if (notifyTime.isAfter(now)) {
+          await scheduleNotification(
+            id: 'Fajr'.hashCode,
+            title: 'Fajr Prayer',
+            body: 'Fajr time remaining 20 minutes.',
+            scheduledTime: notifyTime,
+            notificationType: 'prayer',
           );
         }
       }
       
-      // Schedule notifications for each prayer (triggered 20 minutes before next prayer)
-      for (int i = 0; i < mainPrayers.length; i++) {
-        final currentPrayer = mainPrayers[i];
-        final nextPrayer = mainPrayers[(i + 1) % mainPrayers.length]; // Wrap around for Isha -> Fajr
+      // Dhuhr notification = 20 minutes before Asr
+      if (localPrayerTimes.containsKey('Dhuhr') && localPrayerTimes.containsKey('Asr')) {
+        final asrTime = localPrayerTimes['Asr']!;
+        final notifyTime = asrTime.subtract(const Duration(minutes: 20));
         
-        final currentPrayerTime = prayerTimeMap[currentPrayer];
-        final nextPrayerTime = prayerTimeMap[nextPrayer];
+        if (notifyTime.isAfter(now)) {
+          await scheduleNotification(
+            id: 'Dhuhr'.hashCode,
+            title: 'Dhuhr Prayer',
+            body: 'Dhuhr time remaining 20 minutes.',
+            scheduledTime: notifyTime,
+            notificationType: 'prayer',
+          );
+        }
+      }
+      
+      // Asr notification = 20 minutes before Maghrib
+      if (localPrayerTimes.containsKey('Asr') && localPrayerTimes.containsKey('Maghrib')) {
+        final maghribTime = localPrayerTimes['Maghrib']!;
+        final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
         
-        if (currentPrayerTime != null && nextPrayerTime != null) {
-          // Calculate notification time (20 minutes before next prayer)
-          final notifyTime = nextPrayerTime.subtract(const Duration(minutes: 20));
-          
-          // Only schedule if notification time is in the future
-          if (notifyTime.isAfter(now)) {
-            await scheduleNotification(
-              id: currentPrayer.hashCode,
-              title: '$currentPrayer Prayer',
-              body: '$currentPrayer time remaining 20 minutes.',
-              scheduledTime: notifyTime,
-              notificationType: 'prayer',
-            );
-            // scheduledCount++; // Count for debugging if needed
-          }
+        if (notifyTime.isAfter(now)) {
+          await scheduleNotification(
+            id: 'Asr'.hashCode,
+            title: 'Asr Prayer',
+            body: 'Asr time remaining 20 minutes.',
+            scheduledTime: notifyTime,
+            notificationType: 'prayer',
+          );
+        }
+      }
+      
+      // Maghrib notification = 20 minutes before Isha
+      if (localPrayerTimes.containsKey('Maghrib') && localPrayerTimes.containsKey('Isha')) {
+        final ishaTime = localPrayerTimes['Isha']!;
+        final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
+        
+        if (notifyTime.isAfter(now)) {
+          await scheduleNotification(
+            id: 'Maghrib'.hashCode,
+            title: 'Maghrib Prayer',
+            body: 'Maghrib time remaining 20 minutes.',
+            scheduledTime: notifyTime,
+            notificationType: 'prayer',
+          );
+        }
+      }
+      
+      // Isha notification = 20 minutes before next day's Fajr
+      if (localPrayerTimes.containsKey('Isha') && localPrayerTimes.containsKey('Fajr')) {
+        final fajrTime = localPrayerTimes['Fajr']!;
+        // Add 1 day to Fajr time for next day
+        final nextDayFajr = fajrTime.add(const Duration(days: 1));
+        final notifyTime = nextDayFajr.subtract(const Duration(minutes: 20));
+        
+        if (notifyTime.isAfter(now)) {
+          await scheduleNotification(
+            id: 'Isha'.hashCode,
+            title: 'Isha Prayer',
+            body: 'Isha time remaining 20 minutes.',
+            scheduledTime: notifyTime,
+            notificationType: 'prayer',
+          );
         }
       }
     } catch (e) {

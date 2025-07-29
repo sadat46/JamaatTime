@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'user_management_screen.dart';
 import 'admin_jamaat_panel.dart';
+import 'notification_monitor_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -369,6 +370,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Expanded(
                                   child: Text(
                                     'CSV Import/Export, Bulk Operations, Yearly Data',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Notification Motor Card
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.notifications_active,
+                                  color: Colors.blue,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Notification Motor',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const NotificationMonitorScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.monitor),
+                                    label: const Text('Monitor Notification'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Monitor and manage notification settings and status',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[600],
