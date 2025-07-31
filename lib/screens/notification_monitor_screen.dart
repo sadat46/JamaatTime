@@ -231,9 +231,9 @@ class _NotificationMonitorScreenState extends State<NotificationMonitorScreen> {
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
-                                'Prayer time notification list',
+                                'Prayer notification',
                                 style: TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.green,
                                 ),
@@ -461,9 +461,9 @@ class _NotificationMonitorScreenState extends State<NotificationMonitorScreen> {
                                  const SizedBox(width: 8),
                                  const Expanded(
                                    child: Text(
-                                     'Jamaat time notification list',
+                                     'Jamaat notification',
                                      style: TextStyle(
-                                       fontSize: 20,
+                                       fontSize: 18,
                                        fontWeight: FontWeight.bold,
                                        color: Colors.orange,
                                      ),

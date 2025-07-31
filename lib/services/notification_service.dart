@@ -303,10 +303,22 @@ class NotificationService {
 
       // Get the appropriate sound mode based on notification type
       int soundMode;
-      if (notificationType == 'jamaat') {
-        soundMode = await _settingsService.getJamaatNotificationSoundMode();
-      } else {
-        soundMode = await _settingsService.getPrayerNotificationSoundMode();
+      try {
+        if (notificationType == 'jamaat') {
+          soundMode = await _settingsService.getJamaatNotificationSoundMode();
+        } else {
+          soundMode = await _settingsService.getPrayerNotificationSoundMode();
+        }
+        developer.log(
+          'Sound mode for $notificationType notification: $soundMode',
+          name: 'NotificationService',
+        );
+      } catch (e) {
+        developer.log(
+          'Error getting sound mode, using default: $e',
+          name: 'NotificationService',
+        );
+        soundMode = 0; // Default to custom sound
       }
 
       // Get notification configuration
@@ -367,6 +379,7 @@ class NotificationService {
         name: 'NotificationService',
         error: e,
       );
+      rethrow;
     }
   }
 
@@ -604,12 +617,32 @@ class NotificationService {
   ) async {
     try {
       if (jamaatTimes != null) {
-        // int scheduledCount = 0; // Count for debugging if needed
+        int scheduledCount = 0; // Count for debugging
         final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        developer.log(
+          'Starting jamaat notification scheduling. Total entries: ${jamaatTimes.length}',
+          name: 'NotificationService',
+        );
+        developer.log(
+          'Current time: $now, Today: $today',
+          name: 'NotificationService',
+        );
+        developer.log(
+          'Jamaat times data: $jamaatTimes',
+          name: 'NotificationService',
+        );
 
         for (final entry in jamaatTimes.entries) {
           final name = entry.key;
           final value = entry.value;
+          
+          developer.log(
+            'Processing jamaat time: $name = $value',
+            name: 'NotificationService',
+          );
+          
           if (value != null &&
               value is String &&
               value.isNotEmpty &&
@@ -617,7 +650,9 @@ class NotificationService {
             try {
               final parts = value.split(':');
               if (parts.length == 2) {
-                final jamaatTime = DateTime(
+                // Create jamaat time in Bangladesh timezone
+                final jamaatTime = tz.TZDateTime(
+                  tz.getLocation('Asia/Dhaka'),
                   now.year,
                   now.month,
                   now.day,
@@ -628,8 +663,23 @@ class NotificationService {
                   const Duration(minutes: 10),
                 );
 
+                developer.log(
+                  'Calculated jamaat time: $jamaatTime, notification time: $notifyTime, now: $now',
+                  name: 'NotificationService',
+                );
+
+                // Convert notifyTime to regular DateTime for comparison
+                final notifyTimeRegular = DateTime(
+                  notifyTime.year,
+                  notifyTime.month,
+                  notifyTime.day,
+                  notifyTime.hour,
+                  notifyTime.minute,
+                  notifyTime.second,
+                );
+
                 // Only schedule if notification time is in the future
-                if (notifyTime.isAfter(now)) {
+                if (notifyTimeRegular.isAfter(now)) {
                   await scheduleNotification(
                     id: name.hashCode + 1000,
                     title: '$name Jamaat',
@@ -637,17 +687,54 @@ class NotificationService {
                     scheduledTime: notifyTime,
                     notificationType: 'jamaat',
                   );
-                  // scheduledCount++; // Count for debugging if needed
+                  scheduledCount++;
+                  developer.log(
+                    'Scheduled jamaat notification for $name at $notifyTime',
+                    name: 'NotificationService',
+                  );
+                } else {
+                  developer.log(
+                    'Skipping past jamaat notification for $name at $notifyTime (now: $now)',
+                    name: 'NotificationService',
+                  );
                 }
+              } else {
+                developer.log(
+                  'Invalid jamaat time format for $name: $value (expected HH:mm)',
+                  name: 'NotificationService',
+                );
               }
             } catch (e) {
-              // Handle parsing error silently
+              developer.log(
+                'Error parsing jamaat time for $name: $value, error: $e',
+                name: 'NotificationService',
+                error: e,
+              );
             }
+          } else {
+            developer.log(
+              'Skipping empty or invalid jamaat time for $name: $value',
+              name: 'NotificationService',
+            );
           }
         }
+        
+        developer.log(
+          'Jamaat notification scheduling completed. Scheduled: $scheduledCount',
+          name: 'NotificationService',
+        );
+      } else {
+        developer.log(
+          'Jamaat times is null, skipping jamaat notification scheduling',
+          name: 'NotificationService',
+        );
       }
     } catch (e) {
-      // Handle error silently
+      developer.log(
+        'Error in scheduleJamaatNotifications: $e',
+        name: 'NotificationService',
+        error: e,
+      );
     }
   }
 
@@ -657,11 +744,41 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
+      developer.log(
+        'Starting to schedule all notifications. Prayer times: ${prayerTimes.length}, Jamaat times: ${jamaatTimes?.length ?? 0}',
+        name: 'NotificationService',
+      );
+      
       await cancelAllNotifications();
+      developer.log('Cancelled all existing notifications', name: 'NotificationService');
+      
       await schedulePrayerNotifications(prayerTimes);
+      developer.log('Prayer notifications scheduled', name: 'NotificationService');
+      
       await scheduleJamaatNotifications(jamaatTimes);
+      developer.log('Jamaat notifications scheduled', name: 'NotificationService');
+      
+      developer.log('All notifications scheduled successfully', name: 'NotificationService');
     } catch (e) {
-      // Handle error silently
+      developer.log(
+        'Error in scheduleAllNotifications: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+    }
+  }
+
+  /// Get pending notifications for debugging
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    try {
+      return await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+    } catch (e) {
+      developer.log(
+        'Error getting pending notifications: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+      return [];
     }
   }
 
