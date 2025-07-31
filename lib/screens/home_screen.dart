@@ -65,14 +65,18 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     tzdata.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
-    // Ensure notification service is initialized with context
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService().initialize(context);
-    });
     _initializeApp();
   }
 
   Future<void> _initializeApp() async {
+    // Initialize notification service first
+    try {
+      await NotificationService().initialize(context);
+      debugPrint('Notification service initialized successfully');
+    } catch (e) {
+      debugPrint('Error initializing notification service: $e');
+    }
+    
     // Use more accurate parameters for Bangladesh
     // Start with Muslim World League method which is generally more accurate for South Asia
     params = CalculationMethod.muslimWorldLeague();
@@ -115,6 +119,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Initial prayer times calculation and notification scheduling
     _updatePrayerTimes();
     await _scheduleNotificationsIfNeeded();
+    
+    // Check notification status for debugging
+    await _checkNotificationStatus();
 
     // Initialize ValueNotifiers with current values
     _timeNotifier.value = DateTime.now();
@@ -156,9 +163,17 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       
       if (times != null) {
+        // Create a complete jamaat times map including calculated Maghrib time
+        final completeJamaatTimes = Map<String, dynamic>.from(times);
+        
+        // Add calculated Maghrib jamaat time to the map
+        final maghribJamaatTime = _calculateMaghribJamaatTime();
+        if (maghribJamaatTime != '-') {
+          completeJamaatTimes['maghrib'] = maghribJamaatTime;
+        }
         
         setState(() {
-          jamaatTimes = times;
+          jamaatTimes = completeJamaatTimes;
           isLoadingJamaat = false;
         });
         
@@ -225,21 +240,56 @@ class _HomeScreenState extends State<HomeScreen> {
       'Isha': isha,
     };
 
+    // Update jamaat times if they exist, to recalculate Maghrib jamaat time
+    if (jamaatTimes != null) {
+      final updatedJamaatTimes = Map<String, dynamic>.from(jamaatTimes!);
+      final maghribJamaatTime = _calculateMaghribJamaatTime();
+      if (maghribJamaatTime != '-') {
+        updatedJamaatTimes['maghrib'] = maghribJamaatTime;
+      }
+      setState(() {
+        jamaatTimes = updatedJamaatTimes;
+      });
+      
+      // Reschedule notifications with updated times
+      _notificationsScheduled = false;
+      _scheduleNotificationsIfNeeded();
+    }
   }
 
   Future<void> _scheduleNotificationsIfNeeded() async {
-    if (jamaatTimes == null) return;
+    if (jamaatTimes == null) {
+      debugPrint('Jamaat times is null, skipping notification scheduling');
+      return;
+    }
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+
+    // Only schedule notifications for current date
+    if (selectedDateOnly != today) {
+      debugPrint('Selected date ($selectedDateOnly) is not today ($today), skipping notification scheduling');
+      return;
+    }
 
     // Schedule notifications if:
     // 1. Not scheduled yet today, OR
     // 2. Last scheduled date is different from today
     if (!_notificationsScheduled || _lastScheduledDate.isBefore(today)) {
-      await _notificationService.scheduleAllNotifications(times, jamaatTimes);
-      _notificationsScheduled = true;
-      _lastScheduledDate = today;
+      try {
+        debugPrint('Scheduling notifications for today: $today');
+        debugPrint('Jamaat times: $jamaatTimes');
+        debugPrint('Prayer times: $times');
+        await _notificationService.scheduleAllNotifications(times, jamaatTimes);
+        _notificationsScheduled = true;
+        _lastScheduledDate = today;
+        debugPrint('Notifications scheduled successfully');
+      } catch (e) {
+        debugPrint('Error scheduling notifications: $e');
+      }
+    } else {
+      debugPrint('Notifications already scheduled for today');
     }
   }
 
@@ -257,6 +307,75 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       // Handle error silently for now
       debugPrint('Error updating settings: $e');
+    }
+  }
+
+  /// Check notification permissions and status
+  Future<void> _checkNotificationStatus() async {
+    try {
+      final isEnabled = await _notificationService.areNotificationsEnabled();
+      final isReady = await _notificationService.isReady();
+      final isInitialized = _notificationService.isInitialized;
+      
+      debugPrint('Notification Status:');
+      debugPrint('- Enabled: $isEnabled');
+      debugPrint('- Ready: $isReady');
+      debugPrint('- Initialized: $isInitialized');
+      debugPrint('- Jamaat Times: ${jamaatTimes != null ? 'Loaded' : 'Not loaded'}');
+      debugPrint('- Selected Date: $selectedDate');
+      debugPrint('- Current Date: ${DateTime.now()}');
+      
+      if (!isEnabled) {
+        debugPrint('WARNING: Notifications are not enabled on this device');
+      }
+      if (!isInitialized) {
+        debugPrint('WARNING: Notification service is not initialized');
+      }
+    } catch (e) {
+      debugPrint('Error checking notification status: $e');
+    }
+  }
+
+  /// Schedule a test jamaat notification for debugging
+  Future<void> _scheduleTestJamaatNotification() async {
+    try {
+      final now = DateTime.now();
+      final testTime = now.add(const Duration(minutes: 2)); // 2 minutes from now
+      
+      await _notificationService.scheduleNotification(
+        id: 9999,
+        title: 'Test Jamaat',
+        body: 'This is a test jamaat notification',
+        scheduledTime: testTime,
+        notificationType: 'jamaat',
+      );
+      
+      debugPrint('Test jamaat notification scheduled for: $testTime');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Test jamaat notification scheduled for ${testTime.hour}:${testTime.minute.toString().padLeft(2, '0')}')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error scheduling test jamaat notification: $e');
+    }
+  }
+
+  /// Check pending notifications for debugging
+  Future<void> _checkPendingNotifications() async {
+    try {
+      final pendingNotifications = await _notificationService.getPendingNotifications();
+      debugPrint('Pending notifications: ${pendingNotifications.length}');
+      for (final notification in pendingNotifications) {
+        debugPrint('Pending: ID=${notification.id}, Title=${notification.title}');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${pendingNotifications.length} pending notifications')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error checking pending notifications: $e');
     }
   }
 
@@ -527,6 +646,45 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: const Color(0xFF388E3C),
             foregroundColor: Colors.white,
             elevation: 2,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () async {
+                  await _notificationService.showTestNotification();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Test notification sent')),
+                    );
+                  }
+                },
+                tooltip: 'Test Notification',
+              ),
+              IconButton(
+                icon: const Icon(Icons.schedule),
+                onPressed: () async {
+                  debugPrint('Manual notification scheduling test');
+                  debugPrint('Current jamaat times: $jamaatTimes');
+                  debugPrint('Current prayer times: $times');
+                  await _scheduleNotificationsIfNeeded();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Notifications rescheduled')),
+                    );
+                  }
+                },
+                tooltip: 'Reschedule Notifications',
+              ),
+              IconButton(
+                icon: const Icon(Icons.notifications_active),
+                onPressed: _checkPendingNotifications,
+                tooltip: 'Check Pending Notifications',
+              ),
+              IconButton(
+                icon: const Icon(Icons.schedule_send),
+                onPressed: _scheduleTestJamaatNotification,
+                tooltip: 'Schedule Test Jamaat Notification',
+              ),
+            ],
           ),
           body: Center(
             child: ConstrainedBox(

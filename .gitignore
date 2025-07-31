@@ -15,8 +15,7 @@ migrate_working_dir/
 # IntelliJ related
 *.iml
 *.ipr
-*.iws
-.idea/
+*.iws 
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -43,3 +42,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+#
+# Secret keys
+.env
+*.key
+secrets.dart
+
+# Flutter environment and secret files
+.env
+*.key
+*.pem
+*.jks
+secrets.dart
+google-services.json
