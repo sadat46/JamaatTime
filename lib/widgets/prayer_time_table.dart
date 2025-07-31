@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
-import '../services/jamaat_time_utility.dart';
 
 class PrayerTimeTable extends StatelessWidget {
-  final Map<String, DateTime?> times;
+  final Map<String, DateTime?> prayerTimes;
   final Map<String, dynamic>? jamaatTimes;
-  final String? selectedCity;
-  final String currentPrayer;
-  final bool showJamaatTimes;
+  final String currentPrayerName;
 
   const PrayerTimeTable({
     super.key,
-    required this.times,
+    required this.prayerTimes,
     this.jamaatTimes,
-    this.selectedCity,
-    required this.currentPrayer,
-    this.showJamaatTimes = true,
+    required this.currentPrayerName,
   });
 
   @override
@@ -36,29 +31,28 @@ class PrayerTimeTable extends StatelessWidget {
                 ? const Color(0xFF145A32)
                 : const Color(0xFF43A047),
           ),
-          children: [
-            const Padding(
+          children: const [
+            Padding(
               padding: EdgeInsets.all(8.0),
               child: Text(
                 'Prayer Name',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(8.0),
               child: Text(
                 'Prayer Time',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            if (showJamaatTimes)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'Jamaat Time',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                'Jamaat Time',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
+            ),
           ],
         ),
         // Prayer rows
@@ -71,7 +65,7 @@ class PrayerTimeTable extends StatelessWidget {
           'Maghrib',
           'Isha',
         ].map((name) {
-          final t = times[name];
+          final t = prayerTimes[name];
           final timeStr = t != null
               ? DateFormat('HH:mm').format(
                   tz.TZDateTime.from(
@@ -81,17 +75,41 @@ class PrayerTimeTable extends StatelessWidget {
                 )
               : '-';
 
-          String jamaatStr = '-';
-          if (showJamaatTimes) {
-            jamaatStr = JamaatTimeUtility.instance.getJamaatTimeString(
-              jamaatTimes: jamaatTimes,
-              prayerName: name,
-              maghribPrayerTime: times['Maghrib'],
-              selectedCity: selectedCity,
-            );
+          // Map prayer names to jamaat time keys
+          String jamaatKey;
+          switch (name) {
+            case 'Fajr':
+              jamaatKey = 'fajr';
+              break;
+            case 'Dhuhr':
+              jamaatKey = 'dhuhr';
+              break;
+            case 'Asr':
+              jamaatKey = 'asr';
+              break;
+            case 'Maghrib':
+              jamaatKey = 'maghrib';
+              break;
+            case 'Isha':
+              jamaatKey = 'isha';
+              break;
+            case 'Sunrise':
+            case 'Dahwah-e-kubrah':
+              jamaatKey = name.toLowerCase();
+              break;
+            default:
+              jamaatKey = name.toLowerCase();
           }
 
-          final isCurrent = name == currentPrayer;
+          String jamaatStr = '-';
+          if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
+            final value = jamaatTimes![jamaatKey];
+            if (value != null && value.toString().isNotEmpty) {
+              jamaatStr = _formatJamaatTime(value.toString());
+            }
+          }
+
+          final isCurrent = name == currentPrayerName;
           return TableRow(
             decoration: isCurrent
                 ? BoxDecoration(color: Colors.green.shade100)
@@ -110,31 +128,46 @@ class PrayerTimeTable extends StatelessWidget {
                   ),
                 ),
               ),
-              if (showJamaatTimes)
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          jamaatStr,
-                          style: jamaatStr == '-'
-                              ? const TextStyle(color: Colors.grey)
-                              : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                        ),
-                        if (jamaatStr != '-') ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.mosque, size: 12, color: Colors.green),
-                        ],
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        jamaatStr,
+                        style: jamaatStr == '-'
+                            ? const TextStyle(color: Colors.grey)
+                            : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      ),
+                      if (jamaatStr != '-') ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.mosque, size: 12, color: Colors.green),
                       ],
-                    ),
+                    ],
                   ),
                 ),
+              ),
             ],
           );
         }),
       ],
     );
+  }
+
+  String _formatJamaatTime(String value) {
+    value = value.trim();
+    if (value.isEmpty) return '-';
+    try {
+      final time = DateFormat('HH:mm').parseStrict(value);
+      return DateFormat('HH:mm').format(time);
+    } catch (_) {
+      try {
+        final time = DateFormat('hh:mm a').parseStrict(value);
+        return DateFormat('HH:mm').format(time);
+      } catch (_) {
+        return '-';
+      }
+    }
   }
 } 
