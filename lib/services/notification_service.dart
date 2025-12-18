@@ -67,20 +67,6 @@ class NotificationService {
     }
   }
 
-  /// Get the appropriate channel ID based on sound mode
-  String _getChannelId(int soundMode) {
-    switch (soundMode) {
-      case 0:
-        return 'prayer_channel_custom';
-      case 1:
-        return 'prayer_channel_system';
-      case 2:
-        return 'prayer_channel_silent';
-      default:
-        return 'prayer_channel_custom';
-    }
-  }
-
   /// Get the appropriate channel ID for prayer notifications
   String _getPrayerChannelId(int soundMode) {
     switch (soundMode) {
@@ -109,19 +95,7 @@ class NotificationService {
     }
   }
 
-  /// Get notification sound mode text for display
-  String _getSoundModeText(int mode) {
-    switch (mode) {
-      case 0:
-        return 'Custom Sound';
-      case 1:
-        return 'System Sound';
-      case 2:
-        return 'No Sound';
-      default:
-        return 'Custom Sound';
-    }
-  }
+
 
   /// Get notification configuration based on type and sound mode
   Map<String, dynamic> _getNotificationConfig({
@@ -138,19 +112,6 @@ class NotificationService {
       'playSound': soundMode != 2,
       'enableVibration': soundMode != 2,
     };
-  }
-
-  /// Log notification scheduling for debugging
-  void _logNotificationScheduling({
-    required String title,
-    required DateTime scheduledTime,
-    required String notificationType,
-    required int soundMode,
-  }) {
-    developer.log(
-      'Scheduling $notificationType notification: $title at ${scheduledTime.toString()} with sound mode: $soundMode',
-      name: 'NotificationService',
-    );
   }
 
   /// Create all notification channels for Android
@@ -238,15 +199,10 @@ class NotificationService {
         await androidImplementation.createNotificationChannel(jamaatCustomChannel);
         await androidImplementation.createNotificationChannel(jamaatSystemChannel);
         await androidImplementation.createNotificationChannel(jamaatSilentChannel);
-
-        developer.log(
-          'All notification channels created successfully',
-          name: 'NotificationService',
-        );
       }
     } catch (e) {
       developer.log(
-        'Error creating all notification channels: $e',
+        'Error creating notification channels: $e',
         name: 'NotificationService',
         error: e,
       );
@@ -265,40 +221,16 @@ class NotificationService {
     try {
       // Check if service is initialized
       if (!_isInitialized) {
-        developer.log(
-          'Notification service not initialized, skipping notification: $title',
-          name: 'NotificationService',
-        );
         return;
       }
 
       if (scheduledTime.isBefore(DateTime.now())) {
-        developer.log(
-          'Skipping past notification: $title at ${scheduledTime.toString()}',
-          name: 'NotificationService',
-        );
         return;
-      }
-
-      // Additional check for reasonable notification times
-      if (scheduledTime.hour >= 22 || scheduledTime.hour <= 4) {
-        developer.log(
-          'WARNING: Scheduling notification at unusual time: $title at ${scheduledTime.toString()}',
-          name: 'NotificationService',
-        );
       }
 
       final tz.TZDateTime scheduledDate = tz.TZDateTime.from(
         scheduledTime,
         tz.local,
-      );
-      developer.log(
-        'Scheduling notification: $title at ${scheduledDate.toString()}',
-        name: 'NotificationService',
-      );
-      developer.log(
-        'Notification details - ID: $id, Title: $title, Time: ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}',
-        name: 'NotificationService',
       );
 
       // Get the appropriate sound mode based on notification type
@@ -309,28 +241,12 @@ class NotificationService {
         } else {
           soundMode = await _settingsService.getPrayerNotificationSoundMode();
         }
-        developer.log(
-          'Sound mode for $notificationType notification: $soundMode',
-          name: 'NotificationService',
-        );
       } catch (e) {
-        developer.log(
-          'Error getting sound mode, using default: $e',
-          name: 'NotificationService',
-        );
         soundMode = 0; // Default to custom sound
       }
 
       // Get notification configuration
       final config = _getNotificationConfig(
-        notificationType: notificationType,
-        soundMode: soundMode,
-      );
-
-      // Log the scheduling
-      _logNotificationScheduling(
-        title: title,
-        scheduledTime: scheduledDate,
         notificationType: notificationType,
         soundMode: soundMode,
       );
@@ -368,11 +284,6 @@ class NotificationService {
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
-
-      developer.log(
-        'Notification scheduled successfully: $title',
-        name: 'NotificationService',
-      );
     } catch (e) {
       developer.log(
         'Error scheduling notification: $e',
@@ -387,10 +298,6 @@ class NotificationService {
   Future<void> cancelAllNotifications() async {
     try {
       await flutterLocalNotificationsPlugin.cancelAll();
-      developer.log(
-        'All notifications cancelled',
-        name: 'NotificationService',
-      );
     } catch (e) {
       developer.log(
         'Error cancelling notifications: $e',
@@ -406,7 +313,6 @@ class NotificationService {
     Map<String, DateTime?> prayerTimes,
   ) {
     try {
-      final now = DateTime.now();
       final Map<String, DateTime?> notificationTimes = {};
 
       // Convert prayer times to Bangladesh timezone before calculation
@@ -469,40 +375,89 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) {
     try {
-      final now = DateTime.now();
       final Map<String, DateTime?> notificationTimes = {};
 
       if (jamaatTimes != null) {
+        // Use Bangladesh timezone consistently
+        final dhakaLocation = tz.getLocation('Asia/Dhaka');
+        final nowInDhaka = tz.TZDateTime.now(dhakaLocation);
+
         for (final entry in jamaatTimes.entries) {
           final name = entry.key;
           final value = entry.value;
+
           if (value != null && value is String && value.isNotEmpty && value != '-') {
             try {
               final parts = value.split(':');
-              if (parts.length == 2) {
-                final jamaatTime = DateTime(
-                  now.year,
-                  now.month,
-                  now.day,
-                  int.parse(parts[0]),
-                  int.parse(parts[1]),
+              if (parts.length != 2) {
+                developer.log(
+                  'Invalid jamaat time format for $name: "$value" (expected HH:mm)',
+                  name: 'NotificationService',
                 );
-                final notifyTime = jamaatTime.subtract(
-                  const Duration(minutes: 10),
-                );
-
-                // Store the notification time (regardless of whether it's in the future)
-                notificationTimes[name] = notifyTime;
+                continue;
               }
+
+              final hour = int.tryParse(parts[0]);
+              final minute = int.tryParse(parts[1]);
+
+              // Validate parsed values
+              if (hour == null || minute == null) {
+                developer.log(
+                  'Failed to parse time components for $name: "$value"',
+                  name: 'NotificationService',
+                );
+                continue;
+              }
+
+              // Validate time ranges
+              if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                developer.log(
+                  'Time out of range for $name: hour=$hour, minute=$minute',
+                  name: 'NotificationService',
+                );
+                continue;
+              }
+
+              // Create jamaat time in Bangladesh timezone (same as scheduling)
+              final jamaatTime = tz.TZDateTime(
+                dhakaLocation,
+                nowInDhaka.year,
+                nowInDhaka.month,
+                nowInDhaka.day,
+                hour,
+                minute,
+              );
+              final notifyTime = jamaatTime.subtract(
+                const Duration(minutes: 10),
+              );
+
+              // Store the notification time (convert to regular DateTime for display)
+              // This preserves the actual time in Dhaka timezone
+              notificationTimes[name] = DateTime(
+                notifyTime.year,
+                notifyTime.month,
+                notifyTime.day,
+                notifyTime.hour,
+                notifyTime.minute,
+              );
             } catch (e) {
-              // Handle parsing error silently
+              developer.log(
+                'Error calculating notification time for $name: "$value" - $e',
+                name: 'NotificationService',
+                error: e,
+              );
             }
           }
         }
       }
-      
+
       return notificationTimes;
     } catch (e) {
+      developer.log(
+        'Error in calculateJamaatNotificationTimes: $e',
+        name: 'NotificationService',
+        error: e,
+      );
       return {};
     }
   }
@@ -512,25 +467,28 @@ class NotificationService {
     Map<String, DateTime?> prayerTimes,
   ) async {
     try {
-      final now = DateTime.now();
-      
+      // Use Bangladesh timezone consistently for all comparisons
+      final dhakaLocation = tz.getLocation('Asia/Dhaka');
+      final nowInDhaka = tz.TZDateTime.now(dhakaLocation);
+
       // Convert prayer times to Bangladesh timezone before calculation
-      final Map<String, DateTime> localPrayerTimes = {};
+      final Map<String, tz.TZDateTime> localPrayerTimes = {};
       for (final entry in prayerTimes.entries) {
         if (entry.value != null) {
           // Convert to Bangladesh timezone
-          final localTime = tz.TZDateTime.from(entry.value!, tz.getLocation('Asia/Dhaka'));
+          final localTime = tz.TZDateTime.from(entry.value!, dhakaLocation);
           localPrayerTimes[entry.key] = localTime;
         }
       }
-      
+
       // Schedule notifications with correct logic using local prayer times:
       // Fajr notification = 20 minutes before Sunrise
       if (localPrayerTimes.containsKey('Fajr') && localPrayerTimes.containsKey('Sunrise')) {
         final sunriseTime = localPrayerTimes['Sunrise']!;
         final notifyTime = sunriseTime.subtract(const Duration(minutes: 20));
-        
-        if (notifyTime.isAfter(now)) {
+
+        // Compare TZDateTime objects directly in the same timezone
+        if (notifyTime.isAfter(nowInDhaka)) {
           await scheduleNotification(
             id: 'Fajr'.hashCode,
             title: 'Fajr Prayer',
@@ -540,13 +498,13 @@ class NotificationService {
           );
         }
       }
-      
+
       // Dhuhr notification = 20 minutes before Asr
       if (localPrayerTimes.containsKey('Dhuhr') && localPrayerTimes.containsKey('Asr')) {
         final asrTime = localPrayerTimes['Asr']!;
         final notifyTime = asrTime.subtract(const Duration(minutes: 20));
-        
-        if (notifyTime.isAfter(now)) {
+
+        if (notifyTime.isAfter(nowInDhaka)) {
           await scheduleNotification(
             id: 'Dhuhr'.hashCode,
             title: 'Dhuhr Prayer',
@@ -556,13 +514,13 @@ class NotificationService {
           );
         }
       }
-      
+
       // Asr notification = 20 minutes before Maghrib
       if (localPrayerTimes.containsKey('Asr') && localPrayerTimes.containsKey('Maghrib')) {
         final maghribTime = localPrayerTimes['Maghrib']!;
         final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
-        
-        if (notifyTime.isAfter(now)) {
+
+        if (notifyTime.isAfter(nowInDhaka)) {
           await scheduleNotification(
             id: 'Asr'.hashCode,
             title: 'Asr Prayer',
@@ -572,13 +530,13 @@ class NotificationService {
           );
         }
       }
-      
+
       // Maghrib notification = 20 minutes before Isha
       if (localPrayerTimes.containsKey('Maghrib') && localPrayerTimes.containsKey('Isha')) {
         final ishaTime = localPrayerTimes['Isha']!;
         final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
-        
-        if (notifyTime.isAfter(now)) {
+
+        if (notifyTime.isAfter(nowInDhaka)) {
           await scheduleNotification(
             id: 'Maghrib'.hashCode,
             title: 'Maghrib Prayer',
@@ -588,15 +546,15 @@ class NotificationService {
           );
         }
       }
-      
+
       // Isha notification = 20 minutes before next day's Fajr
       if (localPrayerTimes.containsKey('Isha') && localPrayerTimes.containsKey('Fajr')) {
         final fajrTime = localPrayerTimes['Fajr']!;
         // Add 1 day to Fajr time for next day
         final nextDayFajr = fajrTime.add(const Duration(days: 1));
         final notifyTime = nextDayFajr.subtract(const Duration(minutes: 20));
-        
-        if (notifyTime.isAfter(now)) {
+
+        if (notifyTime.isAfter(nowInDhaka)) {
           await scheduleNotification(
             id: 'Isha'.hashCode,
             title: 'Isha Prayer',
@@ -607,7 +565,11 @@ class NotificationService {
         }
       }
     } catch (e) {
-      // Handle error silently
+      developer.log(
+        'Error in schedulePrayerNotifications: $e',
+        name: 'NotificationService',
+        error: e,
+      );
     }
   }
 
@@ -617,117 +579,86 @@ class NotificationService {
   ) async {
     try {
       if (jamaatTimes != null) {
-        int scheduledCount = 0; // Count for debugging
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-
-        developer.log(
-          'Starting jamaat notification scheduling. Total entries: ${jamaatTimes.length}',
-          name: 'NotificationService',
-        );
-        developer.log(
-          'Current time: $now, Today: $today',
-          name: 'NotificationService',
-        );
-        developer.log(
-          'Jamaat times data: $jamaatTimes',
-          name: 'NotificationService',
-        );
+        // Use Bangladesh timezone for all time comparisons
+        final dhakaLocation = tz.getLocation('Asia/Dhaka');
+        final nowInDhaka = tz.TZDateTime.now(dhakaLocation);
 
         for (final entry in jamaatTimes.entries) {
           final name = entry.key;
           final value = entry.value;
-          
-          developer.log(
-            'Processing jamaat time: $name = $value',
-            name: 'NotificationService',
-          );
-          
+
           if (value != null &&
               value is String &&
               value.isNotEmpty &&
               value != '-') {
             try {
               final parts = value.split(':');
-              if (parts.length == 2) {
-                // Create jamaat time in Bangladesh timezone
-                final jamaatTime = tz.TZDateTime(
-                  tz.getLocation('Asia/Dhaka'),
-                  now.year,
-                  now.month,
-                  now.day,
-                  int.parse(parts[0]),
-                  int.parse(parts[1]),
-                );
-                final notifyTime = jamaatTime.subtract(
-                  const Duration(minutes: 10),
-                );
-
+              if (parts.length != 2) {
                 developer.log(
-                  'Calculated jamaat time: $jamaatTime, notification time: $notifyTime, now: $now',
+                  'Invalid jamaat time format for $name: "$value" (expected HH:mm)',
                   name: 'NotificationService',
                 );
+                continue;
+              }
 
-                // Convert notifyTime to regular DateTime for comparison
-                final notifyTimeRegular = DateTime(
-                  notifyTime.year,
-                  notifyTime.month,
-                  notifyTime.day,
-                  notifyTime.hour,
-                  notifyTime.minute,
-                  notifyTime.second,
-                );
+              final hour = int.tryParse(parts[0]);
+              final minute = int.tryParse(parts[1]);
 
-                // Only schedule if notification time is in the future
-                if (notifyTimeRegular.isAfter(now)) {
-                  await scheduleNotification(
-                    id: name.hashCode + 1000,
-                    title: '$name Jamaat',
-                    body: '$name Jamaat is in 10 minutes.',
-                    scheduledTime: notifyTime,
-                    notificationType: 'jamaat',
-                  );
-                  scheduledCount++;
-                  developer.log(
-                    'Scheduled jamaat notification for $name at $notifyTime',
-                    name: 'NotificationService',
-                  );
-                } else {
-                  developer.log(
-                    'Skipping past jamaat notification for $name at $notifyTime (now: $now)',
-                    name: 'NotificationService',
-                  );
-                }
-              } else {
+              // Validate parsed values
+              if (hour == null || minute == null) {
                 developer.log(
-                  'Invalid jamaat time format for $name: $value (expected HH:mm)',
+                  'Failed to parse time components for $name: "$value"',
                   name: 'NotificationService',
+                );
+                continue;
+              }
+
+              // Validate time ranges
+              if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                developer.log(
+                  'Time out of range for $name: hour=$hour, minute=$minute',
+                  name: 'NotificationService',
+                );
+                continue;
+              }
+
+              // Create jamaat time in Bangladesh timezone
+              final jamaatTime = tz.TZDateTime(
+                dhakaLocation,
+                nowInDhaka.year,
+                nowInDhaka.month,
+                nowInDhaka.day,
+                hour,
+                minute,
+              );
+              final notifyTime = jamaatTime.subtract(
+                const Duration(minutes: 10),
+              );
+
+              // Compare TZDateTime objects directly in the same timezone
+              // This fixes the midnight comparison issue
+              if (notifyTime.isAfter(nowInDhaka)) {
+                // Capitalize the prayer name for display
+                final displayName = name.isNotEmpty
+                    ? name[0].toUpperCase() + name.substring(1)
+                    : name;
+                await scheduleNotification(
+                  id: name.hashCode + 1000,
+                  title: '$displayName Jamaat',
+                  body: '$displayName Jamaat is in 10 minutes.',
+                  scheduledTime: notifyTime,
+                  notificationType: 'jamaat',
                 );
               }
             } catch (e) {
               developer.log(
-                'Error parsing jamaat time for $name: $value, error: $e',
+                'Error parsing jamaat time for $name: "$value" - $e',
                 name: 'NotificationService',
                 error: e,
               );
             }
-          } else {
-            developer.log(
-              'Skipping empty or invalid jamaat time for $name: $value',
-              name: 'NotificationService',
-            );
           }
         }
-        
-        developer.log(
-          'Jamaat notification scheduling completed. Scheduled: $scheduledCount',
-          name: 'NotificationService',
-        );
-      } else {
-        developer.log(
-          'Jamaat times is null, skipping jamaat notification scheduling',
-          name: 'NotificationService',
-        );
       }
     } catch (e) {
       developer.log(
@@ -744,21 +675,9 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
-      developer.log(
-        'Starting to schedule all notifications. Prayer times: ${prayerTimes.length}, Jamaat times: ${jamaatTimes?.length ?? 0}',
-        name: 'NotificationService',
-      );
-      
       await cancelAllNotifications();
-      developer.log('Cancelled all existing notifications', name: 'NotificationService');
-      
       await schedulePrayerNotifications(prayerTimes);
-      developer.log('Prayer notifications scheduled', name: 'NotificationService');
-      
       await scheduleJamaatNotifications(jamaatTimes);
-      developer.log('Jamaat notifications scheduled', name: 'NotificationService');
-      
-      developer.log('All notifications scheduled successfully', name: 'NotificationService');
     } catch (e) {
       developer.log(
         'Error in scheduleAllNotifications: $e',
@@ -826,11 +745,6 @@ class NotificationService {
 
       // Recreate channels with new settings
       await _createAllNotificationChannels();
-
-      developer.log(
-        'Notification channels recreated with new settings. Prayer Mode: $prayerMode, Jamaat Mode: $jamaatMode',
-        name: 'NotificationService',
-      );
     } catch (e) {
       developer.log(
         'Error recreating notification channels: $e',
@@ -840,76 +754,14 @@ class NotificationService {
     }
   }
 
-  /// Show test notification
-  Future<void> showTestNotification() async {
-    try {
-      final prayerMode = await _settingsService.getPrayerNotificationSoundMode();
-      final jamaatMode = await _settingsService.getJamaatNotificationSoundMode();
-
-      await flutterLocalNotificationsPlugin.show(
-        999,
-        'Test Notification',
-        'This is a test notification to verify sound settings. Prayer Mode: ${_getSoundModeText(prayerMode)}, Jamaat Mode: ${_getSoundModeText(jamaatMode)}',
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _getPrayerChannelId(prayerMode),
-            'Test Notifications',
-            channelDescription: 'Test notifications for debugging',
-            importance: Importance.max,
-            priority: Priority.high,
-            showWhen: true,
-            enableVibration: true,
-            playSound: true,
-            icon: '@mipmap/launcher_icon',
-            color: const Color(0xFF388E3C),
-            sound: RawResourceAndroidNotificationSound('allahu_akbar'),
-            vibrationPattern: Int64List.fromList([0, 5000]),
-          ),
-          iOS: const DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-      );
-
-      developer.log(
-        'Test notification shown successfully',
-        name: 'NotificationService',
-      );
-    } catch (e) {
-      developer.log(
-        'Error showing test notification: $e',
-        name: 'NotificationService',
-        error: e,
-      );
-    }
-  }
-
   /// Handle notification sound mode change - recreate channel and reschedule notifications
   Future<void> handleNotificationSoundModeChange() async {
     try {
-      developer.log(
-        'Handling notification sound mode change...',
-        name: 'NotificationService',
-      );
-
       // First, recreate the notification channel with new settings
       await recreateNotificationChannel();
 
       // Cancel all existing notifications to ensure they use the new channel settings
       await cancelAllNotifications();
-      developer.log(
-        'Cancelled all existing notifications',
-        name: 'NotificationService',
-      );
-
-      // Note: We don't reschedule notifications here because we don't have access to prayer times
-      // The home screen will handle rescheduling when it detects the change
-      developer.log(
-        'Notification sound mode change handled successfully',
-        name: 'NotificationService',
-      );
     } catch (e) {
       developer.log(
         'Error handling notification sound mode change: $e',
