@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
+import '../services/notification_service.dart';
+import '../services/bookmark_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'user_management_screen.dart';
 import 'admin_jamaat_panel.dart';
 import 'notification_monitor_screen.dart';
+import 'bookmarks_screen.dart';
+import '../main.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,6 +20,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final SettingsService _settingsService = SettingsService();
+  final NotificationService _notificationService = NotificationService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -27,12 +35,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _passwordVisible = false; // For password field
   bool _confirmPasswordVisible = false; // For confirm password field
 
+  // Settings state variables
+  int _themeIndex = 0; // 0: White, 1: Light, 2: Dark, 3: Green
+  String _madhab = 'hanafi';
+  int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
+  int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
+  String _version = '';
+
   @override
   void initState() {
     super.initState();
     _adminChecked = false; // Reset before checking
     // Check admin status
     _checkAdmin();
+    // Load settings
+    _loadSettings();
+    _loadVersion();
   }
 
   @override
@@ -44,13 +62,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _checkAdmin() async {
-    final isAdmin = await _authService.isAdmin();
-    final isSuperAdmin = await _authService.isSuperAdmin();
-    
+    // Single role check instead of two separate Firestore reads
+    final role = await _authService.getUserRole();
+
     setState(() {
-      _isAdmin = isAdmin;
-      _isSuperAdmin = isSuperAdmin;
+      _isSuperAdmin = role == UserRole.superadmin;
+      _isAdmin = role == UserRole.admin || role == UserRole.superadmin;
       _adminChecked = true; // Set to true after check
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    final idx = await _settingsService.getThemeIndex();
+    final madhab = await _settingsService.getMadhab();
+    final prayerSoundMode = await _settingsService.getPrayerNotificationSoundMode();
+    final jamaatSoundMode = await _settingsService.getJamaatNotificationSoundMode();
+    setState(() {
+      _themeIndex = idx;
+      _madhab = madhab;
+      _prayerNotificationSoundMode = prayerSoundMode;
+      _jamaatNotificationSoundMode = jamaatSoundMode;
+    });
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = 'v ${info.version} ( ${info.buildNumber})';
     });
   }
 
@@ -160,6 +198,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _passwordController.text.trim(),
                                 );
                               }
+
+                              // Initialize BookmarkService after successful login/registration
+                              await BookmarkService().initialize();
+
                               await _checkAdmin();
                             } catch (e) {
                               setState(() {
@@ -253,7 +295,230 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
+                  // Settings Card (Collapsible)
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      leading: const Icon(
+                        Icons.settings,
+                        color: Color(0xFF388E3C),
+                        size: 24,
+                      ),
+                      title: Text(
+                        'সেটিংস',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF388E3C),
+                        ),
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+
+                          // Theme Setting
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Theme'),
+                              DropdownButton<int>(
+                                value: _themeIndex,
+                                items: const [
+                                  DropdownMenuItem(value: 0, child: Text('White Theme')),
+                                  DropdownMenuItem(value: 1, child: Text('Most Popular Light')),
+                                  DropdownMenuItem(value: 2, child: Text('Most Popular Dark')),
+                                  DropdownMenuItem(value: 3, child: Text('Green Theme')),
+                                ],
+                                onChanged: (val) async {
+                                  if (val != null) {
+                                    await _settingsService.setThemeIndex(val);
+                                    setState(() => _themeIndex = val);
+                                    themeIndexNotifier.value = val;
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Madhab Setting
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Prayer Time Method'),
+                              DropdownButton<String>(
+                                value: _madhab,
+                                items: const [
+                                  DropdownMenuItem(value: 'hanafi', child: Text('Hanafi')),
+                                  DropdownMenuItem(value: 'shafi', child: Text('Shafi')),
+                                ],
+                                onChanged: (val) async {
+                                  if (val != null) {
+                                    await _settingsService.setMadhab(val);
+                                    setState(() => _madhab = val);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Prayer Notification Setting
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Prayer Notification'),
+                              DropdownButton<int>(
+                                value: _prayerNotificationSoundMode,
+                                items: const [
+                                  DropdownMenuItem(value: 0, child: Text('Custom Sound')),
+                                  DropdownMenuItem(value: 1, child: Text('System Sound')),
+                                  DropdownMenuItem(value: 2, child: Text('No Sound')),
+                                ],
+                                onChanged: (val) async {
+                                  if (val != null) {
+                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                    await _settingsService.setPrayerNotificationSoundMode(val);
+                                    setState(() => _prayerNotificationSoundMode = val);
+
+                                    // Handle notification sound mode change
+                                    try {
+                                      await _notificationService.handleNotificationSoundModeChange();
+
+                                      // Show success message
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Prayer notification sound setting updated successfully!',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // Show error message
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error updating prayer notification settings: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                            duration: const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Jamaat Notification Setting
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Jamaat Notification'),
+                              DropdownButton<int>(
+                                value: _jamaatNotificationSoundMode,
+                                items: const [
+                                  DropdownMenuItem(value: 0, child: Text('Custom Sound')),
+                                  DropdownMenuItem(value: 1, child: Text('System Sound')),
+                                  DropdownMenuItem(value: 2, child: Text('No Sound')),
+                                ],
+                                onChanged: (val) async {
+                                  if (val != null) {
+                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                    await _settingsService.setJamaatNotificationSoundMode(val);
+                                    setState(() => _jamaatNotificationSoundMode = val);
+
+                                    // Handle notification sound mode change
+                                    try {
+                                      await _notificationService.handleNotificationSoundModeChange();
+
+                                      // Show success message
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Jamaat notification sound setting updated successfully!',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // Show error message
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error updating jamaat notification settings: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                            duration: const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // My Bookmarks Card
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.bookmark,
+                        color: Color(0xFF388E3C),
+                        size: 28,
+                      ),
+                      title: const Text(
+                        'আমার বুকমার্ক',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      subtitle: const Text('সংরক্ষিত আয়াত ও দোয়া'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BookmarksScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Superadmin User Management Section
                   if (_isSuperAdmin) ...[
                     Card(
@@ -449,9 +714,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-                    // Add bottom padding to prevent overflow
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 16),
                   ],
+
+                  // Version and Copyright Info
+                  const SizedBox(height: 32),
+                  if (_version.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Text(
+                        'App Version:  $_version',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  const Text(
+                    'Copyright (c) 2025 sadat46\nStatic Signal Coy,Savar\nAll rights reserved.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 100),
                 ],
               ),
             );

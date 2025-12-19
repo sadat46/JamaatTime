@@ -8,9 +8,13 @@ class JamaatService {
   JamaatService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   // Mock storage for testing when Firebase is not available
   static final Map<String, Map<String, Map<String, String>>> _mockStorage = {};
+
+  // In-memory cache for jamaat times (reduces network calls)
+  static final Map<String, _CachedJamaatTimes> _cache = {};
+  static const Duration _cacheExpiry = Duration(minutes: 30);
 
   /// Save jamaat times for a specific city and date
   Future<void> saveJamaatTimes({
@@ -68,15 +72,32 @@ class JamaatService {
     }
   }
 
-  /// Get jamaat times for a specific city and date
+  /// Get jamaat times for a specific city and date (with caching)
   Future<Map<String, String>?> getJamaatTimes({
     required String city,
     required DateTime date,
   }) async {
     try {
+      final cacheKey = _getCacheKey(city, date);
+
+      // Check cache first
+      if (_cache.containsKey(cacheKey)) {
+        final cached = _cache[cacheKey]!;
+        if (!cached.isExpired(_cacheExpiry)) {
+          developer.log(
+            'Cache hit for $city on ${_formatDate(date)}',
+            name: 'JamaatService',
+          );
+          return Map<String, String>.from(cached.times);
+        } else {
+          // Remove expired cache entry
+          _cache.remove(cacheKey);
+        }
+      }
+
       final dateString = _formatDate(date);
       final cityKey = city.toLowerCase().replaceAll(' ', '_');
-      
+
       // Try Firebase first
       try {
         final doc = await _firestore
@@ -88,7 +109,15 @@ class JamaatService {
 
         if (doc.exists) {
           final data = doc.data()!;
-          return Map<String, String>.from(data['times'] ?? {});
+          final times = Map<String, String>.from(data['times'] ?? {});
+
+          // Cache the result
+          _cache[cacheKey] = _CachedJamaatTimes(
+            times: times,
+            cachedAt: DateTime.now(),
+          );
+
+          return times;
         }
       } catch (firebaseError) {
         // Fallback to mock storage if Firebase fails
@@ -96,12 +125,20 @@ class JamaatService {
           'Firebase get failed, using mock storage: $firebaseError',
           name: 'JamaatService',
         );
-        
+
         if (_mockStorage.containsKey(cityKey) && _mockStorage[cityKey]!.containsKey(dateString)) {
-          return Map<String, String>.from(_mockStorage[cityKey]![dateString]!);
+          final times = Map<String, String>.from(_mockStorage[cityKey]![dateString]!);
+
+          // Cache mock result too
+          _cache[cacheKey] = _CachedJamaatTimes(
+            times: times,
+            cachedAt: DateTime.now(),
+          );
+
+          return times;
         }
       }
-      
+
       return null;
     } catch (e) {
       developer.log(
@@ -111,6 +148,11 @@ class JamaatService {
       );
       return null;
     }
+  }
+
+  /// Clear the jamaat times cache
+  void clearCache() {
+    _cache.clear();
   }
 
   /// Get jamaat times for a date range
@@ -340,5 +382,22 @@ class JamaatService {
   /// Helper method to format date as YYYY-MM-DD
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Generate cache key from city and date
+  String _getCacheKey(String city, DateTime date) {
+    return '${city.toLowerCase().replaceAll(' ', '_')}_${_formatDate(date)}';
+  }
+}
+
+/// Cache entry for jamaat times with expiration
+class _CachedJamaatTimes {
+  final Map<String, String> times;
+  final DateTime cachedAt;
+
+  _CachedJamaatTimes({required this.times, required this.cachedAt});
+
+  bool isExpired(Duration expiry) {
+    return DateTime.now().difference(cachedAt) > expiry;
   }
 } 

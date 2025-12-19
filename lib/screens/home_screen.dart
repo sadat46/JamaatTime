@@ -6,10 +6,11 @@ import '../services/settings_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/jamaat_service.dart';
+import '../widgets/live_clock_widget.dart';
+import '../widgets/prayer_countdown_widget.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tzdata;
 import '../core/constants.dart';
 
 // Extension to get date part only
@@ -17,6 +18,21 @@ extension DateTimeExtension on DateTime {
   DateTime toDate() {
     return DateTime(year, month, day);
   }
+}
+
+/// Pre-computed data for a prayer table row (avoids calculations in build())
+class PrayerRowData {
+  final String name;
+  final String timeStr;
+  final String jamaatStr;
+  final bool isCurrent;
+
+  const PrayerRowData({
+    required this.name,
+    required this.timeStr,
+    required this.jamaatStr,
+    required this.isCurrent,
+  });
 }
 
 class HomeScreen extends StatefulWidget {
@@ -27,16 +43,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Timer _timer;
+  Timer? _timer;
   DateTime _now = DateTime.now();
   Coordinates? _coords;
   CalculationParameters? params;
   PrayerTimes? prayerTimes;
   Map<String, DateTime?> times = {};
-
-  // Add ValueNotifiers for targeted updates
-  final ValueNotifier<DateTime> _timeNotifier = ValueNotifier(DateTime.now());
-  final ValueNotifier<Duration> _countdownNotifier = ValueNotifier(Duration.zero);
 
   Map<String, dynamic>? jamaatTimes;
   bool isLoadingJamaat = false;
@@ -60,22 +72,23 @@ class _HomeScreenState extends State<HomeScreen> {
     const Duration(days: 1),
   );
 
+  // Pre-computed prayer table data (avoids recalculation in build())
+  List<PrayerRowData> _prayerTableData = [];
+
+  // Stream subscription for settings changes (must be cancelled in dispose)
+  StreamSubscription<void>? _settingsSubscription;
+
   @override
   void initState() {
     super.initState();
-    tzdata.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
+    // Timezone initialization moved to main.dart for faster startup
     _initializeApp();
   }
 
   Future<void> _initializeApp() async {
-    // Initialize notification service first
-    try {
-      await NotificationService().initialize(context);
-    } catch (e) {
-      // Handle initialization error silently
-    }
-    
+    // Note: Notification service is already initialized in main.dart
+    // No need to initialize again here (singleton pattern handles this)
+
     // Use more accurate parameters for Bangladesh
     // Start with Muslim World League method which is generally more accurate for South Asia
     params = CalculationMethod.muslimWorldLeague();
@@ -119,26 +132,28 @@ class _HomeScreenState extends State<HomeScreen> {
     _updatePrayerTimes();
     await _scheduleNotificationsIfNeeded();
 
-    // Initialize ValueNotifiers with current values
-    _timeNotifier.value = DateTime.now();
-    _countdownNotifier.value = _getTimeToNextPrayer();
-
-    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Timer for background tasks only (checking day change, etc.)
+    // Clock and countdown widgets now have their own timers
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       final newNow = DateTime.now();
-      
-      // Update ValueNotifiers for targeted widget updates
-      _timeNotifier.value = newNow;
-      _countdownNotifier.value = _getTimeToNextPrayer();
-      
-      // Keep _now updated for backward compatibility
+      final oldDay = DateTime(_now.year, _now.month, _now.day);
+      final newDay = DateTime(newNow.year, newNow.month, newNow.day);
+
+      // Check if day changed - need to recalculate prayer times
+      if (newDay.isAfter(oldDay)) {
+        _now = newNow;
+        selectedDate = newNow;
+        _updatePrayerTimes();
+        if (selectedCity != null) {
+          _fetchJamaatTimes(selectedCity!);
+        }
+      }
       _now = newNow;
     });
 
-    _settingsService.onSettingsChanged.listen((_) => _loadMadhab());
-    
-    // Listen for notification sound mode changes and reschedule notifications
-    _settingsService.onSettingsChanged.listen((_) async {
-      // Check if notification sound mode changed and reschedule if needed
+    // Single listener for all settings changes (combining madhab and notification settings)
+    _settingsSubscription = _settingsService.onSettingsChanged.listen((_) async {
+      await _loadMadhab();
       await _handleNotificationSettingsChange();
     });
   }
@@ -161,33 +176,37 @@ class _HomeScreenState extends State<HomeScreen> {
       if (times != null) {
         // Create a complete jamaat times map including calculated Maghrib time
         final completeJamaatTimes = Map<String, dynamic>.from(times);
-        
+
         // Add calculated Maghrib jamaat time to the map
         final maghribJamaatTime = _calculateMaghribJamaatTime();
         if (maghribJamaatTime != '-') {
           completeJamaatTimes['maghrib'] = maghribJamaatTime;
         }
-        
-        setState(() {
-          jamaatTimes = completeJamaatTimes;
-          isLoadingJamaat = false;
-        });
-        
+
+        jamaatTimes = completeJamaatTimes;
+        isLoadingJamaat = false;
+
+        // Pre-compute table data after jamaat times update
+        _computePrayerTableData();
+
+        // Trigger UI update
+        setState(() {});
+
         // Reset notification scheduling flag when jamaat times change
         _notificationsScheduled = false;
         await _scheduleNotificationsIfNeeded();
       } else {
-        setState(() {
-          jamaatTimes = null;
-          isLoadingJamaat = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
         jamaatTimes = null;
         isLoadingJamaat = false;
-        jamaatError = 'Error loading Jamaat times: $e';
-      });
+        _computePrayerTableData();
+        setState(() {});
+      }
+    } catch (e) {
+      jamaatTimes = null;
+      isLoadingJamaat = false;
+      jamaatError = 'Error loading Jamaat times: $e';
+      _computePrayerTableData();
+      setState(() {});
     }
   }
 
@@ -241,14 +260,15 @@ class _HomeScreenState extends State<HomeScreen> {
       if (maghribJamaatTime != '-') {
         updatedJamaatTimes['maghrib'] = maghribJamaatTime;
       }
-      setState(() {
-        jamaatTimes = updatedJamaatTimes;
-      });
-      
+      jamaatTimes = updatedJamaatTimes;
+
       // Reschedule notifications with updated times
       _notificationsScheduled = false;
       _scheduleNotificationsIfNeeded();
     }
+
+    // Pre-compute table data after prayer times update
+    _computePrayerTableData();
   }
 
   Future<void> _scheduleNotificationsIfNeeded() async {
@@ -317,31 +337,41 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchUserLocation() async {
+    // Set loading state once at the start
+    _coords = null;
+    isFetchingPlaceName = true;
+    currentPlaceName = null;
+    setState(() {});
+
     try {
       final position = await _locationService.getCurrentPosition();
-      setState(() {
-        _coords = Coordinates(position.latitude, position.longitude);
-        isFetchingPlaceName = true;
-        currentPlaceName = null;
-      });
-      // Save last fetched coordinates
+
+      // Update coordinates immediately
+      _coords = Coordinates(position.latitude, position.longitude);
+
+      // Save and fetch place name in parallel with SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble('last_latitude', position.latitude);
       await prefs.setDouble('last_longitude', position.longitude);
+
       // Fetch place name
       final place = await _locationService.getPlaceName(
         position.latitude,
         position.longitude,
       );
-      setState(() {
-        currentPlaceName = place;
-        isFetchingPlaceName = false;
-      });
+
+      // Single setState for all success updates
+      currentPlaceName = place;
+      isFetchingPlaceName = false;
       _updatePrayerTimes();
+      _computePrayerTableData();
+      setState(() {});
+
       // Save last fetched location name
       if (place != null && place.isNotEmpty) {
         await prefs.setString('last_location_name', place);
       }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -351,29 +381,29 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } catch (e) {
-      setState(() {
-        isFetchingPlaceName = false;
-      });
       // On error, check if it's a permission error and prompt to open settings
       if (e.toString().contains('permission')) {
         await _locationService.openLocationSettings();
       }
+
       // On error, load last known location and coordinates
       final prefs = await SharedPreferences.getInstance();
       final lastPlace = prefs.getString('last_location_name');
       final lastLat = prefs.getDouble('last_latitude');
       final lastLng = prefs.getDouble('last_longitude');
+
+      // Single setState for all error state updates
+      isFetchingPlaceName = false;
       if (lastLat != null && lastLng != null) {
-        setState(() {
-          _coords = Coordinates(lastLat, lastLng);
-        });
+        _coords = Coordinates(lastLat, lastLng);
         _updatePrayerTimes();
       }
       if (lastPlace != null && lastPlace.isNotEmpty) {
-        setState(() {
-          currentPlaceName = lastPlace;
-        });
+        currentPlaceName = lastPlace;
       }
+      _computePrayerTableData();
+      setState(() {});
+
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -386,24 +416,28 @@ class _HomeScreenState extends State<HomeScreen> {
     final lastPlace = prefs.getString('last_location_name');
     final lastLat = prefs.getDouble('last_latitude');
     final lastLng = prefs.getDouble('last_longitude');
+
+    // Combine all state updates into a single setState
+    bool needsUpdate = false;
     if (lastLat != null && lastLng != null) {
-      setState(() {
-        _coords = Coordinates(lastLat, lastLng);
-      });
+      _coords = Coordinates(lastLat, lastLng);
       _updatePrayerTimes();
+      needsUpdate = true;
     }
     if (lastPlace != null && lastPlace.isNotEmpty) {
-      setState(() {
-        currentPlaceName = lastPlace;
-      });
+      currentPlaceName = lastPlace;
+      needsUpdate = true;
+    }
+    if (needsUpdate) {
+      _computePrayerTableData();
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
-    _timer.cancel();
-    _timeNotifier.dispose();
-    _countdownNotifier.dispose();
+    _timer?.cancel();
+    _settingsSubscription?.cancel();
     super.dispose();
   }
 
@@ -433,66 +467,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (current == Prayer.maghrib) return 'Maghrib';
       if (current == Prayer.isha) return 'Isha';
       return 'Fajr';
-    }
-  }
-
-  Duration _getTimeToNextPrayer() {
-    final now = _now;
-    final order = [
-      'Fajr',
-      'Sunrise',
-      'Dahwah-e-kubrah',
-      'Dhuhr',
-      'Asr',
-      'Maghrib',
-      'Isha',
-    ];
-    for (final name in order) {
-      final t = times[name];
-      if (t != null && now.isBefore(t)) {
-        return t.difference(now);
-      }
-    }
-    // Next day's Fajr
-    final tomorrow = now.add(const Duration(days: 1));
-    final coords = _coords ?? Coordinates(23.8376, 90.2820);
-    final tomorrowPrayerTimes = PrayerTimes(
-      coordinates: coords,
-      date: tomorrow,
-      calculationParameters: params!,
-      precision: true,
-    );
-    final tomorrowFajr = tomorrowPrayerTimes.fajr;
-    return tomorrowFajr != null
-        ? tomorrowFajr.difference(now)
-        : const Duration();
-  }
-
-  String _getCountdownText() {
-    final currentPrayer = _getCurrentPrayerName();
-    final timeToNext = _getTimeToNextPrayer();
-    final now = DateTime.now();
-    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-    final todayOnly = DateTime(now.year, now.month, now.day);
-    
-    if (selectedDateOnly.isBefore(todayOnly)) {
-      // Past date
-      return 'Viewing past date: ${DateFormat('dd MMM yyyy').format(selectedDate)}';
-    } else if (selectedDateOnly.isAfter(todayOnly)) {
-      // Future date
-      return 'Viewing future date: ${DateFormat('dd MMM yyyy').format(selectedDate)}';
-    } else {
-      // Today
-      if (currentPrayer == 'Sunrise') {
-        return 'Coming Dahwa-e-kubrah';
-      } else if (currentPrayer == 'Dahwah-e-kubrah') {
-        return 'Coming Dhuhr';
-      } else {
-        String countdown = timeToNext.isNegative
-            ? '--:--'
-            : '${timeToNext.inHours.toString().padLeft(2, '0')}:${(timeToNext.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
-        return '$currentPrayer time remaining: $countdown';
-      }
     }
   }
 
@@ -543,6 +517,76 @@ class _HomeScreenState extends State<HomeScreen> {
       return DateFormat('HH:mm').format(maghribJamaatTime);
     }
     return '-';
+  }
+
+  /// Pre-compute prayer table data to avoid expensive calculations in build()
+  void _computePrayerTableData() {
+    final currentPrayer = _getCurrentPrayerName();
+    final dhakaLocation = tz.getLocation('Asia/Dhaka');
+
+    const prayerNames = [
+      'Fajr',
+      'Sunrise',
+      'Dahwah-e-kubrah',
+      'Dhuhr',
+      'Asr',
+      'Maghrib',
+      'Isha',
+    ];
+
+    _prayerTableData = prayerNames.map((name) {
+      // Compute time string
+      final t = times[name];
+      final timeStr = t != null
+          ? DateFormat('HH:mm').format(
+              tz.TZDateTime.from(t, dhakaLocation),
+            )
+          : '-';
+
+      // Map prayer names to jamaat time keys
+      String jamaatKey;
+      switch (name) {
+        case 'Fajr':
+          jamaatKey = 'fajr';
+          break;
+        case 'Dhuhr':
+          jamaatKey = 'dhuhr';
+          break;
+        case 'Asr':
+          jamaatKey = 'asr';
+          break;
+        case 'Maghrib':
+          jamaatKey = 'maghrib';
+          break;
+        case 'Isha':
+          jamaatKey = 'isha';
+          break;
+        case 'Sunrise':
+        case 'Dahwah-e-kubrah':
+          jamaatKey = name.toLowerCase();
+          break;
+        default:
+          jamaatKey = name.toLowerCase();
+      }
+
+      // Compute jamaat string
+      String jamaatStr = '-';
+      if (name == 'Maghrib') {
+        jamaatStr = _calculateMaghribJamaatTime();
+      } else if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
+        final value = jamaatTimes![jamaatKey];
+        if (value != null && value.toString().isNotEmpty) {
+          jamaatStr = _formatJamaatTime(value.toString());
+        }
+      }
+
+      return PrayerRowData(
+        name: name,
+        timeStr: timeStr,
+        jamaatStr: jamaatStr,
+        isCurrent: name == currentPrayer,
+      );
+    }).toList();
   }
 
   @override
@@ -646,21 +690,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                               padding: const EdgeInsets.only(
                                                 right: 12.0,
                                               ),
-                                              child: ValueListenableBuilder<DateTime>(
-                                                valueListenable: _timeNotifier,
-                                                builder: (context, time, child) {
-                                                  final timeStr = DateFormat('HH:mm').format(time);
-                                                  return Text(
-                                                    timeStr,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge
-                                                        ?.copyWith(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                  );
-                                                },
+                                              child: LiveClockWidget(
+                                                textStyle: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyLarge
+                                                    ?.copyWith(
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
                                               ),
                                             ),
                                           ],
@@ -711,24 +747,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                             child: FittedBox(
                                               fit: BoxFit.scaleDown,
                                               alignment: Alignment.centerLeft,
-                                              child: ValueListenableBuilder<Duration>(
-                                                valueListenable: _countdownNotifier,
-                                                builder: (context, countdown, child) {
-                                                  return Text(
-                                                    _getCountdownText(),
-                                                    style: TextStyle(
-                                                      fontSize:
-                                                          _getCurrentPrayerName() ==
-                                                                  'Sunrise' ||
-                                                              _getCurrentPrayerName() ==
-                                                                  'Dahwah-e-kubrah'
-                                                          ? 16
-                                                          : 24,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Color(0xFF1B5E20),
-                                                    ),
-                                                  );
-                                                },
+                                              child: PrayerCountdownWidget(
+                                                prayerTimes: times,
+                                                selectedDate: selectedDate,
+                                                coordinates: _coords,
+                                                calculationParams: params,
                                               ),
                                             ),
                                           ),
@@ -842,102 +865,47 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
-                        ...[
-                          'Fajr',
-                          'Sunrise',
-                          'Dahwah-e-kubrah',
-                          'Dhuhr',
-                          'Asr',
-                          'Maghrib',
-                          'Isha',
-                        ].map((name) {
-                          final t = times[name];
-                          final timeStr = t != null
-                              ? DateFormat('HH:mm').format(
-                                  tz.TZDateTime.from(
-                                    t,
-                                    tz.getLocation('Asia/Dhaka'),
-                                  ),
-                                )
-                              : '-';
-                          // Map prayer names to jamaat time keys
-                          String jamaatKey;
-                          switch (name) {
-                            case 'Fajr':
-                              jamaatKey = 'fajr';
-                              break;
-                            case 'Dhuhr':
-                              jamaatKey = 'dhuhr';
-                              break;
-                            case 'Asr':
-                              jamaatKey = 'asr';
-                              break;
-                            case 'Maghrib':
-                              jamaatKey = 'maghrib';
-                              break;
-                            case 'Isha':
-                              jamaatKey = 'isha';
-                              break;
-                            case 'Sunrise':
-                            case 'Dahwah-e-kubrah':
-                              jamaatKey = name.toLowerCase();
-                              break;
-                            default:
-                              jamaatKey = name.toLowerCase();
-                          }
-                          
-                          String jamaatStr = '-';
-                          if (name == 'Maghrib') {
-                            // For Maghrib, use calculated time from prayer time
-                            jamaatStr = _calculateMaghribJamaatTime();
-                          } else if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
-                            final value = jamaatTimes![jamaatKey];
-                            if (value != null && value.toString().isNotEmpty) {
-                              jamaatStr = _formatJamaatTime(value.toString());
-                            }
-                          }
-                          final isCurrent = name == _getCurrentPrayerName();
-                          return TableRow(
-                            decoration: isCurrent
-                                ? BoxDecoration(color: Colors.green.shade100)
-                                : null,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(name),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Center(
-                                  child: Text(
-                                    timeStr,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
+                        // Use pre-computed prayer table data (avoids expensive calculations in build)
+                        ..._prayerTableData.map((row) => TableRow(
+                          decoration: row.isCurrent
+                              ? BoxDecoration(color: Colors.green.shade100)
+                              : null,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(row.name),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Center(
+                                child: Text(
+                                  row.timeStr,
+                                  style: const TextStyle(fontSize: 13),
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Center(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        jamaatStr,
-                                        style: jamaatStr == '-'
-                                            ? const TextStyle(color: Colors.grey)
-                                            : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                                      ),
-                                      if (jamaatStr != '-') ...[
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.mosque, size: 12, color: Colors.green),
-                                      ],
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      row.jamaatStr,
+                                      style: row.jamaatStr == '-'
+                                          ? const TextStyle(color: Colors.grey)
+                                          : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                                    ),
+                                    if (row.jamaatStr != '-') ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.mosque, size: 12, color: Colors.green),
                                     ],
-                                  ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          );
-                        }),
+                            ),
+                          ],
+                        )),
                       ],
                     ),
                   ],
