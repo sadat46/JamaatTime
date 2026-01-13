@@ -21,7 +21,6 @@ class _NotificationMonitorScreenState extends State<NotificationMonitorScreen> {
   final NotificationService _notificationService = NotificationService();
   
   // Reuse the same prayer time calculation logic from HomeScreen
-  Coordinates? _coords;
   CalculationParameters? params;
   PrayerTimes? prayerTimes;
   Map<String, DateTime?> times = {};
@@ -36,7 +35,7 @@ class _NotificationMonitorScreenState extends State<NotificationMonitorScreen> {
   void initState() {
     super.initState();
     tzdata.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
+    // Removed timezone forcing to support global usage - device local time will be used
     _initializePrayerTimes();
     _loadJamaatNotificationTimes();
   }
@@ -76,11 +75,11 @@ class _NotificationMonitorScreenState extends State<NotificationMonitorScreen> {
       final maghrib = prayerTimes!.maghrib;
       final isha = prayerTimes!.isha;
 
-      // Calculate Dahwah-e-kubrah as midpoint between sunrise and dhuhr (same as HomeScreen)
+      // Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
       DateTime? dahwaKubrah;
-      if (sunrise != null && dhuhr != null) {
-        final diff = dhuhr.difference(sunrise);
-        dahwaKubrah = sunrise.add(
+      if (fajr != null && maghrib != null) {
+        final diff = maghrib.difference(fajr);
+        dahwaKubrah = fajr.add(
           Duration(milliseconds: diff.inMilliseconds ~/ 2),
         );
       }

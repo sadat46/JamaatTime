@@ -1,5 +1,4 @@
 import 'package:adhan_dart/adhan_dart.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
 import '../core/constants.dart';
 
@@ -12,7 +11,7 @@ class PrayerCalculationService {
   /// Initialize timezone data
   void initializeTimeZones() {
     tzdata.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
+    // Removed timezone forcing to support global usage - device local time will be used
   }
 
   /// Get calculation parameters for Bangladesh
@@ -45,11 +44,13 @@ class PrayerCalculationService {
     );
   }
 
-  /// Calculate Dahwah-e-kubrah as midpoint between sunrise and dhuhr
-  DateTime? calculateDahwahKubrah(DateTime? sunrise, DateTime? dhuhr) {
-    if (sunrise != null && dhuhr != null) {
-      final diff = dhuhr.difference(sunrise);
-      return sunrise.add(
+  /// Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
+  /// Represents the midpoint of the Islamic legal day (from start to end of fast)
+  /// Formula: Fajr + ((Maghrib - Fajr) / 2)
+  DateTime? calculateDahwahKubrah(DateTime? fajr, DateTime? maghrib) {
+    if (fajr != null && maghrib != null) {
+      final diff = maghrib.difference(fajr);
+      return fajr.add(
         Duration(milliseconds: diff.inMilliseconds ~/ 2),
       );
     }
@@ -65,8 +66,8 @@ class PrayerCalculationService {
     final maghrib = prayerTimes.maghrib;
     final isha = prayerTimes.isha;
 
-    // Calculate Dahwah-e-kubrah
-    final dahwaKubrah = calculateDahwahKubrah(sunrise, dhuhr);
+    // Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
+    final dahwaKubrah = calculateDahwahKubrah(fajr, maghrib);
 
     return {
       'Fajr': fajr,

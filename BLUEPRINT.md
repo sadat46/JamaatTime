@@ -331,11 +331,11 @@ PrayerTimes calculatePrayerTimes({
   required CalculationParameters parameters,
 })
 
-/// Calculate Dahwah-e-kubrah (Islamic noon)
-/// @param sunrise - Sunrise time
-/// @param dhuhr - Dhuhr time
-/// @returns Midpoint between sunrise and dhuhr
-DateTime? calculateDahwahKubrah(DateTime? sunrise, DateTime? dhuhr)
+/// Calculate Dahwah-e-kubrah (midpoint of Islamic legal day)
+/// @param fajr - Fajr prayer time (start of fast)
+/// @param maghrib - Maghrib prayer time (end of fast)
+/// @returns Midpoint between Fajr and Maghrib
+DateTime? calculateDahwahKubrah(DateTime? fajr, DateTime? maghrib)
 
 /// Create a map of all prayer times
 /// @param prayerTimes - Calculated PrayerTimes object
@@ -1310,7 +1310,7 @@ developer.log(
 | **Adhan** | Islamic call to prayer |
 | **Asr** | Afternoon prayer (3rd daily prayer) |
 | **Cantt/Cantonment** | Military station/settlement |
-| **Dahwah-e-kubrah** | Islamic noon (midpoint between sunrise and dhuhr) |
+| **Dahwah-e-kubrah** | Midpoint of the Islamic legal day (midpoint between Fajr and Maghrib, representing half the fasting period) |
 | **Dhuhr** | Midday prayer (2nd daily prayer) |
 | **Fajr** | Dawn prayer (1st daily prayer) |
 | **Hanafi** | One of four major Sunni schools of Islamic jurisprudence |
