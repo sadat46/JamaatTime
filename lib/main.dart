@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
@@ -14,7 +13,6 @@ import 'themes/white_theme.dart';
 import 'themes/light_theme.dart';
 import 'themes/dark_theme.dart';
 import 'themes/green_theme.dart';
-import 'core/constants.dart';
 
 final ValueNotifier<int> themeIndexNotifier = ValueNotifier(
   0,
@@ -25,7 +23,7 @@ void main() async {
 
   // Initialize timezone data once at app startup (faster than in each screen)
   tzdata.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation(AppConstants.defaultTimeZone));
+  // Removed timezone forcing to support global usage - device local time will be used
 
   try {
     // Initialize Firebase for all platforms
@@ -107,7 +105,10 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,

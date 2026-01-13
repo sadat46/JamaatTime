@@ -214,11 +214,6 @@ class AuthService {
     }
     
     try {
-      // Get all users from Firestore to see what exists
-      final existingDocs = await _firestore.collection('users').get();
-      // Note: existingUserIds is available for future migration logic
-      // final existingUserIds = existingDocs.docs.map((doc) => doc.id).toSet();
-      
       // For now, we'll create a document for the current user if it doesn't exist
       // and provide instructions for manual migration
       final currentUser = _auth.currentUser;

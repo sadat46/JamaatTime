@@ -2,10 +2,10 @@ class AppConstants {
   // Default coordinates (Dhaka, Bangladesh)
   static const double defaultLatitude = 23.8376;
   static const double defaultLongitude = 90.2820;
-  
-  // Time zone
-  static const String defaultTimeZone = 'Asia/Dhaka';
-  
+
+  // Time zone - REMOVED to support global usage (device local time will be used)
+  // static const String defaultTimeZone = 'Asia/Dhaka';
+
   // Default city
   static const String defaultCity = 'Savar Cantt';
   

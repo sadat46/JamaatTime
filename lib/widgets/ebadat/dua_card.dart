@@ -99,6 +99,7 @@ class _DuaCardState extends State<DuaCard> {
                       setState(() {});
 
                       if (mounted) {
+                        // ignore: use_build_context_synchronously
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(

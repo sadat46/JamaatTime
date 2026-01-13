@@ -14,7 +14,24 @@ class JamaatService {
 
   // In-memory cache for jamaat times (reduces network calls)
   static final Map<String, _CachedJamaatTimes> _cache = {};
-  static const Duration _cacheExpiry = Duration(minutes: 30);
+
+  /// Get cache expiry duration based on target date (Smart Cache)
+  /// - Today: 30 minutes (data may change)
+  /// - Future: 6 hours (unlikely to change)
+  /// - Past: 24 hours (won't change)
+  static Duration _getSmartCacheExpiry(DateTime targetDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+
+    if (target == today) {
+      return const Duration(minutes: 30);
+    } else if (target.isAfter(today)) {
+      return const Duration(hours: 6);
+    } else {
+      return const Duration(hours: 24);
+    }
+  }
 
   /// Save jamaat times for a specific city and date
   Future<void> saveJamaatTimes({
@@ -76,16 +93,18 @@ class JamaatService {
   Future<Map<String, String>?> getJamaatTimes({
     required String city,
     required DateTime date,
+    bool forceRefresh = false,
   }) async {
     try {
       final cacheKey = _getCacheKey(city, date);
 
-      // Check cache first
-      if (_cache.containsKey(cacheKey)) {
+      // Check cache first (skip if forceRefresh is true)
+      if (!forceRefresh && _cache.containsKey(cacheKey)) {
         final cached = _cache[cacheKey]!;
-        if (!cached.isExpired(_cacheExpiry)) {
+        final cacheExpiry = _getSmartCacheExpiry(date);
+        if (!cached.isExpired(cacheExpiry)) {
           developer.log(
-            'Cache hit for $city on ${_formatDate(date)}',
+            'Cache hit for $city on ${_formatDate(date)} (expiry: ${cacheExpiry.inMinutes}min)',
             name: 'JamaatService',
           );
           return Map<String, String>.from(cached.times);
@@ -93,6 +112,14 @@ class JamaatService {
           // Remove expired cache entry
           _cache.remove(cacheKey);
         }
+      }
+
+      // Log if force refresh was requested
+      if (forceRefresh) {
+        developer.log(
+          'Force refresh requested for $city on ${_formatDate(date)}',
+          name: 'JamaatService',
+        );
       }
 
       final dateString = _formatDate(date);
@@ -153,6 +180,37 @@ class JamaatService {
   /// Clear the jamaat times cache
   void clearCache() {
     _cache.clear();
+  }
+
+  /// Update a single prayer's jamaat time with proper schema and cache clearing
+  Future<void> updateSingleJamaatTime({
+    required String city,
+    required DateTime date,
+    required String prayerName,
+    required String time,
+  }) async {
+    final cityKey = city.toLowerCase().replaceAll(' ', '_');
+    final dateString = _formatDate(date);
+
+    // 1. Clear cache for this city/date
+    final cacheKey = _getCacheKey(city, date);
+    _cache.remove(cacheKey);
+
+    // 2. Save with correct schema (nested under 'times')
+    await _firestore
+        .collection('jamaat_times')
+        .doc(cityKey)
+        .collection('daily_times')
+        .doc(dateString)
+        .set({
+      'times': {prayerName.toLowerCase(): time},
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    developer.log(
+      'Updated $prayerName time for $city on $dateString: $time',
+      name: 'JamaatService',
+    );
   }
 
   /// Get jamaat times for a date range

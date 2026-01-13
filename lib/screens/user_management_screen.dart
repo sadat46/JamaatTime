@@ -155,6 +155,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: selectedRole,
               decoration: const InputDecoration(
                 labelText: 'Role',
@@ -193,9 +194,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               
               try {
                 await _authService.addUserToFirestore(userId, email, selectedRole);
-                
+
                 if (mounted) {
+                  // ignore: use_build_context_synchronously
                   Navigator.of(context).pop();
+                  // ignore: use_build_context_synchronously
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('User $email added successfully'),
@@ -211,6 +214,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 }
               } catch (e) {
                 if (mounted) {
+                  // ignore: use_build_context_synchronously
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error adding user: $e'),

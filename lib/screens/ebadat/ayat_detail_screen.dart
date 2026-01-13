@@ -252,9 +252,9 @@ ${widget.ayat.banglaMeaning}
                     child: Text(
                       widget.ayat.banglaTransliteration,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 19,
                         fontStyle: FontStyle.italic,
-                        height: 1.6,
+                        height: 1.7,
                         color: Colors.grey[800],
                       ),
                     ),
@@ -280,8 +280,8 @@ ${widget.ayat.banglaMeaning}
                     child: Text(
                       widget.ayat.banglaMeaning,
                       style: const TextStyle(
-                        fontSize: 16,
-                        height: 1.7,
+                        fontSize: 19,
+                        height: 1.8,
                         color: Colors.black87,
                       ),
                     ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz;
 import '../services/jamaat_time_utility.dart';
 
 class PrayerTimeTable extends StatelessWidget {
@@ -73,12 +72,7 @@ class PrayerTimeTable extends StatelessWidget {
         ].map((name) {
           final t = times[name];
           final timeStr = t != null
-              ? DateFormat('HH:mm').format(
-                  tz.TZDateTime.from(
-                    t,
-                    tz.getLocation('Asia/Dhaka'),
-                  ),
-                )
+              ? DateFormat('HH:mm').format(t.toLocal())
               : '-';
 
           String jamaatStr = '-';

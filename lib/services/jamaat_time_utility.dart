@@ -1,5 +1,4 @@
 import 'package:intl/intl.dart';
-import '../core/constants.dart';
 
 class JamaatTimeUtility {
   static JamaatTimeUtility? _instance;
@@ -94,8 +93,8 @@ class JamaatTimeUtility {
     } else {
       // For other prayers, get from jamaat times map
       final jamaatKey = getJamaatTimeKey(prayerName);
-      if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
-        final value = jamaatTimes![jamaatKey];
+      if (jamaatTimes != null && jamaatTimes.containsKey(jamaatKey)) {
+        final value = jamaatTimes[jamaatKey];
         if (value != null && value.toString().isNotEmpty) {
           return formatJamaatTime(value.toString());
         }

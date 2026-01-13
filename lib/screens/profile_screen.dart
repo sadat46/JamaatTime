@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
@@ -41,6 +45,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   String _version = '';
+  String? _currentVersion;
+  String? _buildNumber;
+  bool _isChecking = false;
 
   @override
   void initState() {
@@ -89,7 +96,170 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final info = await PackageInfo.fromPlatform();
     setState(() {
       _version = 'v ${info.version} ( ${info.buildNumber})';
+      _currentVersion = info.version;
+      _buildNumber = info.buildNumber;
     });
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_isChecking) return;
+
+    setState(() {
+      _isChecking = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/sadat46/jaamat-time-release/releases/latest'),
+        headers: const {'Accept': 'application/vnd.github+json'},
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('GitHub responded with status ${response.statusCode}');
+      }
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final latestTag = (data['tag_name'] as String? ?? '').trim();
+      final releaseUrl = data['html_url'] as String?;
+      final assets = data['assets'] as List<dynamic>? ?? const [];
+
+      if (latestTag.isEmpty) {
+        throw Exception('Latest release tag not found');
+      }
+
+      final current = _currentVersion ?? '0.0.0';
+      final comparison = _compareVersions(current, latestTag);
+
+      if (comparison >= 0) {
+        _showUpdateSnackBar('You are using the latest version');
+        return;
+      }
+
+      String? downloadUrl;
+      for (final asset in assets) {
+        if (asset is Map<String, dynamic>) {
+          final name = asset['name'] as String?;
+          final url = asset['browser_download_url'] as String?;
+          if (name != null && name.toLowerCase().endsWith('.apk') && url != null) {
+            downloadUrl = url;
+            break;
+          }
+        }
+      }
+
+      downloadUrl ??= releaseUrl;
+
+      if (downloadUrl == null) {
+        _showUpdateSnackBar('Update available but no download link provided');
+        return;
+      }
+
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Update Available'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Current version: $current'),
+                if (_buildNumber != null)
+                  Text('Build: $_buildNumber'),
+                const SizedBox(height: 12),
+                Text('Latest version: $latestTag'),
+                if (data['body'] is String && (data['body'] as String).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    data['body'] as String,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Not Now'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  await _launchDownload(downloadUrl!);
+                },
+                child: const Text('Download'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (error) {
+      debugPrint('ProfileScreen: Update check failed - $error');
+      _showUpdateSnackBar('Failed to check for updates');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isChecking = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _launchDownload(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw Exception('Unable to open $url');
+      }
+    } catch (error) {
+      debugPrint('ProfileScreen: Launch failed - $error');
+      _showUpdateSnackBar('Could not open download link');
+    }
+  }
+
+  void _showUpdateSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  int _compareVersions(String current, String latest) {
+    List<int> parse(String value) {
+      var cleaned = value.trim();
+      if (cleaned.toLowerCase().startsWith('v')) {
+        cleaned = cleaned.substring(1);
+      }
+      cleaned = cleaned.split('+').first;
+      cleaned = cleaned.split('-').first;
+
+      final segments = cleaned.split('.');
+      if (segments.isEmpty) {
+        return [0];
+      }
+
+      return segments
+          .map((segment) {
+            final match = RegExp(r'\d+').firstMatch(segment);
+            return match != null ? int.parse(match.group(0)!) : 0;
+          })
+          .toList();
+    }
+
+    final currentParts = parse(current);
+    final latestParts = parse(latest);
+    final maxLength = max(currentParts.length, latestParts.length);
+
+    for (var i = 0; i < maxLength; i++) {
+      final currentValue = i < currentParts.length ? currentParts[i] : 0;
+      final latestValue = i < latestParts.length ? latestParts[i] : 0;
+
+      if (currentValue != latestValue) {
+        return currentValue.compareTo(latestValue);
+      }
+    }
+
+    return 0;
   }
 
 
@@ -728,6 +898,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
+                  const SizedBox(height: 12),
+                  // Check for Update Button
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: _isChecking ? null : _checkForUpdate,
+                      icon: _isChecking
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.system_update_alt),
+                      label: Text(_isChecking ? 'Checking...' : 'Check for Update'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF388E3C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
                     'Copyright (c) 2025 sadat46\nStatic Signal Coy,Savar\nAll rights reserved.',
                     textAlign: TextAlign.center,
