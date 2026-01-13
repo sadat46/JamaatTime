@@ -10,7 +10,6 @@ import '../widgets/live_clock_widget.dart';
 import '../widgets/prayer_countdown_widget.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timezone/timezone.dart' as tz;
 import '../core/constants.dart';
 
 // Extension to get date part only
@@ -53,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? jamaatTimes;
   bool isLoadingJamaat = false;
   String? jamaatError;
+  DateTime? _lastJamaatUpdate;  // Track last successful jamaat times fetch
   DateTime selectedDate = DateTime.now(); // Add selected date for jamaat times
 
   final List<String> canttNames = AppConstants.canttNames;
@@ -158,19 +158,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _fetchJamaatTimes(String city) async {
+  Future<void> _fetchJamaatTimes(String city, {bool forceRefresh = false}) async {
     setState(() {
       isLoadingJamaat = true;
       jamaatError = null;
       jamaatTimes = null;
     });
-    
+
     try {
-      
+
       // Use JamaatService for consistent data structure
       final times = await _jamaatService.getJamaatTimes(
         city: city,
         date: selectedDate,
+        forceRefresh: forceRefresh,
       );
       
       if (times != null) {
@@ -184,6 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         jamaatTimes = completeJamaatTimes;
+        _lastJamaatUpdate = DateTime.now();  // Track successful fetch
         isLoadingJamaat = false;
 
         // Pre-compute table data after jamaat times update
@@ -234,11 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final maghrib = prayerTimes!.maghrib;
     final isha = prayerTimes!.isha;
 
-    // Calculate Dahwah-e-kubrah as midpoint between sunrise and dhuhr
+    // Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
     DateTime? dahwaKubrah;
-    if (sunrise != null && dhuhr != null) {
-      final diff = dhuhr.difference(sunrise);
-      dahwaKubrah = sunrise.add(
+    if (fajr != null && maghrib != null) {
+      final diff = maghrib.difference(fajr);
+      dahwaKubrah = fajr.add(
         Duration(milliseconds: diff.inMilliseconds ~/ 2),
       );
     }
@@ -508,11 +510,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (maghribPrayerTime != null && selectedCity != null) {
       final offset = _getMaghribOffset(selectedCity!);
 
-      // Convert to Bangladesh timezone for consistency with other jamaat times
-      // This ensures the calculation is correct regardless of device timezone
-      final dhakaLocation = tz.getLocation('Asia/Dhaka');
-      final maghribInDhaka = tz.TZDateTime.from(maghribPrayerTime, dhakaLocation);
-      final maghribJamaatTime = maghribInDhaka.add(Duration(minutes: offset));
+      // Use device local time to support global usage
+      final maghribLocal = maghribPrayerTime.toLocal();
+      final maghribJamaatTime = maghribLocal.add(Duration(minutes: offset));
 
       return DateFormat('HH:mm').format(maghribJamaatTime);
     }
@@ -522,7 +522,6 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Pre-compute prayer table data to avoid expensive calculations in build()
   void _computePrayerTableData() {
     final currentPrayer = _getCurrentPrayerName();
-    final dhakaLocation = tz.getLocation('Asia/Dhaka');
 
     const prayerNames = [
       'Fajr',
@@ -535,12 +534,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     _prayerTableData = prayerNames.map((name) {
-      // Compute time string
+      // Compute time string using device local time
       final t = times[name];
       final timeStr = t != null
-          ? DateFormat('HH:mm').format(
-              tz.TZDateTime.from(t, dhakaLocation),
-            )
+          ? DateFormat('HH:mm').format(t.toLocal())
           : '-';
 
       // Map prayer names to jamaat time keys
@@ -611,12 +608,22 @@ class _HomeScreenState extends State<HomeScreen> {
           body: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxContentWidth),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 8.0,
-                ),
-                child: Column(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  if (selectedCity != null) {
+                    await _fetchJamaatTimes(selectedCity!, forceRefresh: true);
+                    _updatePrayerTimes();
+                  }
+                },
+                color: const Color(0xFF388E3C),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: 8.0,
+                    ),
+                    child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     LayoutBuilder(
@@ -732,7 +739,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                         ],
                                       ),
-
+                                    if (_lastJamaatUpdate != null && !isLoadingJamaat)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 16.0, top: 4.0),
+                                        child: Text(
+                                          'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
+                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                        ),
+                                      ),
 
                                     const SizedBox(height: 8),
                                     Row(
@@ -908,13 +922,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         )),
                       ],
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 }
