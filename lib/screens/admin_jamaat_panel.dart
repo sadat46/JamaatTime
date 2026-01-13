@@ -5,7 +5,6 @@ import '../services/jamaat_service.dart';
 import '../core/constants.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminJamaatPanel extends StatefulWidget {
   const AdminJamaatPanel({super.key});
@@ -101,91 +100,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         _adminLoading = false;
         _adminMsg = 'Error loading jamaat times: $e';
       });
-    }
-  }
-
-  Future<void> _saveManualTimes() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
-
-    try {
-      final times = <String, String>{};
-      for (final entry in _jamaatControllers.entries) {
-        if (entry.value.text.isNotEmpty) {
-          times[entry.key.toLowerCase()] = entry.value.text;
-        }
-      }
-
-      if (times.isEmpty) {
-        setState(() {
-          _message = 'Please enter at least one prayer time';
-          _isSuccess = false;
-        });
-        return;
-      }
-
-      // Use JamaatService for consistent data structure
-      try {
-        await _jamaatService.saveJamaatTimes(
-          city: _selectedCity,
-          date: _selectedDate,
-          times: times,
-        );
-
-        setState(() {
-          _isSuccess = true;
-          _message = 'Jamaat times saved successfully for $_selectedCity on ${DateFormat('MMM dd, yyyy').format(_selectedDate)}';
-        });
-
-        // Clear success message after 3 seconds
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              _isSuccess = false;
-              _message = null;
-            });
-          }
-        });
-      } catch (e) {
-        setState(() {
-          _isSuccess = false;
-          _message = 'Error saving jamaat times: $e';
-        });
-      }
-    } catch (e) {
-      debugPrint('Error saving jamaat times: $e');
-      setState(() {
-        _message = 'Error saving jamaat times: $e';
-        _isSuccess = false;
-      });
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _editManualTimes() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
-
-    try {
-      // Load existing times for editing
-      await _loadJamaatTimes();
-      
-      setState(() {
-        _message = 'Times loaded for editing. Make your changes and click Save.';
-        _isSuccess = true;
-      });
-    } catch (e) {
-      setState(() {
-        _message = 'Error loading times for editing: $e';
-        _isSuccess = false;
-      });
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -811,6 +725,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<String>(
+                                // ignore: deprecated_member_use
                                 value: _selectedCity,
                                 decoration: const InputDecoration(
                                   labelText: 'Cantt Name',
@@ -960,15 +875,12 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                                           _adminMsg = null;
                                         });
                                         try {
-                                          final data = {p.toLowerCase(): formatted};
-                                          final dateString = DateFormat('yyyy-MM-dd').format(_selectedDate);
-                                          final cityKey = _selectedCity.toLowerCase().replaceAll(' ', '_');
-                                          await FirebaseFirestore.instance
-                                              .collection('jamaat_times')
-                                              .doc(cityKey)
-                                              .collection('daily_times')
-                                              .doc(dateString)
-                                              .set(data, SetOptions(merge: true));
+                                          await _jamaatService.updateSingleJamaatTime(
+                                            city: _selectedCity,
+                                            date: _selectedDate,
+                                            prayerName: p,
+                                            time: formatted,
+                                          );
                                           setState(() {
                                             _adminMsg = '$p time saved successfully!';
                                             _editingPrayer = null;
@@ -1076,6 +988,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<String>(
+                                // ignore: deprecated_member_use
                                 value: _selectedCity,
                                 decoration: const InputDecoration(
                                   labelText: 'Cantt Name',
@@ -1094,6 +1007,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
                             const SizedBox(width: 16),
                             Expanded(
                               child: DropdownButtonFormField<int>(
+                                // ignore: deprecated_member_use
                                 value: _selectedYear,
                                 decoration: const InputDecoration(
                                   labelText: 'Year',

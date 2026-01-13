@@ -740,9 +740,6 @@ class NotificationService {
   /// Recreate notification channel with new settings
   Future<void> recreateNotificationChannel() async {
     try {
-      final prayerMode = await _settingsService.getPrayerNotificationSoundMode();
-      final jamaatMode = await _settingsService.getJamaatNotificationSoundMode();
-
       // Recreate channels with new settings
       await _createAllNotificationChannels();
     } catch (e) {

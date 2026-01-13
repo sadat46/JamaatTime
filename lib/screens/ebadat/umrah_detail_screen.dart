@@ -155,8 +155,8 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                     child: Text(
                       widget.section.description,
                       style: const TextStyle(
-                        fontSize: 16,
-                        height: 1.7,
+                        fontSize: 19,
+                        height: 1.8,
                         color: Colors.black87,
                       ),
                     ),
@@ -186,7 +186,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                                 const Text(
                                   '• ',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFFE65100),
                                   ),
@@ -195,8 +195,8 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                                   child: Text(
                                     rule,
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      height: 1.6,
+                                      fontSize: 19,
+                                      height: 1.7,
                                       color: Colors.black87,
                                     ),
                                   ),
@@ -340,9 +340,9 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                 child: Text(
                   dua.banglaTransliteration,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 17,
                     fontStyle: FontStyle.italic,
-                    height: 1.5,
+                    height: 1.6,
                     color: Colors.grey[800],
                   ),
                 ),
@@ -362,8 +362,8 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                 child: Text(
                   dua.banglaMeaning,
                   style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
+                    fontSize: 17,
+                    height: 1.7,
                     color: Colors.black87,
                   ),
                 ),
@@ -422,8 +422,9 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
               Text(
                 dua.banglaTransliteration,
                 style: const TextStyle(
+                  fontSize: 17,
                   fontStyle: FontStyle.italic,
-                  height: 1.5,
+                  height: 1.6,
                 ),
               ),
               const SizedBox(height: 16),
@@ -438,7 +439,8 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
               Text(
                 dua.banglaMeaning,
                 style: const TextStyle(
-                  height: 1.6,
+                  fontSize: 17,
+                  height: 1.7,
                 ),
               ),
             ],
