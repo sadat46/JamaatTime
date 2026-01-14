@@ -31,6 +31,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   Timer? _timer;
   String _countdownText = '';
   bool _isSpecialPrayer = false;
+  double _progressValue = 0.0;
 
   // Default coordinates (Dhaka, Bangladesh)
   static const double _defaultLatitude = 23.8376;
@@ -73,24 +74,28 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
 
     String text;
     bool isSpecial = false;
+    double progress = 0.0;
 
     if (selectedDateOnly.isBefore(todayOnly)) {
       // Past date
       text = 'Viewing past date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
       isSpecial = true;
+      progress = 0.0;
     } else if (selectedDateOnly.isAfter(todayOnly)) {
       // Future date
       text = 'Viewing future date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
       isSpecial = true;
+      progress = 0.0;
     } else {
-      // Today - show countdown
-      final currentPrayer = _getCurrentPrayerName(now);
+      // Today - show countdown with current period name
+      final currentPeriod = _getCurrentPrayerPeriodName(now);
       final timeToNext = _getTimeToNextPrayer(now);
+      progress = _calculateProgress(now);
 
-      if (currentPrayer == 'Sunrise') {
+      if (currentPeriod == 'Sunrise') {
         text = 'Coming Dahwa-e-kubrah';
         isSpecial = true;
-      } else if (currentPrayer == 'Dahwah-e-kubrah') {
+      } else if (currentPeriod == 'Dahwah-e-kubrah') {
         text = 'Coming Dhuhr';
         isSpecial = true;
       } else {
@@ -103,7 +108,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
             ? '--:--:--'
             : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-        text = '$currentPrayer time remaining: $countdown';
+        text = '$currentPeriod time remaining: $countdown';
         isSpecial = false;
       }
     }
@@ -112,11 +117,12 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       setState(() {
         _countdownText = text;
         _isSpecialPrayer = isSpecial;
+        _progressValue = progress;
       });
     }
   }
 
-  String _getCurrentPrayerName(DateTime now) {
+  String _getCurrentPrayerPeriodName(DateTime now) {
     final times = widget.prayerTimes;
     final order = [
       'Fajr',
@@ -128,16 +134,22 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       'Isha',
     ];
 
-    // Find the next prayer (first prayer that hasn't passed yet)
-    for (final name in order) {
-      final t = times[name];
-      if (t != null && now.isBefore(t)) {
-        return name;
+    // Find which period we're currently in
+    String currentPeriod = 'Isha'; // Default (between midnight and Fajr)
+
+    for (int i = 0; i < order.length; i++) {
+      final t = times[order[i]];
+      if (t != null) {
+        if (now.isBefore(t)) {
+          // We haven't reached this prayer yet, so we're in the previous period
+          return i > 0 ? order[i - 1] : 'Isha';
+        }
+        // We've passed this prayer, update current period
+        currentPeriod = order[i];
       }
     }
 
-    // All prayers have passed, next is tomorrow's Fajr
-    return 'Fajr';
+    return currentPeriod; // We've passed all prayers (Isha period)
   }
 
   Duration _getTimeToNextPrayer(DateTime now) {
@@ -180,6 +192,67 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     return Duration.zero;
   }
 
+  double _calculateProgress(DateTime now) {
+    final times = widget.prayerTimes;
+    final order = [
+      'Fajr',
+      'Sunrise',
+      'Dahwah-e-kubrah',
+      'Dhuhr',
+      'Asr',
+      'Maghrib',
+      'Isha',
+    ];
+
+    DateTime? periodStart;
+    DateTime? periodEnd;
+
+    // Find current period boundaries
+    for (int i = 0; i < order.length; i++) {
+      final t = times[order[i]];
+      if (t != null && now.isBefore(t)) {
+        if (i > 0) {
+          periodStart = times[order[i - 1]];
+          periodEnd = t;
+        } else {
+          // Before first prayer - return 0 for simplicity
+          return 0.0;
+        }
+        break;
+      }
+    }
+
+    // After all prayers - we're in Isha period
+    if (periodStart == null || periodEnd == null) {
+      periodStart = times['Isha'];
+
+      // Get tomorrow's Fajr
+      if (periodStart != null && widget.coordinates != null && widget.calculationParams != null) {
+        final tomorrow = now.add(const Duration(days: 1));
+        final tomorrowPrayerTimes = PrayerTimes(
+          coordinates: widget.coordinates!,
+          date: tomorrow,
+          calculationParameters: widget.calculationParams!,
+          precision: true,
+        );
+        periodEnd = tomorrowPrayerTimes.fajr;
+      }
+    }
+
+    // Calculate progress
+    if (periodStart != null && periodEnd != null) {
+      final totalDuration = periodEnd.difference(periodStart).inMilliseconds;
+      final elapsedDuration = now.difference(periodStart).inMilliseconds;
+
+      if (totalDuration > 0) {
+        final progress = elapsedDuration / totalDuration;
+        return progress.clamp(0.0, 1.0);
+      }
+    }
+
+    return 0.0;
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -200,11 +273,33 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       color: const Color(0xFF1B5E20),
     );
 
-    return Text(
-      _countdownText,
-      style: _isSpecialPrayer
-          ? (widget.specialTextStyle ?? specialStyle)
-          : (widget.textStyle ?? defaultStyle),
+    return IntrinsicWidth(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Countdown text
+          Text(
+            _countdownText,
+            style: _isSpecialPrayer
+                ? (widget.specialTextStyle ?? specialStyle)
+                : (widget.textStyle ?? defaultStyle),
+          ),
+
+          // Progress bar (only for normal prayers, not special "Coming..." messages)
+          if (!_isSpecialPrayer) ...[
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: _progressValue,
+              backgroundColor: const Color(0xFFE0E0E0),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF1B5E20),
+              ),
+              minHeight: 8,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

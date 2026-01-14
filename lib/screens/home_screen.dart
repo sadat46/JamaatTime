@@ -739,15 +739,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                         ],
                                       ),
-                                    if (_lastJamaatUpdate != null && !isLoadingJamaat)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 16.0, top: 4.0),
-                                        child: Text(
-                                          'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
-                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                        ),
-                                      ),
-
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
@@ -822,12 +813,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
-                    Text(
-                      'Prayer Times',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF2E7D32),
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          'Prayer Times',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: const Color(0xFF2E7D32),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (_lastJamaatUpdate != null && !isLoadingJamaat)
+                          Text(
+                            'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     if (isLoadingJamaat)
