@@ -40,7 +40,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _confirmPasswordVisible = false; // For confirm password field
 
   // Settings state variables
-  int _themeIndex = 0; // 0: White, 1: Light, 2: Dark, 3: Green
   String _madhab = 'hanafi';
   int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
@@ -80,12 +79,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final idx = await _settingsService.getThemeIndex();
     final madhab = await _settingsService.getMadhab();
     final prayerSoundMode = await _settingsService.getPrayerNotificationSoundMode();
     final jamaatSoundMode = await _settingsService.getJamaatNotificationSoundMode();
     setState(() {
-      _themeIndex = idx;
       _madhab = madhab;
       _prayerNotificationSoundMode = prayerSoundMode;
       _jamaatNotificationSoundMode = jamaatSoundMode;
@@ -492,32 +489,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-
-                          // Theme Setting
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Theme'),
-                              DropdownButton<int>(
-                                value: _themeIndex,
-                                items: const [
-                                  DropdownMenuItem(value: 0, child: Text('White Theme')),
-                                  DropdownMenuItem(value: 1, child: Text('Most Popular Light')),
-                                  DropdownMenuItem(value: 2, child: Text('Most Popular Dark')),
-                                  DropdownMenuItem(value: 3, child: Text('Green Theme')),
-                                ],
-                                onChanged: (val) async {
-                                  if (val != null) {
-                                    await _settingsService.setThemeIndex(val);
-                                    setState(() => _themeIndex = val);
-                                    themeIndexNotifier.value = val;
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
                           // Madhab Setting
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,

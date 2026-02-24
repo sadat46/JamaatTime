@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'dart:io';
 import '../services/settings_service.dart';
+import '../models/location_config.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -15,6 +16,24 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   final SettingsService _settingsService = SettingsService();
   bool _isInitialized = false;
+
+  // Location configuration for timezone handling
+  LocationConfig? _currentLocationConfig;
+
+  /// Set the current location configuration
+  void setLocationConfig(LocationConfig config) {
+    _currentLocationConfig = config;
+  }
+
+  /// Get the timezone string for the current location
+  String _getTimezone() {
+    return _currentLocationConfig?.timezone ?? 'Asia/Dhaka';
+  }
+
+  /// Get the timezone location object
+  tz.Location _getLocation() {
+    return tz.getLocation(_getTimezone());
+  }
 
   /// Initialize notification service
   Future<void> initialize([BuildContext? context]) async {
@@ -378,9 +397,9 @@ class NotificationService {
       final Map<String, DateTime?> notificationTimes = {};
 
       if (jamaatTimes != null) {
-        // Use Bangladesh timezone consistently
-        final dhakaLocation = tz.getLocation('Asia/Dhaka');
-        final nowInDhaka = tz.TZDateTime.now(dhakaLocation);
+        // Use the configured location's timezone consistently
+        final location = _getLocation();
+        final now = tz.TZDateTime.now(location);
 
         for (final entry in jamaatTimes.entries) {
           final name = entry.key;
@@ -418,12 +437,12 @@ class NotificationService {
                 continue;
               }
 
-              // Create jamaat time in Bangladesh timezone (same as scheduling)
+              // Create jamaat time in the configured location's timezone
               final jamaatTime = tz.TZDateTime(
-                dhakaLocation,
-                nowInDhaka.year,
-                nowInDhaka.month,
-                nowInDhaka.day,
+                location,
+                now.year,
+                now.month,
+                now.day,
                 hour,
                 minute,
               );
@@ -432,7 +451,7 @@ class NotificationService {
               );
 
               // Store the notification time (convert to regular DateTime for display)
-              // This preserves the actual time in Dhaka timezone
+              // This preserves the actual time in the location's timezone
               notificationTimes[name] = DateTime(
                 notifyTime.year,
                 notifyTime.month,
@@ -467,16 +486,16 @@ class NotificationService {
     Map<String, DateTime?> prayerTimes,
   ) async {
     try {
-      // Use Bangladesh timezone consistently for all comparisons
-      final dhakaLocation = tz.getLocation('Asia/Dhaka');
-      final nowInDhaka = tz.TZDateTime.now(dhakaLocation);
+      // Use the configured location's timezone for all comparisons
+      final location = _getLocation();
+      final now = tz.TZDateTime.now(location);
 
-      // Convert prayer times to Bangladesh timezone before calculation
+      // Convert prayer times to the configured location's timezone
       final Map<String, tz.TZDateTime> localPrayerTimes = {};
       for (final entry in prayerTimes.entries) {
         if (entry.value != null) {
-          // Convert to Bangladesh timezone
-          final localTime = tz.TZDateTime.from(entry.value!, dhakaLocation);
+          // Convert to the correct timezone
+          final localTime = tz.TZDateTime.from(entry.value!, location);
           localPrayerTimes[entry.key] = localTime;
         }
       }
@@ -488,7 +507,7 @@ class NotificationService {
         final notifyTime = sunriseTime.subtract(const Duration(minutes: 20));
 
         // Compare TZDateTime objects directly in the same timezone
-        if (notifyTime.isAfter(nowInDhaka)) {
+        if (notifyTime.isAfter(now)) {
           await scheduleNotification(
             id: 'Fajr'.hashCode,
             title: 'Fajr Prayer',
@@ -504,7 +523,7 @@ class NotificationService {
         final asrTime = localPrayerTimes['Asr']!;
         final notifyTime = asrTime.subtract(const Duration(minutes: 20));
 
-        if (notifyTime.isAfter(nowInDhaka)) {
+        if (notifyTime.isAfter(now)) {
           await scheduleNotification(
             id: 'Dhuhr'.hashCode,
             title: 'Dhuhr Prayer',
@@ -520,7 +539,7 @@ class NotificationService {
         final maghribTime = localPrayerTimes['Maghrib']!;
         final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
 
-        if (notifyTime.isAfter(nowInDhaka)) {
+        if (notifyTime.isAfter(now)) {
           await scheduleNotification(
             id: 'Asr'.hashCode,
             title: 'Asr Prayer',
@@ -536,7 +555,7 @@ class NotificationService {
         final ishaTime = localPrayerTimes['Isha']!;
         final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
 
-        if (notifyTime.isAfter(nowInDhaka)) {
+        if (notifyTime.isAfter(now)) {
           await scheduleNotification(
             id: 'Maghrib'.hashCode,
             title: 'Maghrib Prayer',
@@ -554,7 +573,7 @@ class NotificationService {
         final nextDayFajr = fajrTime.add(const Duration(days: 1));
         final notifyTime = nextDayFajr.subtract(const Duration(minutes: 20));
 
-        if (notifyTime.isAfter(nowInDhaka)) {
+        if (notifyTime.isAfter(now)) {
           await scheduleNotification(
             id: 'Isha'.hashCode,
             title: 'Isha Prayer',
@@ -579,9 +598,9 @@ class NotificationService {
   ) async {
     try {
       if (jamaatTimes != null) {
-        // Use Bangladesh timezone for all time comparisons
-        final dhakaLocation = tz.getLocation('Asia/Dhaka');
-        final nowInDhaka = tz.TZDateTime.now(dhakaLocation);
+        // Use the configured location's timezone for all time comparisons
+        final location = _getLocation();
+        final now = tz.TZDateTime.now(location);
 
         for (final entry in jamaatTimes.entries) {
           final name = entry.key;
@@ -622,12 +641,12 @@ class NotificationService {
                 continue;
               }
 
-              // Create jamaat time in Bangladesh timezone
+              // Create jamaat time in the configured location's timezone
               final jamaatTime = tz.TZDateTime(
-                dhakaLocation,
-                nowInDhaka.year,
-                nowInDhaka.month,
-                nowInDhaka.day,
+                location,
+                now.year,
+                now.month,
+                now.day,
                 hour,
                 minute,
               );
@@ -637,7 +656,7 @@ class NotificationService {
 
               // Compare TZDateTime objects directly in the same timezone
               // This fixes the midnight comparison issue
-              if (notifyTime.isAfter(nowInDhaka)) {
+              if (notifyTime.isAfter(now)) {
                 // Capitalize the prayer name for display
                 final displayName = name.isNotEmpty
                     ? name[0].toUpperCase() + name.substring(1)

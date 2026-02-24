@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/jamaat_time_utility.dart';
+import '../core/constants.dart';
 
 class PrayerTimeTable extends StatelessWidget {
   final Map<String, DateTime?> times;
@@ -20,8 +21,12 @@ class PrayerTimeTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Table(
-      border: TableBorder.all(color: Colors.grey.shade300),
+      border: TableBorder.all(
+        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+      ),
       columnWidths: const {
         0: FlexColumnWidth(3),
         1: FlexColumnWidth(3),
@@ -31,31 +36,40 @@ class PrayerTimeTable extends StatelessWidget {
         // Header row
         TableRow(
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF145A32)
-                : const Color(0xFF43A047),
+            color: isDarkMode
+                ? AppConstants.brandGreenDark
+                : AppConstants.brandGreen,
           ),
           children: [
-            const Padding(
-              padding: EdgeInsets.all(8.0),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
               child: Text(
                 'Prayer Name',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.white,
+                ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.all(8.0),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
               child: Text(
                 'Prayer Time',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.white,
+                ),
               ),
             ),
             if (showJamaatTimes)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Text(
                   'Jamaat Time',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.white,
+                  ),
                 ),
               ),
           ],
@@ -88,19 +102,33 @@ class PrayerTimeTable extends StatelessWidget {
           final isCurrent = name == currentPrayer;
           return TableRow(
             decoration: isCurrent
-                ? BoxDecoration(color: Colors.green.shade100)
+                ? BoxDecoration(
+                    color: isDarkMode
+                        ? const Color(0xFF2E7D32).withValues(alpha: 0.5)
+                        : Colors.green.shade100,
+                  )
                 : null,
             children: [
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text(name),
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Center(
                   child: Text(
                     timeStr,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
                   ),
                 ),
               ),
@@ -114,12 +142,25 @@ class PrayerTimeTable extends StatelessWidget {
                         Text(
                           jamaatStr,
                           style: jamaatStr == '-'
-                              ? const TextStyle(color: Colors.grey)
-                              : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                              ? TextStyle(
+                                  color: isDarkMode ? Colors.grey.shade600 : Colors.grey,
+                                )
+                              : TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode
+                                      ? const Color(0xFF81C784)
+                                      : Colors.green.shade700,
+                                ),
                         ),
                         if (jamaatStr != '-') ...[
                           const SizedBox(width: 4),
-                          const Icon(Icons.mosque, size: 12, color: Colors.green),
+                          Icon(
+                            Icons.mosque,
+                            size: 12,
+                            color: isDarkMode
+                                ? const Color(0xFF81C784)
+                                : Colors.green.shade700,
+                          ),
                         ],
                       ],
                     ),

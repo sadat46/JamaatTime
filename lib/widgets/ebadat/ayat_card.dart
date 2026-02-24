@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/ayat_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -136,7 +137,7 @@ class _AyatCardState extends State<AyatCard> {
                   // Surah Name (Arabic)
                   Text(
                     widget.ayat.surahNameArabic,
-                    style: TextStyle(
+                    style: GoogleFonts.amiri(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey[700],
@@ -179,17 +180,19 @@ class _AyatCardState extends State<AyatCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[800]
+                      : Colors.grey[50],
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   widget.ayat.arabicText,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
+                  style: GoogleFonts.amiri(
                     fontSize: 24,
                     fontWeight: FontWeight.w500,
                     height: 1.8,
-                    color: Colors.black87,
+                    color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
                   ),
                 ),
               ),
@@ -204,7 +207,9 @@ class _AyatCardState extends State<AyatCard> {
                   style: TextStyle(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
-                    color: Colors.grey[700],
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[700],
                     height: 1.5,
                   ),
                 ),
@@ -216,15 +221,17 @@ class _AyatCardState extends State<AyatCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF388E3C).withValues(alpha: 0.05),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF388E3C).withValues(alpha: 0.15)
+                      : const Color(0xFF388E3C).withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   widget.ayat.banglaMeaning,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     height: 1.6,
-                    color: Colors.black87,
+                    color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
                   ),
                 ),
               ),

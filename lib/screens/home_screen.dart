@@ -6,8 +6,13 @@ import '../services/settings_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/jamaat_service.dart';
+import '../services/location_config_service.dart';
+import '../models/location_config.dart';
+import '../services/prayer_calculation_service.dart';
 import '../widgets/live_clock_widget.dart';
 import '../widgets/prayer_countdown_widget.dart';
+import '../widgets/sahri_iftar_widget.dart';
+import '../widgets/forbidden_times_widget.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
@@ -19,18 +24,30 @@ extension DateTimeExtension on DateTime {
   }
 }
 
+/// Row type for conditional styling
+enum PrayerRowType {
+  prayer,      // Standard prayer times (Fajr, Dhuhr, etc.)
+  info,        // Informational rows (Sunrise, Dahwah-e-kubrah)
+  sahriIftar,  // Sahri/Iftar rows (amber styling)
+  forbidden,   // Forbidden time windows (red styling)
+}
+
 /// Pre-computed data for a prayer table row (avoids calculations in build())
 class PrayerRowData {
   final String name;
   final String timeStr;
   final String jamaatStr;
   final bool isCurrent;
+  final PrayerRowType type;
+  final String? endTimeStr;  // For forbidden windows (shows range)
 
   const PrayerRowData({
     required this.name,
     required this.timeStr,
     required this.jamaatStr,
     required this.isCurrent,
+    this.type = PrayerRowType.prayer,
+    this.endTimeStr,
   });
 }
 
@@ -62,6 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final LocationService _locationService = LocationService();
   final NotificationService _notificationService = NotificationService();
   final JamaatService _jamaatService = JamaatService();
+  final LocationConfigService _locationConfigService = LocationConfigService();
+  LocationConfig? _locationConfig;
 
   String? currentPlaceName;
   bool isFetchingPlaceName = false;
@@ -89,24 +108,29 @@ class _HomeScreenState extends State<HomeScreen> {
     // Note: Notification service is already initialized in main.dart
     // No need to initialize again here (singleton pattern handles this)
 
-    // Use more accurate parameters for Bangladesh
-    // Start with Muslim World League method which is generally more accurate for South Asia
-    params = CalculationMethod.muslimWorldLeague();
-    // Load madhab setting immediately to ensure correct Asr calculation
-    final madhab = await _settingsService.getMadhab();
-    params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-
-    // Set prayer time adjustments
-    // In adhan_dart, adjustments is a Map<String, int>
-    params!.adjustments = Map.from(AppConstants.defaultAdjustments);
-
     selectedCity = AppConstants.defaultCity;
+
+    // Get location config for selected city
+    _locationConfig = _locationConfigService.getConfigForCity(selectedCity!);
+    _locationConfigService.setCurrentConfig(_locationConfig!);
+
+    // Pass config to notification service
+    _notificationService.setLocationConfig(_locationConfig!);
+
+    // Get calculation parameters based on location
+    params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
+
+    // Only apply madhab for Bangladesh (not applicable for Saudi)
+    if (_locationConfig!.country == Country.bangladesh) {
+      final madhab = await _settingsService.getMadhab();
+      params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+    }
 
     // Initialize times with default values to avoid null issues
     final coords = Coordinates(
-      AppConstants.defaultLatitude,
-      AppConstants.defaultLongitude,
-    ); // Default coordinates
+      _locationConfig!.latitude,
+      _locationConfig!.longitude,
+    );
     prayerTimes = PrayerTimes(
       coordinates: coords,
       date: _now,
@@ -125,7 +149,12 @@ class _HomeScreenState extends State<HomeScreen> {
       'Isha': prayerTimes!.isha,
     };
 
-    await _fetchJamaatTimes(selectedCity!);
+    // Fetch or calculate jamaat times based on location
+    if (_locationConfig!.jamaatSource == JamaatSource.server) {
+      await _fetchJamaatTimes(selectedCity!);
+    } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+      _calculateLocalJamaatTimes();
+    }
     await _loadLastLocation();
 
     // Initial prayer times calculation and notification scheduling
@@ -144,8 +173,12 @@ class _HomeScreenState extends State<HomeScreen> {
         _now = newNow;
         selectedDate = newNow;
         _updatePrayerTimes();
-        if (selectedCity != null) {
-          _fetchJamaatTimes(selectedCity!);
+        if (selectedCity != null && _locationConfig != null) {
+          if (_locationConfig!.jamaatSource == JamaatSource.server) {
+            _fetchJamaatTimes(selectedCity!);
+          } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+            _calculateLocalJamaatTimes();
+          }
         }
       }
       _now = newNow;
@@ -212,13 +245,57 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Calculate local jamaat times based on fixed offsets (for Saudi Arabia)
+  void _calculateLocalJamaatTimes() {
+    if (_locationConfig == null || _locationConfig!.jamaatOffsets == null) {
+      return;
+    }
+
+    final offsets = _locationConfig!.jamaatOffsets!;
+    final newJamaatTimes = <String, dynamic>{};
+
+    // Map prayer names to offset keys
+    final prayerMapping = {
+      'fajr': 'Fajr',
+      'dhuhr': 'Dhuhr',
+      'asr': 'Asr',
+      'maghrib': 'Maghrib',
+      'isha': 'Isha',
+    };
+
+    for (final entry in offsets.entries) {
+      final prayerKey = entry.key;
+      final offset = entry.value;
+      final prayerName = prayerMapping[prayerKey];
+
+      if (prayerName != null && times[prayerName] != null) {
+        final prayerTime = times[prayerName]!;
+        final jamaatTime = prayerTime.add(Duration(minutes: offset));
+        newJamaatTimes[prayerKey] = DateFormat('HH:mm').format(jamaatTime.toLocal());
+      }
+    }
+
+    setState(() {
+      jamaatTimes = newJamaatTimes;
+      isLoadingJamaat = false;
+      jamaatError = null;
+    });
+
+    _computePrayerTableData();
+    _scheduleNotificationsIfNeeded();
+  }
+
   void _updatePrayerTimes() {
-    final coords =
-        _coords ??
-        Coordinates(
-          AppConstants.defaultLatitude,
-          AppConstants.defaultLongitude,
-        );
+    final coords = _coords ??
+        (_locationConfig != null
+            ? Coordinates(
+                _locationConfig!.latitude,
+                _locationConfig!.longitude,
+              )
+            : Coordinates(
+                AppConstants.defaultLatitude,
+                AppConstants.defaultLongitude,
+              ));
     
     // Use selectedDate for prayer times calculation instead of _now
     final dateForCalculation = selectedDate;
@@ -317,6 +394,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadMadhab() async {
+    // Only apply madhab for Bangladesh locations
+    if (_locationConfig == null || _locationConfig!.country != Country.bangladesh) {
+      return;
+    }
+
     final madhab = await _settingsService.getMadhab();
     setState(() {
       params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
@@ -361,6 +443,83 @@ class _HomeScreenState extends State<HomeScreen> {
         position.latitude,
         position.longitude,
       );
+
+      // Detect country from coordinates
+      final country = _locationConfigService.detectCountryFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      // Handle different country scenarios
+      if (country == Country.other) {
+        // REST OF WORLD: Create dynamic config for GPS location
+        final placeName = place ?? 'Current Location';
+
+        // Create world config
+        _locationConfig = LocationConfig.world(
+          placeName,
+          position.latitude,
+          position.longitude,
+        );
+        _locationConfigService.setCurrentConfig(_locationConfig!);
+        _notificationService.setLocationConfig(_locationConfig!);
+
+        // Update calculation parameters (no Bangladesh/Saudi adjustments)
+        params = PrayerCalculationService.instance
+            .getCalculationParametersForConfig(_locationConfig!);
+
+        // Clear jamaat times - not available for random locations
+        jamaatTimes = null;
+        jamaatError = null;
+        isLoadingJamaat = false;
+
+        // Unselect city dropdown (user is in GPS mode)
+        selectedCity = null;
+
+        // Save GPS mode state
+        await prefs.setBool('is_gps_mode', true);
+        await prefs.remove('selected_city');
+      } else if (country == Country.saudiArabia) {
+        // SAUDI ARABIA: Find nearest city and use its config
+        final nearestCity = _locationConfigService.getNearestSaudiCity(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (nearestCity != null) {
+          selectedCity = nearestCity;
+          _locationConfig = _locationConfigService.getConfigForCity(nearestCity);
+          _locationConfigService.setCurrentConfig(_locationConfig!);
+          _notificationService.setLocationConfig(_locationConfig!);
+
+          params = PrayerCalculationService.instance
+              .getCalculationParametersForConfig(_locationConfig!);
+
+          // Calculate local jamaat times for Saudi
+          _calculateLocalJamaatTimes();
+
+          await prefs.setBool('is_gps_mode', false);
+          await prefs.setString('selected_city', nearestCity);
+        }
+      } else if (country == Country.bangladesh) {
+        // BANGLADESH: Keep existing selected city or default
+        // (User is physically in Bangladesh but using GPS)
+        // Keep the selected city config, just update coordinates
+        if (_locationConfig == null || _locationConfig!.country != Country.bangladesh) {
+          selectedCity = AppConstants.defaultCity;
+          _locationConfig = _locationConfigService.getConfigForCity(selectedCity!);
+          _locationConfigService.setCurrentConfig(_locationConfig!);
+          _notificationService.setLocationConfig(_locationConfig!);
+
+          params = PrayerCalculationService.instance
+              .getCalculationParametersForConfig(_locationConfig!);
+
+          final madhab = await _settingsService.getMadhab();
+          params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+
+          await _fetchJamaatTimes(selectedCity!);
+        }
+      }
 
       // Single setState for all success updates
       currentPlaceName = place;
@@ -522,7 +681,9 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Pre-compute prayer table data to avoid expensive calculations in build()
   void _computePrayerTableData() {
     final currentPrayer = _getCurrentPrayerName();
+    final List<PrayerRowData> tableData = [];
 
+    // Only Main Prayer Times (7 rows)
     const prayerNames = [
       'Fajr',
       'Sunrise',
@@ -533,12 +694,20 @@ class _HomeScreenState extends State<HomeScreen> {
       'Isha',
     ];
 
-    _prayerTableData = prayerNames.map((name) {
+    for (final name in prayerNames) {
       // Compute time string using device local time
       final t = times[name];
       final timeStr = t != null
           ? DateFormat('HH:mm').format(t.toLocal())
           : '-';
+
+      // Determine row type
+      PrayerRowType type;
+      if (name == 'Sunrise' || name == 'Dahwah-e-kubrah') {
+        type = PrayerRowType.info;
+      } else {
+        type = PrayerRowType.prayer;
+      }
 
       // Map prayer names to jamaat time keys
       String jamaatKey;
@@ -577,13 +746,88 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      return PrayerRowData(
+      tableData.add(PrayerRowData(
         name: name,
         timeStr: timeStr,
         jamaatStr: jamaatStr,
         isCurrent: name == currentPrayer,
-      );
-    }).toList();
+        type: type,
+      ));
+    }
+
+    _prayerTableData = tableData;
+  }
+
+  /// Get row decoration based on row type
+  BoxDecoration? _getRowDecoration(PrayerRowData row, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    switch (row.type) {
+      case PrayerRowType.forbidden:
+        return BoxDecoration(
+          color: isDark ? Colors.red.shade900.withValues(alpha: 0.3) : Colors.red.shade50,
+        );
+      case PrayerRowType.sahriIftar:
+        return BoxDecoration(
+          color: isDark ? Colors.orange.shade900.withValues(alpha: 0.3) : Colors.orange.shade50,
+        );
+      case PrayerRowType.prayer:
+      case PrayerRowType.info:
+        if (row.isCurrent) {
+          return BoxDecoration(
+            color: isDark ? Colors.green.shade900.withValues(alpha: 0.3) : Colors.green.shade100,
+          );
+        }
+        return null;
+    }
+  }
+
+  /// Build grouped city dropdown items (Bangladesh and Saudi Arabia)
+  List<DropdownMenuItem<String>> _buildCityDropdownItems() {
+    final items = <DropdownMenuItem<String>>[];
+
+    // Bangladesh cities section
+    items.add(const DropdownMenuItem(
+      enabled: false,
+      value: null,
+      child: Text(
+        '🇧🇩 Bangladesh',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+    ));
+    for (final city in AppConstants.bangladeshCities) {
+      items.add(DropdownMenuItem(
+        value: city,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Text(city),
+        ),
+      ));
+    }
+
+    // Saudi Arabia cities section
+    items.add(const DropdownMenuItem(
+      enabled: false,
+      value: null,
+      child: Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text(
+          '🇸🇦 Saudi Arabia',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+      ),
+    ));
+    for (final city in AppConstants.saudiCities) {
+      items.add(DropdownMenuItem(
+        value: city,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Text(city),
+        ),
+      ));
+    }
+
+    return items;
   }
 
   @override
@@ -597,12 +841,11 @@ class _HomeScreenState extends State<HomeScreen> {
             : 600.0;
         final horizontalPadding = constraints.maxWidth < 400 ? 8.0 : 16.0;
         return Scaffold(
-          backgroundColor: const Color(0xFFE8F5E9),
           appBar: AppBar(
             title: const Text('Jamaat Time'),
             centerTitle: true,
-            backgroundColor: const Color(0xFF388E3C),
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
             elevation: 2,
           ),
           body: Center(
@@ -615,7 +858,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _updatePrayerTimes();
                   }
                 },
-                color: const Color(0xFF388E3C),
+                color: Theme.of(context).colorScheme.primary,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Padding(
@@ -652,25 +895,71 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        const Text('Your Mosque at: '),
-                                        DropdownButton<String>(
-                                          value: selectedCity,
-                                          items: canttNames.map((cantt) {
-                                            return DropdownMenuItem<String>(
-                                              value: cantt,
-                                              child: Text(cantt),
-                                            );
-                                          }).toList(),
-                                          onChanged: (value) {
+                                        Text(
+                                          _locationConfig != null &&
+                                                  _locationConfig!.jamaatSource == JamaatSource.none
+                                              ? 'GPS Location: '
+                                              : 'Your Mosque at: ',
+                                        ),
+                                        if (_locationConfig == null ||
+                                            _locationConfig!.jamaatSource != JamaatSource.none)
+                                          DropdownButton<String>(
+                                            value: selectedCity,
+                                            items: _buildCityDropdownItems(),
+                                            onChanged: (value) async {
+                                            if (value == null || value == selectedCity) return;
+
                                             setState(() {
                                               selectedCity = value;
                                             });
-                                            if (selectedCity != null) {
-                                              _fetchJamaatTimes(selectedCity!);
-                                              _updatePrayerTimes();
+
+                                            // Update location config
+                                            _locationConfig = _locationConfigService.getConfigForCity(value);
+                                            _locationConfigService.setCurrentConfig(_locationConfig!);
+                                            _notificationService.setLocationConfig(_locationConfig!);
+
+                                            // Update calculation parameters
+                                            params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
+
+                                            // Only apply madhab for Bangladesh
+                                            if (_locationConfig!.country == Country.bangladesh) {
+                                              final madhab = await _settingsService.getMadhab();
+                                              params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+                                            }
+
+                                            // Cancel existing notifications and reschedule
+                                            _notificationsScheduled = false;
+
+                                            // Update coordinates for the new location
+                                            _coords = Coordinates(
+                                              _locationConfig!.latitude,
+                                              _locationConfig!.longitude,
+                                            );
+
+                                            // Recalculate prayer times
+                                            _updatePrayerTimes();
+
+                                            // Fetch/calculate jamaat times based on location
+                                            if (_locationConfig!.jamaatSource == JamaatSource.server) {
+                                              await _fetchJamaatTimes(value);
+                                            } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+                                              _calculateLocalJamaatTimes();
                                             }
                                           },
                                         ),
+                                        // Show current location name in GPS mode
+                                        if (_locationConfig != null &&
+                                            _locationConfig!.jamaatSource == JamaatSource.none)
+                                          Flexible(
+                                            child: Text(
+                                              currentPlaceName ?? 'Detecting...',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blue,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                       ],
                                     ),
                                     const SizedBox(height: 8),
@@ -735,6 +1024,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                             child: Text(
                                               jamaatError!,
                                               style: const TextStyle(fontSize: 12, color: Colors.red),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    // Show message when jamaat times not available (GPS mode in unsupported location)
+                                    if (_locationConfig != null &&
+                                        _locationConfig!.jamaatSource == JamaatSource.none &&
+                                        !isLoadingJamaat &&
+                                        jamaatError == null)
+                                      Row(
+                                        children: [
+                                          const SizedBox(width: 16),
+                                          const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              '📍 GPS Mode: Jamaat times not available for this location',
+                                              style: TextStyle(fontSize: 12, color: Colors.blue[700]),
                                             ),
                                           ),
                                         ],
@@ -888,9 +1195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         // Use pre-computed prayer table data (avoids expensive calculations in build)
                         ..._prayerTableData.map((row) => TableRow(
-                          decoration: row.isCurrent
-                              ? BoxDecoration(color: Colors.green.shade100)
-                              : null,
+                          decoration: _getRowDecoration(row, context),
                           children: [
                             Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -915,9 +1220,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       row.jamaatStr,
                                       style: row.jamaatStr == '-'
                                           ? const TextStyle(color: Colors.grey)
-                                          : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                                          : (row.type == PrayerRowType.forbidden
+                                              ? const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)
+                                              : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                     ),
-                                    if (row.jamaatStr != '-') ...[
+                                    if (row.jamaatStr != '-' && row.type != PrayerRowType.forbidden) ...[
                                       const SizedBox(width: 4),
                                       const Icon(Icons.mosque, size: 12, color: Colors.green),
                                     ],
@@ -928,6 +1235,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         )),
                       ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Sahri & Iftar Times Table
+                    SahriIftarWidget(
+                      fajrTime: times['Fajr'],
+                      maghribTime: times['Maghrib'],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Forbidden Prayer Times Table
+                    ForbiddenTimesWidget(
+                      prayerTimes: prayerTimes,
                     ),
                     ],
                   ),

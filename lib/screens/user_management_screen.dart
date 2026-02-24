@@ -455,12 +455,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Widget build(BuildContext context) {
     if (!_isSuperAdmin) {
       return Scaffold(
-        backgroundColor: const Color(0xFFE8F5E9),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('User Management'),
           centerTitle: true,
-          backgroundColor: const Color(0xFF388E3C),
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
           elevation: 2,
         ),
         body: Center(
@@ -496,12 +496,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('User Management'),
         centerTitle: true,
-        backgroundColor: const Color(0xFF388E3C),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
         elevation: 2,
         actions: [
           IconButton(

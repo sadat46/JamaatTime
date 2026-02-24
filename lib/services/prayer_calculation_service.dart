@@ -1,6 +1,33 @@
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:intl/intl.dart';
 import '../core/constants.dart';
+import '../models/location_config.dart';
+
+/// Represents a forbidden prayer time window
+class ForbiddenWindow {
+  final String name;
+  final DateTime start;
+  final DateTime end;
+
+  const ForbiddenWindow({
+    required this.name,
+    required this.start,
+    required this.end,
+  });
+
+  /// Check if current time falls within this forbidden window
+  bool isActive(DateTime now) {
+    return now.isAfter(start) && now.isBefore(end);
+  }
+
+  /// Format as time range string (e.g., "05:45 - 06:00")
+  String toRangeString() {
+    final startStr = DateFormat('HH:mm').format(start.toLocal());
+    final endStr = DateFormat('HH:mm').format(end.toLocal());
+    return '$startStr - $endStr';
+  }
+}
 
 class PrayerCalculationService {
   static PrayerCalculationService? _instance;
@@ -20,6 +47,39 @@ class PrayerCalculationService {
     params.madhab = madhab;
     params.adjustments = Map.from(AppConstants.defaultAdjustments);
     return params;
+  }
+
+  /// Get calculation parameters based on LocationConfig
+  CalculationParameters getCalculationParametersForConfig(LocationConfig config) {
+    // Get the base calculation parameters from the config
+    CalculationParameters params = config.getCalculationParameters();
+
+    if (config.country == Country.saudiArabia) {
+      // Apply Ramadan adjustment if needed for Saudi Arabia
+      if (_isRamadan()) {
+        // Isha is 120 min after Maghrib during Ramadan (default is 90)
+        // Add an additional 30 minutes adjustment
+        params.adjustments = {'isha': 30};
+      }
+    } else if (config.country == Country.bangladesh) {
+      // For Bangladesh, apply default adjustments
+      params.adjustments = Map.from(AppConstants.defaultAdjustments);
+    } else {
+      // For rest of the world (Country.other):
+      // Use pure calculation without country-specific adjustments
+      // This gives neutral, astronomically accurate prayer times
+      params.adjustments = {};
+    }
+
+    return params;
+  }
+
+  /// Check if current date is during Ramadan (Hijri month 9)
+  /// TODO: Implement proper Hijri calendar conversion or use package:hijri_calendar
+  bool _isRamadan() {
+    // Simplified check - always returns false for now
+    // In production, this should use a proper Hijri calendar library
+    return false;
   }
 
   /// Calculate prayer times for given coordinates and date
@@ -173,5 +233,40 @@ class PrayerCalculationService {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[month - 1];
+  }
+
+  /// Calculate forbidden prayer time windows
+  /// Returns list of ForbiddenWindow objects for the given prayer times
+  List<ForbiddenWindow> calculateForbiddenWindows(PrayerTimes pt) {
+    final windows = <ForbiddenWindow>[];
+
+    // 1. Sunrise Window: From sunrise for ~15 minutes
+    if (pt.sunrise != null) {
+      windows.add(ForbiddenWindow(
+        name: 'After Sunrise',
+        start: pt.sunrise!,
+        end: pt.sunrise!.add(const Duration(minutes: 15)),
+      ));
+    }
+
+    // 2. Zawal Window: ~5 minutes before and after solar zenith (Dhuhr)
+    if (pt.dhuhr != null) {
+      windows.add(ForbiddenWindow(
+        name: 'Zawal (Zenith)',
+        start: pt.dhuhr!.subtract(const Duration(minutes: 5)),
+        end: pt.dhuhr!.add(const Duration(minutes: 5)),
+      ));
+    }
+
+    // 3. Sunset Window: ~15 minutes before Maghrib
+    if (pt.maghrib != null) {
+      windows.add(ForbiddenWindow(
+        name: 'Before Sunset',
+        start: pt.maghrib!.subtract(const Duration(minutes: 15)),
+        end: pt.maghrib!,
+      ));
+    }
+
+    return windows;
   }
 } 

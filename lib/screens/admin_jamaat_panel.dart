@@ -655,12 +655,12 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Admin Jamaat Panel'),
         centerTitle: true,
-        backgroundColor: const Color(0xFF388E3C),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
         elevation: 2,
         bottom: _tabController != null ? TabBar(
           controller: _tabController!,

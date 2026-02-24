@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/ayat_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -132,7 +133,9 @@ ${widget.ayat.banglaMeaning}
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF388E3C),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1B5E20)
+            : const Color(0xFF388E3C),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -171,18 +174,24 @@ ${widget.ayat.banglaMeaning}
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1565C0).withValues(alpha: 0.1),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF1565C0).withValues(alpha:0.2)
+                            : const Color(0xFF1565C0).withValues(alpha:0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF1565C0).withValues(alpha: 0.3),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF64B5F6).withValues(alpha:0.5)
+                              : const Color(0xFF1565C0).withValues(alpha:0.3),
                         ),
                       ),
                       child: Text(
                         widget.ayat.category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1565C0),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF90CAF9)
+                              : const Color(0xFF1565C0),
                         ),
                       ),
                     ),
@@ -193,10 +202,14 @@ ${widget.ayat.banglaMeaning}
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[850]
+                          : Colors.grey[50],
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: const Color(0xFF1B5E20).withValues(alpha: 0.2),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF81C784).withValues(alpha:0.3)
+                            : const Color(0xFF1B5E20).withValues(alpha:0.2),
                         width: 2,
                       ),
                     ),
@@ -204,11 +217,13 @@ ${widget.ayat.banglaMeaning}
                       widget.ayat.arabicText,
                       textAlign: TextAlign.center,
                       textDirection: TextDirection.rtl,
-                      style: const TextStyle(
+                      style: GoogleFonts.amiri(
                         fontSize: 28,
                         fontWeight: FontWeight.w500,
                         height: 2.0,
-                        color: Color(0xFF1B5E20),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF81C784)
+                            : const Color(0xFF1B5E20),
                       ),
                     ),
                   ),
@@ -218,18 +233,22 @@ ${widget.ayat.banglaMeaning}
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.menu_book,
                         size: 18,
-                        color: Color(0xFF1565C0),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF90CAF9)
+                            : const Color(0xFF1565C0),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '${widget.ayat.surahName}, আয়াত ${widget.ayat.ayatNumber}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1565C0),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF90CAF9)
+                              : const Color(0xFF1565C0),
                         ),
                       ),
                     ],
@@ -246,7 +265,9 @@ ${widget.ayat.banglaMeaning}
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue[50],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1565C0).withValues(alpha:0.15)
+                          : Colors.blue[50],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -255,7 +276,9 @@ ${widget.ayat.banglaMeaning}
                         fontSize: 19,
                         fontStyle: FontStyle.italic,
                         height: 1.7,
-                        color: Colors.grey[800],
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[300]
+                            : Colors.grey[800],
                       ),
                     ),
                   ),
@@ -271,18 +294,22 @@ ${widget.ayat.banglaMeaning}
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1565C0).withValues(alpha: 0.05),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1565C0).withValues(alpha:0.2)
+                          : const Color(0xFF1565C0).withValues(alpha:0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFF1565C0).withValues(alpha: 0.2),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF64B5F6).withValues(alpha:0.4)
+                            : const Color(0xFF1565C0).withValues(alpha:0.2),
                       ),
                     ),
                     child: Text(
                       widget.ayat.banglaMeaning,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 19,
                         height: 1.8,
-                        color: Colors.black87,
+                        color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
                       ),
                     ),
                   ),
@@ -324,9 +351,13 @@ ${widget.ayat.banglaMeaning}
                           icon: const Icon(Icons.copy),
                           label: const Text('কপি'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF1565C0),
-                            side: const BorderSide(
-                              color: Color(0xFF1565C0),
+                            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF90CAF9)
+                                : const Color(0xFF1565C0),
+                            side: BorderSide(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF90CAF9)
+                                  : const Color(0xFF1565C0),
                               width: 2,
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -343,7 +374,9 @@ ${widget.ayat.banglaMeaning}
                           icon: const Icon(Icons.share),
                           label: const Text('শেয়ার'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1565C0),
+                            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF0D47A1)
+                                : const Color(0xFF1565C0),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -370,15 +403,19 @@ ${widget.ayat.banglaMeaning}
         Icon(
           icon,
           size: 20,
-          color: const Color(0xFF1565C0),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF90CAF9)
+              : const Color(0xFF1565C0),
         ),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1565C0),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF90CAF9)
+                : const Color(0xFF1565C0),
           ),
         ),
       ],

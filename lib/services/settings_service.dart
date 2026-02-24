@@ -45,7 +45,7 @@ class SettingsService {
 
   Future<int> getThemeIndex() async {
     final prefs = await _prefs;
-    return prefs.getInt(_themeIndexKey) ?? 0;
+    return prefs.getInt(_themeIndexKey) ?? 2;
   }
 
   Future<void> setThemeIndex(int idx) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/dua_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -132,7 +133,9 @@ ${widget.dua.banglaMeaning}
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF4A148C)
+            : const Color(0xFF6A1B9A),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -171,18 +174,24 @@ ${widget.dua.banglaMeaning}
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6A1B9A).withValues(alpha: 0.1),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF6A1B9A).withValues(alpha:0.2)
+                            : const Color(0xFF6A1B9A).withValues(alpha:0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF6A1B9A).withValues(alpha: 0.3),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF9C4DCC).withValues(alpha:0.5)
+                              : const Color(0xFF6A1B9A).withValues(alpha:0.3),
                         ),
                       ),
                       child: Text(
                         widget.dua.category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF6A1B9A),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFCE93D8)
+                              : const Color(0xFF6A1B9A),
                         ),
                       ),
                     ),
@@ -193,10 +202,14 @@ ${widget.dua.banglaMeaning}
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[850]
+                          : Colors.grey[50],
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: const Color(0xFF4A148C).withValues(alpha: 0.2),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF9C4DCC).withValues(alpha:0.3)
+                            : const Color(0xFF4A148C).withValues(alpha:0.2),
                         width: 2,
                       ),
                     ),
@@ -204,11 +217,13 @@ ${widget.dua.banglaMeaning}
                       widget.dua.arabicText,
                       textAlign: TextAlign.center,
                       textDirection: TextDirection.rtl,
-                      style: const TextStyle(
+                      style: GoogleFonts.amiri(
                         fontSize: 28,
                         fontWeight: FontWeight.w500,
                         height: 2.0,
-                        color: Color(0xFF4A148C),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFFCE93D8)
+                            : const Color(0xFF4A148C),
                       ),
                     ),
                   ),
@@ -218,20 +233,24 @@ ${widget.dua.banglaMeaning}
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.menu_book,
                         size: 18,
-                        color: Color(0xFF6A1B9A),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFFCE93D8)
+                            : const Color(0xFF6A1B9A),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           widget.dua.reference,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF6A1B9A),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFCE93D8)
+                                : const Color(0xFF6A1B9A),
                           ),
                         ),
                       ),
@@ -249,7 +268,9 @@ ${widget.dua.banglaMeaning}
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6A1B9A).withValues(alpha: 0.05),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF6A1B9A).withValues(alpha:0.15)
+                          : const Color(0xFF6A1B9A).withValues(alpha:0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -258,7 +279,9 @@ ${widget.dua.banglaMeaning}
                         fontSize: 19,
                         fontStyle: FontStyle.italic,
                         height: 1.7,
-                        color: Colors.grey[800],
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[300]
+                            : Colors.grey[800],
                       ),
                     ),
                   ),
@@ -274,18 +297,22 @@ ${widget.dua.banglaMeaning}
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6A1B9A).withValues(alpha: 0.08),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF6A1B9A).withValues(alpha:0.2)
+                          : const Color(0xFF6A1B9A).withValues(alpha:0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFF6A1B9A).withValues(alpha: 0.2),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF9C4DCC).withValues(alpha:0.4)
+                            : const Color(0xFF6A1B9A).withValues(alpha:0.2),
                       ),
                     ),
                     child: Text(
                       widget.dua.banglaMeaning,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 19,
                         height: 1.8,
-                        color: Colors.black87,
+                        color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
                       ),
                     ),
                   ),
@@ -346,7 +373,9 @@ ${widget.dua.banglaMeaning}
                           icon: const Icon(Icons.share),
                           label: const Text('শেয়ার'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6A1B9A),
+                            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF4A148C)
+                                : const Color(0xFF6A1B9A),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -373,15 +402,19 @@ ${widget.dua.banglaMeaning}
         Icon(
           icon,
           size: 20,
-          color: const Color(0xFF6A1B9A),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFCE93D8)
+              : const Color(0xFF6A1B9A),
         ),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF6A1B9A),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFCE93D8)
+                : const Color(0xFF6A1B9A),
           ),
         ),
       ],
