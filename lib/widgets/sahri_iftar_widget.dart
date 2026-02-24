@@ -374,18 +374,29 @@ class _SahriIftarCard extends StatelessWidget {
     final bool isSahri = type == SahriIftarType.sahri;
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final double textScale = MediaQuery.textScalerOf(context).scale(1);
+    final double cardHeight = (100 * textScale.clamp(1.0, 1.2)).toDouble();
     final spec = _SahriIftarVisualSpec.from(
       type: type,
       brightness: Theme.of(context).brightness,
     );
-    final IconData icon = isSahri ? Icons.nightlight_round : Icons.wb_sunny;
 
-    final countdownStyle = Theme.of(context).textTheme.headlineSmall?.copyWith(
-      color: spec.accent,
-      fontWeight: FontWeight.w800,
-      fontFeatures: const [FontFeature.tabularFigures()],
-      letterSpacing: 1.2,
-    );
+    final TextStyle countdownStyle =
+        Theme.of(context).textTheme.headlineSmall?.copyWith(
+          color: spec.accent,
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
+          letterSpacing: 1.0,
+          height: 1,
+        ) ??
+        TextStyle(
+          color: spec.accent,
+          fontSize: 30,
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
+          letterSpacing: 1,
+          height: 1,
+        );
 
     return Semantics(
       button: true,
@@ -395,160 +406,166 @@ class _SahriIftarCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
           onTap: onTap,
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: spec.panelGradient,
-              border: Border.all(color: spec.border),
-              boxShadow: [
-                BoxShadow(
-                  color: spec.glow,
-                  blurRadius: 22,
-                  spreadRadius: 0.5,
-                  offset: const Offset(0, 10),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -30,
-                    top: -30,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: spec.accent.withValues(alpha: 0.12),
-                      ),
-                    ),
+          child: SizedBox(
+            height: cardHeight,
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: spec.panelGradient,
+                border: Border.all(color: spec.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: spec.glow,
+                    blurRadius: 18,
+                    spreadRadius: 0.3,
+                    offset: const Offset(0, 8),
                   ),
-                  Positioned(
-                    left: -18,
-                    bottom: -30,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.18),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _AccentIconBadge(
-                              icon: icon,
-                              accent: spec.accent,
-                              tint: spec.glassTint,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: spec.primaryText,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    'Countdown First',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: spec.secondaryText,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: _InfoChip(
-                            icon: Icons.schedule_outlined,
-                            label:
-                                '${isSahri ? 'Ends at' : 'Begins at'} $timeText',
-                            accent: spec.accent,
-                            textColor: spec.primaryText,
-                            fill: spec.glassTint,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Remaining Time',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: spec.secondaryText,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(height: 6),
-                        AnimatedSwitcher(
-                          duration: reduceMotion
-                              ? Duration.zero
-                              : const Duration(milliseconds: 180),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                          },
-                          child: Text(
-                            countdownText,
-                            key: ValueKey(countdownText),
-                            style: countdownStyle,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _InfoChip(
-                              icon: Icons.access_time_rounded,
-                              label: 'Event time $timeText',
-                              accent: spec.accent,
-                              textColor: spec.secondaryText,
-                              fill: spec.glassTint.withValues(alpha: 0.7),
-                            ),
-                            _InfoChip(
-                              icon: Icons.open_in_full_rounded,
-                              label: 'Tap for focus mode',
-                              accent: spec.accent,
-                              textColor: spec.secondaryText,
-                              fill: spec.glassTint.withValues(alpha: 0.7),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -24,
+                      top: -24,
+                      child: Container(
+                        width: 82,
+                        height: 82,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: spec.accent.withValues(alpha: 0.09),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: -10,
+                      bottom: -14,
+                      child: Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(
+                                        color: spec.primaryText,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _InfoChip(
+                                icon: Icons.schedule_outlined,
+                                label:
+                                    '${isSahri ? 'Ends at' : 'Begins at'} $timeText',
+                                accent: spec.accent,
+                                textColor: spec.primaryText,
+                                fill: spec.glassTint.withValues(alpha: 0.85),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                iconSize: 12,
+                                textStyle: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: spec.primaryText,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Expanded(
+                            child: Center(
+                              child: AnimatedSwitcher(
+                                duration: reduceMotion
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 180),
+                                switchInCurve: Curves.easeOutCubic,
+                                switchOutCurve: Curves.easeInCubic,
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
+                                child: FittedBox(
+                                  key: ValueKey(countdownText),
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    countdownText,
+                                    style: countdownStyle,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Remaining Time',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: spec.secondaryText,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _InfoChip(
+                                icon: Icons.open_in_full_rounded,
+                                label: 'Focus',
+                                accent: spec.accent,
+                                textColor: spec.secondaryText,
+                                fill: spec.glassTint.withValues(alpha: 0.75),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                iconSize: 12,
+                                textStyle: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: spec.secondaryText,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -923,6 +940,9 @@ class _InfoChip extends StatelessWidget {
   final Color accent;
   final Color textColor;
   final Color fill;
+  final EdgeInsetsGeometry padding;
+  final double iconSize;
+  final TextStyle? textStyle;
 
   const _InfoChip({
     required this.icon,
@@ -930,6 +950,9 @@ class _InfoChip extends StatelessWidget {
     required this.accent,
     required this.textColor,
     required this.fill,
+    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    this.iconSize = 14,
+    this.textStyle,
   });
 
   @override
@@ -941,18 +964,20 @@ class _InfoChip extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: padding,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: accent),
+            Icon(icon, size: iconSize, color: accent),
             const SizedBox(width: 6),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
-              ),
+              style:
+                  textStyle ??
+                  Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ],
         ),
