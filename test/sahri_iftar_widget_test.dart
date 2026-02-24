@@ -27,6 +27,9 @@ void main() {
     expect(find.byKey(const Key('iftar-card')), findsOneWidget);
     expect(find.text('Sahri Ends'), findsOneWidget);
     expect(find.text('Iftar Begins'), findsOneWidget);
+    expect(find.text('Tap for focus mode'), findsNWidgets(2));
+    expect(find.textContaining('Ends at'), findsOneWidget);
+    expect(find.textContaining('Begins at'), findsOneWidget);
   });
 
   testWidgets('tapping a card opens fullscreen and can close', (tester) async {
