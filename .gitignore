@@ -56,3 +56,5 @@ secrets.dart
 *.jks
 secrets.dart
 google-services.json
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist

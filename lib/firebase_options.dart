@@ -15,6 +15,9 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  // Replace these placeholder API keys by re-running:
+  // flutterfire configure
+  // Do not commit real keys to public git history.
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;
@@ -38,7 +41,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'REDACTED_FIREBASE_API_KEY',
+    apiKey: 'REPLACE_WITH_FIREBASE_WEB_API_KEY',
     appId: '1:148161891333:web:925e0bf8e8ec5c06f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
@@ -47,7 +50,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REDACTED_FIREBASE_API_KEY',
+    apiKey: 'REPLACE_WITH_FIREBASE_ANDROID_API_KEY',
     appId: '1:148161891333:android:68547dfcc1ea57b5f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
@@ -55,7 +58,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'REDACTED_FIREBASE_API_KEY',
+    apiKey: 'REPLACE_WITH_FIREBASE_IOS_API_KEY',
     appId: '1:148161891333:ios:8be90a38cf4125e3f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
@@ -64,7 +67,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'REDACTED_FIREBASE_API_KEY',
+    apiKey: 'REPLACE_WITH_FIREBASE_MACOS_API_KEY',
     appId: '1:148161891333:ios:8be90a38cf4125e3f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
@@ -73,7 +76,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'REDACTED_FIREBASE_API_KEY',
+    apiKey: 'REPLACE_WITH_FIREBASE_WINDOWS_API_KEY',
     appId: '1:148161891333:web:89892e9de4b4de09f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
@@ -82,7 +85,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions linux = FirebaseOptions(
-    apiKey: 'REDACTED_FIREBASE_API_KEY',
+    apiKey: 'REPLACE_WITH_FIREBASE_LINUX_API_KEY',
     appId: '1:148161891333:android:68547dfcc1ea57b5f8e06c',
     messagingSenderId: '148161891333',
     projectId: 'jaamattime',
