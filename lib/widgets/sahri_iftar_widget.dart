@@ -58,17 +58,17 @@ class _SahriIftarCountdownLogic {
     );
   }
 
-  static const Duration sehriGracePeriod = Duration(minutes: 3);
-  static const Duration sehriWarningThreshold = Duration(minutes: 2);
+  static const Duration gracePeriod = Duration(minutes: 3);
+  static const Duration warningThreshold = Duration(minutes: 2);
 
   /// Returns elapsed duration since [targetTime] if within the 3-minute
   /// grace period. Returns null if not in grace period.
-  static Duration? sehriGraceElapsed(DateTime? targetTime, DateTime now) {
+  static Duration? graceElapsed(DateTime? targetTime, DateTime now) {
     if (targetTime == null) return null;
     final target = targetTime.toLocal();
     if (now.isBefore(target)) return null;
     final elapsed = now.difference(target);
-    if (elapsed > sehriGracePeriod) return null;
+    if (elapsed > gracePeriod) return null;
     return elapsed;
   }
 
@@ -211,6 +211,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
   String _sahriCountdown = _SahriIftarCountdownLogic.unavailableCountdown;
   String _iftarCountdown = _SahriIftarCountdownLogic.unavailableCountdown;
   bool _sehriInGrace = false;
+  bool _iftarInGrace = false;
   bool _animateIn = false;
 
   @override
@@ -247,26 +248,35 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
 
   void _calculateCountdowns() {
     final now = DateTime.now();
-    final graceElapsed = _SahriIftarCountdownLogic.sehriGraceElapsed(
+    final sahriGrace = _SahriIftarCountdownLogic.graceElapsed(
       widget.fajrTime,
+      now,
+    );
+    final iftarGrace = _SahriIftarCountdownLogic.graceElapsed(
+      widget.maghribTime,
       now,
     );
 
     if (mounted) {
       setState(() {
-        _sehriInGrace = graceElapsed != null;
-        if (graceElapsed != null) {
-          _sahriCountdown = _SahriIftarCountdownLogic.formatElapsed(graceElapsed);
+        _sehriInGrace = sahriGrace != null;
+        if (sahriGrace != null) {
+          _sahriCountdown = _SahriIftarCountdownLogic.formatElapsed(sahriGrace);
         } else {
           _sahriCountdown = _SahriIftarCountdownLogic.calculateCountdown(
             widget.fajrTime,
             now,
           );
         }
-        _iftarCountdown = _SahriIftarCountdownLogic.calculateCountdown(
-          widget.maghribTime,
-          now,
-        );
+        _iftarInGrace = iftarGrace != null;
+        if (iftarGrace != null) {
+          _iftarCountdown = _SahriIftarCountdownLogic.formatElapsed(iftarGrace);
+        } else {
+          _iftarCountdown = _SahriIftarCountdownLogic.calculateCountdown(
+            widget.maghribTime,
+            now,
+          );
+        }
       });
     }
   }
@@ -311,7 +321,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
             timeText: fajrTimeStr,
             countdownText: _sahriCountdown,
             onTap: () => _openFullscreen(SahriIftarType.sahri),
-            sehriInGrace: _sehriInGrace,
+            inGrace: _sehriInGrace,
           ),
         ),
         const SizedBox(height: 12),
@@ -324,6 +334,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
             timeText: maghribTimeStr,
             countdownText: _iftarCountdown,
             onTap: () => _openFullscreen(SahriIftarType.iftar),
+            inGrace: _iftarInGrace,
           ),
         ),
       ],
@@ -393,7 +404,7 @@ class _SahriIftarCard extends StatelessWidget {
   final String timeText;
   final String countdownText;
   final VoidCallback onTap;
-  final bool sehriInGrace;
+  final bool inGrace;
 
   const _SahriIftarCard({
     super.key,
@@ -402,7 +413,7 @@ class _SahriIftarCard extends StatelessWidget {
     required this.timeText,
     required this.countdownText,
     required this.onTap,
-    this.sehriInGrace = false,
+    this.inGrace = false,
   });
 
   @override
@@ -565,14 +576,16 @@ class _SahriIftarCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  isSahri && sehriInGrace
-                                      ? 'Sehri time finished'
+                                  inGrace
+                                      ? (isSahri
+                                          ? 'Sehri time finished'
+                                          : 'Iftar time started')
                                       : 'Remaining Time',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: isSahri && sehriInGrace
+                                        color: inGrace
                                             ? Colors.amber.shade700
                                             : spec.secondaryText,
                                         fontWeight: FontWeight.w600,
@@ -636,7 +649,7 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   Timer? _timer;
   String _countdown = _SahriIftarCountdownLogic.unavailableCountdown;
-  bool _sehriInGrace = false;
+  bool _inGrace = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
 
@@ -653,15 +666,10 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
   IconData get _icon => _isSahri ? Icons.nightlight_round : Icons.wb_sunny;
 
   double _countdownProgress(DateTime now) {
-    if (_isSahri) {
-      final graceElapsed = _SahriIftarCountdownLogic.sehriGraceElapsed(
-        widget.fajrTime,
-        now,
-      );
-      if (graceElapsed != null) {
-        return graceElapsed.inSeconds /
-            _SahriIftarCountdownLogic.sehriGracePeriod.inSeconds;
-      }
+    final graceTime = _SahriIftarCountdownLogic.graceElapsed(_activeTime, now);
+    if (graceTime != null) {
+      return graceTime.inSeconds /
+          _SahriIftarCountdownLogic.gracePeriod.inSeconds;
     }
 
     final remaining = _SahriIftarCountdownLogic.remainingDuration(
@@ -716,15 +724,13 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
 
   void _calculateCountdown() {
     final now = DateTime.now();
-    final graceElapsed = _isSahri
-        ? _SahriIftarCountdownLogic.sehriGraceElapsed(widget.fajrTime, now)
-        : null;
-    final newSehriInGrace = graceElapsed != null;
+    final elapsed = _SahriIftarCountdownLogic.graceElapsed(_activeTime, now);
+    final newInGrace = elapsed != null;
 
     setState(() {
-      _sehriInGrace = newSehriInGrace;
-      if (graceElapsed != null) {
-        _countdown = _SahriIftarCountdownLogic.formatElapsed(graceElapsed);
+      _inGrace = newInGrace;
+      if (elapsed != null) {
+        _countdown = _SahriIftarCountdownLogic.formatElapsed(elapsed);
       } else {
         _countdown = _SahriIftarCountdownLogic.calculateCountdown(
           _activeTime,
@@ -737,10 +743,9 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
       _activeTime,
       now,
     );
-    final shouldPulse = _isSahri &&
-        !newSehriInGrace &&
+    final shouldPulse = !newInGrace &&
         remaining != null &&
-        remaining <= _SahriIftarCountdownLogic.sehriWarningThreshold;
+        remaining <= _SahriIftarCountdownLogic.warningThreshold;
 
     if (shouldPulse && !_pulseController.isAnimating) {
       _pulseController.repeat(reverse: true);
@@ -944,15 +949,16 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                       MainAxisSize.min,
                                                   children: [
                                                     Text(
-                                                      _isSahri && _sehriInGrace
-                                                          ? 'Sehri time finished'
+                                                      _inGrace
+                                                          ? (_isSahri
+                                                              ? 'Sehri time finished'
+                                                              : 'Iftar time started')
                                                           : 'Remaining Time',
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodySmall
                                                           ?.copyWith(
-                                                            color: _isSahri &&
-                                                                    _sehriInGrace
+                                                            color: _inGrace
                                                                 ? Colors.amber
                                                                     .shade700
                                                                 : spec
