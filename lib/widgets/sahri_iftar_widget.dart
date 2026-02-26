@@ -58,6 +58,31 @@ class _SahriIftarCountdownLogic {
     );
   }
 
+  static const Duration sehriGracePeriod = Duration(minutes: 3);
+  static const Duration sehriWarningThreshold = Duration(minutes: 2);
+
+  /// Returns elapsed duration since [targetTime] if within the 3-minute
+  /// grace period. Returns null if not in grace period.
+  static Duration? sehriGraceElapsed(DateTime? targetTime, DateTime now) {
+    if (targetTime == null) return null;
+    final target = targetTime.toLocal();
+    if (now.isBefore(target)) return null;
+    final elapsed = now.difference(target);
+    if (elapsed > sehriGracePeriod) return null;
+    return elapsed;
+  }
+
+  /// Formats an elapsed duration as forward-counting MM:SS or HH:MM:SS.
+  static String formatElapsed(Duration elapsed) {
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes.remainder(60);
+    final s = elapsed.inSeconds.remainder(60);
+    if (h > 0) {
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
   static String _formatDuration(Duration duration) {
     if (duration.isNegative) {
       return unavailableCountdown;
@@ -185,6 +210,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
   Timer? _timer;
   String _sahriCountdown = _SahriIftarCountdownLogic.unavailableCountdown;
   String _iftarCountdown = _SahriIftarCountdownLogic.unavailableCountdown;
+  bool _sehriInGrace = false;
   bool _animateIn = false;
 
   @override
@@ -221,19 +247,26 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
 
   void _calculateCountdowns() {
     final now = DateTime.now();
-    final sahriCountdown = _SahriIftarCountdownLogic.calculateCountdown(
+    final graceElapsed = _SahriIftarCountdownLogic.sehriGraceElapsed(
       widget.fajrTime,
-      now,
-    );
-    final iftarCountdown = _SahriIftarCountdownLogic.calculateCountdown(
-      widget.maghribTime,
       now,
     );
 
     if (mounted) {
       setState(() {
-        _sahriCountdown = sahriCountdown;
-        _iftarCountdown = iftarCountdown;
+        _sehriInGrace = graceElapsed != null;
+        if (graceElapsed != null) {
+          _sahriCountdown = _SahriIftarCountdownLogic.formatElapsed(graceElapsed);
+        } else {
+          _sahriCountdown = _SahriIftarCountdownLogic.calculateCountdown(
+            widget.fajrTime,
+            now,
+          );
+        }
+        _iftarCountdown = _SahriIftarCountdownLogic.calculateCountdown(
+          widget.maghribTime,
+          now,
+        );
       });
     }
   }
@@ -278,6 +311,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
             timeText: fajrTimeStr,
             countdownText: _sahriCountdown,
             onTap: () => _openFullscreen(SahriIftarType.sahri),
+            sehriInGrace: _sehriInGrace,
           ),
         ),
         const SizedBox(height: 12),
@@ -359,6 +393,7 @@ class _SahriIftarCard extends StatelessWidget {
   final String timeText;
   final String countdownText;
   final VoidCallback onTap;
+  final bool sehriInGrace;
 
   const _SahriIftarCard({
     super.key,
@@ -367,6 +402,7 @@ class _SahriIftarCard extends StatelessWidget {
     required this.timeText,
     required this.countdownText,
     required this.onTap,
+    this.sehriInGrace = false,
   });
 
   @override
@@ -529,12 +565,16 @@ class _SahriIftarCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Remaining Time',
+                                  isSahri && sehriInGrace
+                                      ? 'Sehri time finished'
+                                      : 'Remaining Time',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: spec.secondaryText,
+                                        color: isSahri && sehriInGrace
+                                            ? Colors.amber.shade700
+                                            : spec.secondaryText,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -593,9 +633,12 @@ class SahriIftarFullscreenPage extends StatefulWidget {
 }
 
 class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   Timer? _timer;
   String _countdown = _SahriIftarCountdownLogic.unavailableCountdown;
+  bool _sehriInGrace = false;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnim;
 
   DateTime? get _activeTime => widget.type == SahriIftarType.sahri
       ? widget.fajrTime
@@ -610,6 +653,17 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
   IconData get _icon => _isSahri ? Icons.nightlight_round : Icons.wb_sunny;
 
   double _countdownProgress(DateTime now) {
+    if (_isSahri) {
+      final graceElapsed = _SahriIftarCountdownLogic.sehriGraceElapsed(
+        widget.fajrTime,
+        now,
+      );
+      if (graceElapsed != null) {
+        return graceElapsed.inSeconds /
+            _SahriIftarCountdownLogic.sehriGracePeriod.inSeconds;
+      }
+    }
+
     final remaining = _SahriIftarCountdownLogic.remainingDuration(
       _activeTime,
       now,
@@ -626,6 +680,14 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _pulseAnim = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    );
     WidgetsBinding.instance.addObserver(this);
     unawaited(_setWakeLock(enabled: true));
     _calculateCountdown();
@@ -654,18 +716,45 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
 
   void _calculateCountdown() {
     final now = DateTime.now();
+    final graceElapsed = _isSahri
+        ? _SahriIftarCountdownLogic.sehriGraceElapsed(widget.fajrTime, now)
+        : null;
+    final newSehriInGrace = graceElapsed != null;
+
     setState(() {
-      _countdown = _SahriIftarCountdownLogic.calculateCountdown(
-        _activeTime,
-        now,
-      );
+      _sehriInGrace = newSehriInGrace;
+      if (graceElapsed != null) {
+        _countdown = _SahriIftarCountdownLogic.formatElapsed(graceElapsed);
+      } else {
+        _countdown = _SahriIftarCountdownLogic.calculateCountdown(
+          _activeTime,
+          now,
+        );
+      }
     });
+
+    final remaining = _SahriIftarCountdownLogic.remainingDuration(
+      _activeTime,
+      now,
+    );
+    final shouldPulse = _isSahri &&
+        !newSehriInGrace &&
+        remaining != null &&
+        remaining <= _SahriIftarCountdownLogic.sehriWarningThreshold;
+
+    if (shouldPulse && !_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    } else if (!shouldPulse && _pulseController.isAnimating) {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _pulseController.dispose();
     unawaited(_setWakeLock(enabled: false));
     super.dispose();
   }
@@ -682,12 +771,13 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
       brightness: Theme.of(context).brightness,
     );
 
-    final countdownStyle = Theme.of(context).textTheme.displaySmall?.copyWith(
-      color: spec.accent,
-      fontWeight: FontWeight.w800,
-      fontFeatures: const [FontFeature.tabularFigures()],
-      letterSpacing: 1.2,
-    );
+    final countdownBaseStyle =
+        Theme.of(context).textTheme.displaySmall?.copyWith(
+          color: spec.accent,
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
+          letterSpacing: 1.2,
+        );
 
     return Scaffold(
       backgroundColor: spec.ambientColors.last,
@@ -794,66 +884,115 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                             ),
                                       ),
                                       const SizedBox(height: 18),
-                                      SizedBox(
-                                        width: ringSize,
-                                        height: ringSize,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            SizedBox.expand(
-                                              child: CircularProgressIndicator(
-                                                value: progress,
-                                                strokeWidth: 10,
-                                                backgroundColor: spec.ringTrack,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation(
-                                                      spec.accent,
-                                                    ),
-                                              ),
-                                            ),
-                                            Column(
-                                              mainAxisSize: MainAxisSize.min,
+                                      AnimatedBuilder(
+                                        animation: _pulseAnim,
+                                        builder: (context, _) {
+                                          final pulseVal = _pulseAnim.value;
+                                          final ringStroke =
+                                              10.0 + pulseVal * 4.0;
+                                          final pulseColor = Color.lerp(
+                                            spec.accent,
+                                            Colors.redAccent,
+                                            pulseVal,
+                                          )!;
+                                          final isWarning =
+                                              _pulseController.isAnimating;
+                                          final countdownStyle =
+                                              countdownBaseStyle?.copyWith(
+                                                color: isWarning
+                                                    ? pulseColor
+                                                    : spec.accent,
+                                                shadows: isWarning
+                                                    ? [
+                                                        Shadow(
+                                                          color: Colors.redAccent
+                                                              .withValues(
+                                                                alpha: 0.7 *
+                                                                    pulseVal,
+                                                              ),
+                                                          blurRadius:
+                                                              12 * pulseVal,
+                                                        ),
+                                                      ]
+                                                    : null,
+                                              );
+                                          return SizedBox(
+                                            width: ringSize,
+                                            height: ringSize,
+                                            child: Stack(
+                                              alignment: Alignment.center,
                                               children: [
-                                                Text(
-                                                  'Remaining Time',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        color:
-                                                            spec.secondaryText,
-                                                        fontWeight:
-                                                            FontWeight.w600,
+                                                SizedBox.expand(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        value: progress,
+                                                        strokeWidth: isWarning
+                                                            ? ringStroke
+                                                            : 10,
+                                                        backgroundColor:
+                                                            spec.ringTrack,
+                                                        valueColor:
+                                                            AlwaysStoppedAnimation(
+                                                              isWarning
+                                                                  ? pulseColor
+                                                                  : spec.accent,
+                                                            ),
                                                       ),
                                                 ),
-                                                const SizedBox(height: 8),
-                                                AnimatedSwitcher(
-                                                  duration: reduceMotion
-                                                      ? Duration.zero
-                                                      : const Duration(
-                                                          milliseconds: 180,
+                                                Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      _isSahri && _sehriInGrace
+                                                          ? 'Sehri time finished'
+                                                          : 'Remaining Time',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: _isSahri &&
+                                                                    _sehriInGrace
+                                                                ? Colors.amber
+                                                                    .shade700
+                                                                : spec
+                                                                    .secondaryText,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    AnimatedSwitcher(
+                                                      duration: reduceMotion
+                                                          ? Duration.zero
+                                                          : const Duration(
+                                                              milliseconds: 180,
+                                                            ),
+                                                      switchInCurve:
+                                                          Curves.easeOutCubic,
+                                                      switchOutCurve:
+                                                          Curves.easeInCubic,
+                                                      transitionBuilder:
+                                                          (child, animation) {
+                                                            return FadeTransition(
+                                                              opacity: animation,
+                                                              child: child,
+                                                            );
+                                                          },
+                                                      child: Text(
+                                                        _countdown,
+                                                        key: ValueKey(
+                                                          _countdown,
                                                         ),
-                                                  switchInCurve:
-                                                      Curves.easeOutCubic,
-                                                  switchOutCurve:
-                                                      Curves.easeInCubic,
-                                                  transitionBuilder:
-                                                      (child, animation) {
-                                                        return FadeTransition(
-                                                          opacity: animation,
-                                                          child: child,
-                                                        );
-                                                      },
-                                                  child: Text(
-                                                    _countdown,
-                                                    key: ValueKey(_countdown),
-                                                    style: countdownStyle,
-                                                  ),
+                                                        style: countdownStyle,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                          ],
-                                        ),
+                                          );
+                                        },
                                       ),
                                       const SizedBox(height: 18),
                                       _InfoChip(
