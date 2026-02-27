@@ -104,19 +104,6 @@ class PrayerCalculationService {
     );
   }
 
-  /// Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
-  /// Represents the midpoint of the Islamic legal day (from start to end of fast)
-  /// Formula: Fajr + ((Maghrib - Fajr) / 2)
-  DateTime? calculateDahwahKubrah(DateTime? fajr, DateTime? maghrib) {
-    if (fajr != null && maghrib != null) {
-      final diff = maghrib.difference(fajr);
-      return fajr.add(
-        Duration(milliseconds: diff.inMilliseconds ~/ 2),
-      );
-    }
-    return null;
-  }
-
   /// Create prayer times map from PrayerTimes object
   Map<String, DateTime?> createPrayerTimesMap(PrayerTimes prayerTimes) {
     final fajr = prayerTimes.fajr;
@@ -126,13 +113,9 @@ class PrayerCalculationService {
     final maghrib = prayerTimes.maghrib;
     final isha = prayerTimes.isha;
 
-    // Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
-    final dahwaKubrah = calculateDahwahKubrah(fajr, maghrib);
-
     return {
       'Fajr': fajr,
       'Sunrise': sunrise,
-      'Dahwah-e-kubrah': dahwaKubrah,
       'Dhuhr': dhuhr,
       'Asr': asr,
       'Maghrib': maghrib,
@@ -157,7 +140,7 @@ class PrayerCalculationService {
       return 'Fajr';
     } else {
       // Today - show current prayer
-      final order = ['Fajr', 'Sunrise', 'Dahwah-e-kubrah', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      final order = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
       for (final name in order) {
         final t = times[name];
         if (t != null && now.isBefore(t)) {
@@ -175,7 +158,7 @@ class PrayerCalculationService {
     required Coordinates coordinates,
     required CalculationParameters params,
   }) {
-    final order = ['Fajr', 'Sunrise', 'Dahwah-e-kubrah', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+    final order = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
     for (final name in order) {
       final t = times[name];
       if (t != null && now.isBefore(t)) {
@@ -215,15 +198,12 @@ class PrayerCalculationService {
     } else {
       // Today
       if (currentPrayer == 'Sunrise') {
-        return 'Coming Dahwa-e-kubrah';
-      } else if (currentPrayer == 'Dahwah-e-kubrah') {
         return 'Coming Dhuhr';
-      } else {
-        String countdown = timeToNext.isNegative
-            ? '--:--'
-            : '${timeToNext.inHours.toString().padLeft(2, '0')}:${(timeToNext.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
-        return '$currentPrayer time remaining: $countdown';
       }
+      String countdown = timeToNext.isNegative
+          ? '--:--'
+          : '${timeToNext.inHours.toString().padLeft(2, '0')}:${(timeToNext.inMinutes.remainder(60)).toString().padLeft(2, '0')}';
+      return '$currentPrayer time remaining: $countdown';
     }
   }
 

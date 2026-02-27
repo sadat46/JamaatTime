@@ -97,25 +97,19 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       final timeToNext = _getTimeToNextPrayer(now);
       progress = _calculateProgress(now);
 
-      if (currentPeriod == 'Sunrise') {
-        periodName = 'Coming Dahwa-e-kubrah';
-        isSpecial = true;
-      } else if (currentPeriod == 'Dahwah-e-kubrah') {
-        periodName = 'Coming Dhuhr';
-        isSpecial = true;
-      } else {
-        // Format as HH:MM:SS
-        final hours = timeToNext.inHours;
-        final minutes = timeToNext.inMinutes.remainder(60);
-        final seconds = timeToNext.inSeconds.remainder(60);
+      // Format as HH:MM:SS
+      final hours = timeToNext.inHours;
+      final minutes = timeToNext.inMinutes.remainder(60);
+      final seconds = timeToNext.inSeconds.remainder(60);
 
-        countdownTimeStr = timeToNext.isNegative
-            ? '--:--:--'
-            : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      countdownTimeStr = timeToNext.isNegative
+          ? '--:--:--'
+          : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-        periodName = '$currentPeriod time remaining';
-        isSpecial = false;
-      }
+      periodName = currentPeriod == 'Sunrise'
+          ? 'Coming Dhuhr'
+          : '$currentPeriod time remaining';
+      isSpecial = false;
     }
 
     if (mounted) {
@@ -133,7 +127,6 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     final order = [
       'Fajr',
       'Sunrise',
-      'Dahwah-e-kubrah',
       'Dhuhr',
       'Asr',
       'Maghrib',
@@ -163,7 +156,6 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     final order = [
       'Fajr',
       'Sunrise',
-      'Dahwah-e-kubrah',
       'Dhuhr',
       'Asr',
       'Maghrib',
@@ -203,7 +195,6 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     final order = [
       'Fajr',
       'Sunrise',
-      'Dahwah-e-kubrah',
       'Dhuhr',
       'Asr',
       'Maghrib',
@@ -268,7 +259,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   @override
   Widget build(BuildContext context) {
     if (_isSpecialPrayer) {
-      // Special state (past/future date, Sunrise/Dahwah): text-only display
+      // Special state (past/future date): text-only display
       return Text(
         _periodName,
         style: widget.specialTextStyle ?? TextStyle(
@@ -291,9 +282,9 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
           _periodName,
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppConstants.brandGreen,
-            letterSpacing: 0.3,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+            letterSpacing: 0.8,
           ),
         ),
         const SizedBox(height: 6),
@@ -304,17 +295,18 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
           child: CustomPaint(
             painter: _CircularProgressPainter(
               progress: _progressValue,
-              startColor: AppConstants.brandGreenLight,
-              endColor: AppConstants.brandGreenDark,
-              trackColor: Colors.grey.shade200,
+              startColor: const Color(0xFF69F0AE),
+              endColor: Colors.white,
+              trackColor: Colors.white.withValues(alpha: 0.15),
             ),
             child: Center(
               child: Text(
                 _countdownTimeStr,
-                style: TextStyle(
+                style: (widget.textStyle ?? const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: AppConstants.brandGreenDark,
+                  color: Colors.white,
+                )).copyWith(
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),

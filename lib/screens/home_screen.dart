@@ -28,7 +28,7 @@ extension DateTimeExtension on DateTime {
 /// Row type for conditional styling
 enum PrayerRowType {
   prayer,      // Standard prayer times (Fajr, Dhuhr, etc.)
-  info,        // Informational rows (Sunrise, Dahwah-e-kubrah)
+  info,        // Informational rows (Sunrise)
   sahriIftar,  // Sahri/Iftar rows (amber styling)
   forbidden,   // Forbidden time windows (red styling)
 }
@@ -143,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
     times = {
       'Fajr': prayerTimes!.fajr,
       'Sunrise': prayerTimes!.sunrise,
-      'Dahwah-e-kubrah': null, // Will be calculated later
       'Dhuhr': prayerTimes!.dhuhr,
       'Asr': prayerTimes!.asr,
       'Maghrib': prayerTimes!.maghrib,
@@ -314,19 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final maghrib = prayerTimes!.maghrib;
     final isha = prayerTimes!.isha;
 
-    // Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
-    DateTime? dahwaKubrah;
-    if (fajr != null && maghrib != null) {
-      final diff = maghrib.difference(fajr);
-      dahwaKubrah = fajr.add(
-        Duration(milliseconds: diff.inMilliseconds ~/ 2),
-      );
-    }
-
     times = {
       'Fajr': fajr,
       'Sunrise': sunrise,
-      'Dahwah-e-kubrah': dahwaKubrah,
       'Dhuhr': dhuhr,
       'Asr': asr,
       'Maghrib': maghrib,
@@ -684,11 +673,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentPrayer = _getCurrentPrayerName();
     final List<PrayerRowData> tableData = [];
 
-    // Only Main Prayer Times (7 rows)
+    // Only Main Prayer Times (6 rows)
     const prayerNames = [
       'Fajr',
       'Sunrise',
-      'Dahwah-e-kubrah',
       'Dhuhr',
       'Asr',
       'Maghrib',
@@ -704,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Determine row type
       PrayerRowType type;
-      if (name == 'Sunrise' || name == 'Dahwah-e-kubrah') {
+      if (name == 'Sunrise') {
         type = PrayerRowType.info;
       } else {
         type = PrayerRowType.prayer;
@@ -729,7 +717,6 @@ class _HomeScreenState extends State<HomeScreen> {
           jamaatKey = 'isha';
           break;
         case 'Sunrise':
-        case 'Dahwah-e-kubrah':
           jamaatKey = name.toLowerCase();
           break;
         default:

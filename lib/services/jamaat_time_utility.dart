@@ -70,7 +70,6 @@ class JamaatTimeUtility {
       case 'Isha':
         return 'isha';
       case 'Sunrise':
-      case 'Dahwah-e-kubrah':
         return prayerName.toLowerCase();
       default:
         return prayerName.toLowerCase();

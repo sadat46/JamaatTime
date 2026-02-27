@@ -78,7 +78,6 @@ class PrayerTimeTable extends StatelessWidget {
         ...[
           'Fajr',
           'Sunrise',
-          'Dahwah-e-kubrah',
           'Dhuhr',
           'Asr',
           'Maghrib',

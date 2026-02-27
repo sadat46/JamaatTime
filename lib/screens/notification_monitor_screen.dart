@@ -75,19 +75,9 @@ class _NotificationMonitorScreenState extends State<NotificationMonitorScreen> {
       final maghrib = prayerTimes!.maghrib;
       final isha = prayerTimes!.isha;
 
-      // Calculate Dahwah-e-kubrah (midpoint between Fajr and Maghrib)
-      DateTime? dahwaKubrah;
-      if (fajr != null && maghrib != null) {
-        final diff = maghrib.difference(fajr);
-        dahwaKubrah = fajr.add(
-          Duration(milliseconds: diff.inMilliseconds ~/ 2),
-        );
-      }
-
       times = {
         'Fajr': fajr,
         'Sunrise': sunrise,
-        'Dahwah-e-kubrah': dahwaKubrah,
         'Dhuhr': dhuhr,
         'Asr': asr,
         'Maghrib': maghrib,
