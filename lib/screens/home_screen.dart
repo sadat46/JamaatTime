@@ -746,10 +746,50 @@ class _HomeScreenState extends State<HomeScreen> {
     _prayerTableData = tableData;
   }
 
+  IconData _prayerIconForName(String prayerName) {
+    switch (prayerName) {
+      case 'Fajr':
+        return Icons.wb_twilight_outlined;
+      case 'Sunrise':
+        return Icons.wb_sunny_outlined;
+      case 'Dhuhr':
+        return Icons.wb_sunny;
+      case 'Asr':
+        return Icons.wb_cloudy_outlined;
+      case 'Maghrib':
+        return Icons.nights_stay_outlined;
+      case 'Isha':
+        return Icons.dark_mode_outlined;
+      default:
+        return Icons.schedule_outlined;
+    }
+  }
+
+  Color _prayerIconAccent(String prayerName) {
+    switch (prayerName) {
+      case 'Fajr':
+        return const Color(0xFF2A77D4);
+      case 'Sunrise':
+        return const Color(0xFFF2A93B);
+      case 'Dhuhr':
+        return const Color(0xFFDD8A2F);
+      case 'Asr':
+        return const Color(0xFF2B9B88);
+      case 'Maghrib':
+        return const Color(0xFFB7632A);
+      case 'Isha':
+        return const Color(0xFF5564C7);
+      default:
+        return AppConstants.brandGreen;
+    }
+  }
+
   /// Build a single prayer card row for the premium layout.
   Widget _buildPrayerCard(PrayerRowData row, BuildContext context) {
     final isInfo = row.type == PrayerRowType.info;
     final isActive = row.isCurrent;
+    final prayerIcon = _prayerIconForName(row.name);
+    final iconAccent = _prayerIconAccent(row.name);
 
     return Container(
       decoration: BoxDecoration(
@@ -795,15 +835,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Icon
-                    Icon(
-                      isInfo ? Icons.info_outline : Icons.access_time,
-                      size: 18,
-                      color: isActive
-                          ? AppConstants.brandGreen
-                          : isInfo
-                              ? Colors.blueGrey
-                              : Colors.grey.shade600,
+                    // Prayer-specific icon marker.
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: iconAccent.withValues(alpha: isActive ? 0.16 : 0.10),
+                        border: Border.all(
+                          color: iconAccent.withValues(alpha: isActive ? 0.45 : 0.30),
+                        ),
+                      ),
+                      child: Icon(
+                        prayerIcon,
+                        size: 16,
+                        color: iconAccent,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     // Prayer name
@@ -956,6 +1003,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final dateStr = DateFormat('EEE, d MMM, yyyy').format(selectedDate);
     final hijriStr = _toHijriString(selectedDate);
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final Color prayerBandColor = isDarkMode
+        ? const Color(0xFF18261E)
+        : const Color(0xFFF1F7F2);
+    final Color prayerBandBorder = isDarkMode
+        ? const Color(0xFF2A4334)
+        : const Color(0xFFD8E6DA);
+    final Color sahriBandColor = isDarkMode
+        ? const Color(0xFF17261F)
+        : const Color(0xFFEAF5EF);
+    final Color sahriBandBorder = isDarkMode
+        ? const Color(0xFF2E4A3B)
+        : const Color(0xFFCBE1D1);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1249,45 +1309,71 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
 
                     // ── Prayer Times Section ──
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const SectionHeader(title: 'Prayer Times'),
-                        if (_lastJamaatUpdate != null && !isLoadingJamaat)
-                          Text(
-                            'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (isLoadingJamaat)
-                      const Center(child: CircularProgressIndicator()),
-                    if (jamaatError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          jamaatError!,
-                          style: const TextStyle(color: Colors.orange),
-                        ),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      decoration: BoxDecoration(
+                        color: prayerBandColor,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: prayerBandBorder),
                       ),
-                    // Card-based prayer rows
-                    ..._prayerTableData.map((row) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: _buildPrayerCard(row, context),
-                    )),
-                    const SizedBox(height: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const SectionHeader(title: 'Prayer Times'),
+                              if (_lastJamaatUpdate != null && !isLoadingJamaat)
+                                Text(
+                                  'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (isLoadingJamaat)
+                            const Center(child: CircularProgressIndicator()),
+                          if (jamaatError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Text(
+                                jamaatError!,
+                                style: const TextStyle(color: Colors.orange),
+                              ),
+                            ),
+                          // Card-based prayer rows
+                          ..._prayerTableData.map((row) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: _buildPrayerCard(row, context),
+                          )),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
 
                     // ── Sahri & Iftar Times Section ──
-                    const SectionHeader(title: 'Sahri & Iftar Times'),
-                    SahriIftarWidget(
-                      fajrTime: times['Fajr'],
-                      maghribTime: times['Maghrib'],
-                      showTitle: false,
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      decoration: BoxDecoration(
+                        color: sahriBandColor,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: sahriBandBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SectionHeader(title: 'Sahri & Iftar Times'),
+                          SahriIftarWidget(
+                            fajrTime: times['Fajr'],
+                            maghribTime: times['Maghrib'],
+                            showTitle: false,
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
 

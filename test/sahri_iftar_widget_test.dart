@@ -28,10 +28,11 @@ void main() {
     expect(find.text('Sahri Ends'), findsOneWidget);
     expect(find.text('Iftar Begins'), findsOneWidget);
     expect(find.text('Remaining Time'), findsNWidgets(2));
-    expect(find.text('Focus'), findsNWidgets(2));
+    expect(find.text('Tap card for focus'), findsNWidgets(2));
     expect(find.textContaining('Ends at'), findsOneWidget);
     expect(find.textContaining('Begins at'), findsOneWidget);
-    expect(find.byIcon(Icons.workspace_premium_rounded), findsNWidgets(2));
+    expect(find.byIcon(Icons.nightlight_round), findsOneWidget);
+    expect(find.byIcon(Icons.wb_twilight_rounded), findsOneWidget);
   });
 
   testWidgets('tapping a card opens fullscreen and can close', (tester) async {

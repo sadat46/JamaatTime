@@ -428,11 +428,20 @@ class _SahriIftarCard extends StatelessWidget {
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final double textScale = MediaQuery.textScalerOf(context).scale(1);
-    final double cardHeight = (100 * textScale.clamp(1.0, 1.2)).toDouble();
+    final double cardHeight = (112 * textScale.clamp(1.0, 1.2)).toDouble();
     final spec = _SahriIftarVisualSpec.from(
       type: type,
       brightness: Theme.of(context).brightness,
     );
+    final IconData featureIcon = isSahri
+        ? Icons.nightlight_round
+        : Icons.wb_twilight_rounded;
+    final Color featureIconAccent = isDarkMode
+        ? const Color(0xFF8FC7FF)
+        : const Color(0xFF2A77D4);
+    final List<Color> featureBadgeColors = isDarkMode
+        ? const [Color(0xFF1C3553), Color(0xFF1A2C44)]
+        : const [Color(0xFFDDF0FF), Color(0xFFBFDFFF)];
     final LinearGradient cardGradient = isDarkMode
         ? spec.panelGradient
         : LinearGradient(
@@ -526,56 +535,80 @@ class _SahriIftarCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(
-                                        color: spec.primaryText,
-                                        fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
                               Container(
-                                width: 26,
-                                height: 26,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.white.withValues(alpha: 0.72),
-                                  border: Border.all(
-                                    color: spec.accent.withValues(alpha: 0.24),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: featureBadgeColors,
                                   ),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(
+                                      alpha: isDarkMode ? 0.24 : 0.82,
+                                    ),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: featureIconAccent.withValues(
+                                        alpha: 0.30,
+                                      ),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
                                 ),
                                 child: Icon(
-                                  Icons.workspace_premium_rounded,
-                                  size: 16,
-                                  color: spec.accent,
+                                  featureIcon,
+                                  size: 24,
+                                  color: featureIconAccent,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              InfoChip(
-                                icon: Icons.schedule_outlined,
-                                label:
-                                    '${isSahri ? 'Ends at' : 'Begins at'} $timeText',
-                                accent: spec.accent,
-                                textColor: spec.primaryText,
-                                fill: spec.glassTint.withValues(alpha: 0.85),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                iconSize: 12,
-                                textStyle: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                      color: spec.primaryText,
-                                      fontWeight: FontWeight.w700,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
+                                                  color: spec.primaryText,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${isSahri ? 'Ends at' : 'Begins at'} $timeText',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.right,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelMedium
+                                              ?.copyWith(
+                                                color: spec.secondaryText,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ],
                                     ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -613,8 +646,8 @@ class _SahriIftarCard extends StatelessWidget {
                                 child: Text(
                                   inGrace
                                       ? (isSahri
-                                          ? 'Sehri time finished'
-                                          : 'Iftar time started')
+                                            ? 'Sehri time finished'
+                                            : 'Iftar time started')
                                       : 'Remaining Time',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -627,21 +660,9 @@ class _SahriIftarCard extends StatelessWidget {
                                       ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              InfoChip(
-                                icon: Icons.open_in_full_rounded,
-                                label: 'Focus',
-                                accent: spec.accent,
-                                textColor: spec.secondaryText,
-                                fill: spec.glassTint.withValues(alpha: 0.75),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                iconSize: 12,
-                                textStyle: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
+                              Text(
+                                'Tap card for focus',
+                                style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
                                       color: spec.secondaryText,
                                       fontWeight: FontWeight.w700,
@@ -778,7 +799,8 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
       _activeTime,
       now,
     );
-    final shouldPulse = !newInGrace &&
+    final shouldPulse =
+        !newInGrace &&
         remaining != null &&
         remaining <= _SahriIftarCountdownLogic.warningThreshold;
 
@@ -811,8 +833,8 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
       brightness: Theme.of(context).brightness,
     );
 
-    final countdownBaseStyle =
-        Theme.of(context).textTheme.displaySmall?.copyWith(
+    final countdownBaseStyle = Theme.of(context).textTheme.displaySmall
+        ?.copyWith(
           color: spec.accent,
           fontWeight: FontWeight.w800,
           fontFeatures: const [FontFeature.tabularFigures()],
@@ -945,9 +967,11 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                 shadows: isWarning
                                                     ? [
                                                         Shadow(
-                                                          color: Colors.redAccent
+                                                          color: Colors
+                                                              .redAccent
                                                               .withValues(
-                                                                alpha: 0.7 *
+                                                                alpha:
+                                                                    0.7 *
                                                                     pulseVal,
                                                               ),
                                                           blurRadius:
@@ -963,21 +987,20 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                               alignment: Alignment.center,
                                               children: [
                                                 SizedBox.expand(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        value: progress,
-                                                        strokeWidth: isWarning
-                                                            ? ringStroke
-                                                            : 10,
-                                                        backgroundColor:
-                                                            spec.ringTrack,
-                                                        valueColor:
-                                                            AlwaysStoppedAnimation(
-                                                              isWarning
-                                                                  ? pulseColor
-                                                                  : spec.accent,
-                                                            ),
-                                                      ),
+                                                  child: CircularProgressIndicator(
+                                                    value: progress,
+                                                    strokeWidth: isWarning
+                                                        ? ringStroke
+                                                        : 10,
+                                                    backgroundColor:
+                                                        spec.ringTrack,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation(
+                                                          isWarning
+                                                              ? pulseColor
+                                                              : spec.accent,
+                                                        ),
+                                                  ),
                                                 ),
                                                 Column(
                                                   mainAxisSize:
@@ -986,18 +1009,18 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                     Text(
                                                       _inGrace
                                                           ? (_isSahri
-                                                              ? 'Sehri time finished'
-                                                              : 'Iftar time started')
+                                                                ? 'Sehri time finished'
+                                                                : 'Iftar time started')
                                                           : 'Remaining Time',
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodySmall
                                                           ?.copyWith(
                                                             color: _inGrace
-                                                                ? Colors.amber
-                                                                    .shade700
-                                                                : spec
-                                                                    .secondaryText,
+                                                                ? Colors
+                                                                      .amber
+                                                                      .shade700
+                                                                : spec.secondaryText,
                                                             fontWeight:
                                                                 FontWeight.w600,
                                                           ),
@@ -1016,7 +1039,8 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                       transitionBuilder:
                                                           (child, animation) {
                                                             return FadeTransition(
-                                                              opacity: animation,
+                                                              opacity:
+                                                                  animation,
                                                               child: child,
                                                             );
                                                           },
