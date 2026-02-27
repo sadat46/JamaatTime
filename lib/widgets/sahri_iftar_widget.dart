@@ -426,12 +426,25 @@ class _SahriIftarCard extends StatelessWidget {
     final bool isSahri = type == SahriIftarType.sahri;
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final double textScale = MediaQuery.textScalerOf(context).scale(1);
     final double cardHeight = (100 * textScale.clamp(1.0, 1.2)).toDouble();
     final spec = _SahriIftarVisualSpec.from(
       type: type,
       brightness: Theme.of(context).brightness,
     );
+    final LinearGradient cardGradient = isDarkMode
+        ? spec.panelGradient
+        : LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.white,
+              Colors.white,
+              isSahri ? const Color(0xFFC6EBC8) : const Color(0xFFB8E4BB),
+            ],
+            stops: const [0.0, 0.68, 1.0],
+          );
 
     final TextStyle countdownStyle =
         Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -463,7 +476,7 @@ class _SahriIftarCard extends StatelessWidget {
             child: Ink(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                gradient: spec.panelGradient,
+                gradient: cardGradient,
                 border: Border.all(color: spec.border),
                 boxShadow: [
                   BoxShadow(
@@ -523,7 +536,24 @@ class _SahriIftarCard extends StatelessWidget {
                                       ?.copyWith(
                                         color: spec.primaryText,
                                         fontWeight: FontWeight.w800,
-                                      ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.72),
+                                  border: Border.all(
+                                    color: spec.accent.withValues(alpha: 0.24),
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.workspace_premium_rounded,
+                                  size: 16,
+                                  color: spec.accent,
                                 ),
                               ),
                               const SizedBox(width: 8),

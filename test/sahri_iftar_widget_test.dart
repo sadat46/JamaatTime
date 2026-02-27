@@ -31,6 +31,7 @@ void main() {
     expect(find.text('Focus'), findsNWidgets(2));
     expect(find.textContaining('Ends at'), findsOneWidget);
     expect(find.textContaining('Begins at'), findsOneWidget);
+    expect(find.byIcon(Icons.workspace_premium_rounded), findsNWidgets(2));
   });
 
   testWidgets('tapping a card opens fullscreen and can close', (tester) async {
