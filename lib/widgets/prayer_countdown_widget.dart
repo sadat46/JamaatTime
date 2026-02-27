@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
+import '../core/constants.dart';
 
 /// A self-contained countdown widget that updates every second.
-/// Shows time remaining until the next prayer in HH:MM:SS format.
+/// Shows time remaining until the next prayer as a circular progress ring.
 class PrayerCountdownWidget extends StatefulWidget {
   final Map<String, DateTime?> prayerTimes;
   final DateTime selectedDate;
@@ -29,7 +32,8 @@ class PrayerCountdownWidget extends StatefulWidget {
 
 class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   Timer? _timer;
-  String _countdownText = '';
+  String _periodName = '';
+  String _countdownTimeStr = '';
   bool _isSpecialPrayer = false;
   double _progressValue = 0.0;
 
@@ -72,18 +76,19 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     );
     final todayOnly = DateTime(now.year, now.month, now.day);
 
-    String text;
+    String periodName;
+    String countdownTimeStr = '';
     bool isSpecial = false;
     double progress = 0.0;
 
     if (selectedDateOnly.isBefore(todayOnly)) {
       // Past date
-      text = 'Viewing past date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
+      periodName = 'Viewing past date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
       isSpecial = true;
       progress = 0.0;
     } else if (selectedDateOnly.isAfter(todayOnly)) {
       // Future date
-      text = 'Viewing future date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
+      periodName = 'Viewing future date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
       isSpecial = true;
       progress = 0.0;
     } else {
@@ -93,10 +98,10 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       progress = _calculateProgress(now);
 
       if (currentPeriod == 'Sunrise') {
-        text = 'Coming Dahwa-e-kubrah';
+        periodName = 'Coming Dahwa-e-kubrah';
         isSpecial = true;
       } else if (currentPeriod == 'Dahwah-e-kubrah') {
-        text = 'Coming Dhuhr';
+        periodName = 'Coming Dhuhr';
         isSpecial = true;
       } else {
         // Format as HH:MM:SS
@@ -104,18 +109,19 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
         final minutes = timeToNext.inMinutes.remainder(60);
         final seconds = timeToNext.inSeconds.remainder(60);
 
-        final countdown = timeToNext.isNegative
+        countdownTimeStr = timeToNext.isNegative
             ? '--:--:--'
             : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-        text = '$currentPeriod time remaining: $countdown';
+        periodName = '$currentPeriod time remaining';
         isSpecial = false;
       }
     }
 
     if (mounted) {
       setState(() {
-        _countdownText = text;
+        _periodName = periodName;
+        _countdownTimeStr = countdownTimeStr;
         _isSpecialPrayer = isSpecial;
         _progressValue = progress;
       });
@@ -261,45 +267,124 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final defaultStyle = TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-      color: const Color(0xFF1B5E20),
-    );
+    if (_isSpecialPrayer) {
+      // Special state (past/future date, Sunrise/Dahwah): text-only display
+      return Text(
+        _periodName,
+        style: widget.specialTextStyle ?? TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppConstants.brandGreenDark,
+        ),
+        textAlign: TextAlign.center,
+      );
+    }
 
-    final specialStyle = TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.bold,
-      color: const Color(0xFF1B5E20),
-    );
+    // Normal state: circular progress ring with countdown
+    const double ringSize = 140.0;
 
-    return IntrinsicWidth(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Countdown text
-          Text(
-            _countdownText,
-            style: _isSpecialPrayer
-                ? (widget.specialTextStyle ?? specialStyle)
-                : (widget.textStyle ?? defaultStyle),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Prayer name label above the ring
+        Text(
+          _periodName,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppConstants.brandGreen,
+            letterSpacing: 0.3,
           ),
-
-          // Progress bar (only for normal prayers, not special "Coming..." messages)
-          if (!_isSpecialPrayer) ...[
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: _progressValue,
-              backgroundColor: const Color(0xFFE0E0E0),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF1B5E20),
-              ),
-              minHeight: 8,
+        ),
+        const SizedBox(height: 6),
+        // Circular ring
+        SizedBox(
+          width: ringSize,
+          height: ringSize,
+          child: CustomPaint(
+            painter: _CircularProgressPainter(
+              progress: _progressValue,
+              startColor: AppConstants.brandGreenLight,
+              endColor: AppConstants.brandGreenDark,
+              trackColor: Colors.grey.shade200,
             ),
-          ],
-        ],
-      ),
+            child: Center(
+              child: Text(
+                _countdownTimeStr,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppConstants.brandGreenDark,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+}
+
+/// Custom painter for a circular progress ring with gradient stroke.
+class _CircularProgressPainter extends CustomPainter {
+  final double progress;
+  final Color startColor;
+  final Color endColor;
+  final Color trackColor;
+  final double strokeWidth;
+
+  const _CircularProgressPainter({
+    required this.progress,
+    required this.startColor,
+    required this.endColor,
+    required this.trackColor,
+    this.strokeWidth = 10.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Draw track
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    // Draw progress arc with gradient
+    if (progress > 0.005) {
+      final sweepAngle = 2 * math.pi * progress;
+      final gradient = SweepGradient(
+        startAngle: -math.pi / 2,
+        endAngle: -math.pi / 2 + sweepAngle,
+        colors: [startColor, endColor],
+        tileMode: TileMode.clamp,
+      );
+      final progressPaint = Paint()
+        ..shader = gradient.createShader(rect)
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        sweepAngle,
+        false,
+        progressPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CircularProgressPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.startColor != startColor ||
+        oldDelegate.endColor != endColor;
   }
 }

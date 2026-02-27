@@ -13,6 +13,7 @@ import '../widgets/live_clock_widget.dart';
 import '../widgets/prayer_countdown_widget.dart';
 import '../widgets/sahri_iftar_widget.dart';
 import '../widgets/forbidden_times_widget.dart';
+import '../widgets/shared_ui_widgets.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
@@ -758,28 +759,131 @@ class _HomeScreenState extends State<HomeScreen> {
     _prayerTableData = tableData;
   }
 
-  /// Get row decoration based on row type
-  BoxDecoration? _getRowDecoration(PrayerRowData row, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  /// Build a single prayer card row for the premium layout.
+  Widget _buildPrayerCard(PrayerRowData row, BuildContext context) {
+    final isInfo = row.type == PrayerRowType.info;
+    final isActive = row.isCurrent;
 
-    switch (row.type) {
-      case PrayerRowType.forbidden:
-        return BoxDecoration(
-          color: isDark ? Colors.red.shade900.withValues(alpha: 0.3) : Colors.red.shade50,
-        );
-      case PrayerRowType.sahriIftar:
-        return BoxDecoration(
-          color: isDark ? Colors.orange.shade900.withValues(alpha: 0.3) : Colors.orange.shade50,
-        );
-      case PrayerRowType.prayer:
-      case PrayerRowType.info:
-        if (row.isCurrent) {
-          return BoxDecoration(
-            color: isDark ? Colors.green.shade900.withValues(alpha: 0.3) : Colors.green.shade100,
-          );
-        }
-        return null;
-    }
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: isActive
+            ? Colors.green.shade50
+            : isInfo
+                ? Colors.grey.shade50
+                : Colors.white,
+        border: Border.all(
+          color: isActive
+              ? AppConstants.brandGreen.withValues(alpha: 0.3)
+              : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // Active indicator strip
+            if (isActive)
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: AppConstants.brandGreen,
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(12),
+                  ),
+                ),
+              ),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isActive ? 12.0 : 16.0,
+                  vertical: 12.0,
+                ),
+                child: Row(
+                  children: [
+                    // Icon
+                    Icon(
+                      isInfo ? Icons.info_outline : Icons.access_time,
+                      size: 18,
+                      color: isActive
+                          ? AppConstants.brandGreen
+                          : isInfo
+                              ? Colors.blueGrey
+                              : Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 10),
+                    // Prayer name
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        row.name,
+                        style: TextStyle(
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                          fontStyle: isInfo ? FontStyle.italic : FontStyle.normal,
+                          color: isActive
+                              ? AppConstants.brandGreenDark
+                              : isInfo
+                                  ? Colors.blueGrey
+                                  : Colors.black87,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    // Prayer time
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        row.timeStr,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          fontStyle: isInfo ? FontStyle.italic : FontStyle.normal,
+                          color: isActive
+                              ? AppConstants.brandGreenDark
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    // Jamaat time (hidden for info rows)
+                    if (!isInfo)
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              row.jamaatStr,
+                              style: row.jamaatStr == '-'
+                                  ? const TextStyle(color: Colors.grey, fontSize: 13)
+                                  : TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppConstants.brandGreen,
+                                      fontSize: 13,
+                                    ),
+                            ),
+                            if (row.jamaatStr != '-') ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.mosque, size: 12, color: AppConstants.brandGreen),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Build grouped city dropdown items (Bangladesh and Saudi Arabia)
@@ -869,6 +973,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // ── Gradient Hero Header ──
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final maxCardWidth = constraints.maxWidth < 500
@@ -877,22 +982,38 @@ class _HomeScreenState extends State<HomeScreen> {
                         return Center(
                           child: ConstrainedBox(
                             constraints: BoxConstraints(maxWidth: maxCardWidth),
-                            child: Card(
-                              elevation: 4,
-                              color: Theme.of(context).cardColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppConstants.brandGreenDark,
+                                    AppConstants.brandGreen,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(24),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppConstants.brandGreenDark.withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: Padding(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: constraints.maxWidth < 400
-                                      ? 8.0
-                                      : 16.0,
+                                      ? 12.0
+                                      : 20.0,
                                   vertical: 20.0,
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // Location row
                                     Row(
                                       children: [
                                         Text(
@@ -900,12 +1021,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   _locationConfig!.jamaatSource == JamaatSource.none
                                               ? 'GPS Location: '
                                               : 'Your Mosque at: ',
+                                          style: const TextStyle(color: Colors.white70),
                                         ),
                                         if (_locationConfig == null ||
                                             _locationConfig!.jamaatSource != JamaatSource.none)
                                           DropdownButton<String>(
                                             value: selectedCity,
                                             items: _buildCityDropdownItems(),
+                                            dropdownColor: AppConstants.brandGreenDark,
+                                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                                            iconEnabledColor: Colors.white70,
+                                            underline: Container(height: 1, color: Colors.white38),
                                             onChanged: (value) async {
                                             if (value == null || value == selectedCity) return;
 
@@ -955,7 +1081,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               currentPlaceName ?? 'Detecting...',
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
-                                                color: Colors.blue,
+                                                color: Colors.white,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -963,36 +1089,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-
-                                    const SizedBox(height: 4),
+                                    // Date + clock row
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           dateStr,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.bodyMedium,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                         Row(
                                           children: [
                                             const Icon(
                                               Icons.access_time,
-                                              size: 20,
+                                              size: 18,
+                                              color: Colors.white70,
                                             ),
                                             const SizedBox(width: 4),
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                right: 12.0,
-                                              ),
-                                              child: LiveClockWidget(
-                                                textStyle: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyLarge
-                                                    ?.copyWith(
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
+                                            LiveClockWidget(
+                                              textStyle: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                fontSize: 16,
                                               ),
                                             ),
                                           ],
@@ -1008,27 +1129,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                           SizedBox(
                                             width: 16,
                                             height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
                                           ),
                                           SizedBox(width: 8),
-                                          Text('Loading jamaat times...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                          Text('Loading jamaat times...', style: TextStyle(fontSize: 12, color: Colors.white60)),
                                         ],
                                       ),
                                     if (jamaatError != null)
                                       Row(
                                         children: [
                                           const SizedBox(width: 16),
-                                          const Icon(Icons.error, size: 16, color: Colors.red),
+                                          const Icon(Icons.error, size: 16, color: Colors.orangeAccent),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
                                               jamaatError!,
-                                              style: const TextStyle(fontSize: 12, color: Colors.red),
+                                              style: const TextStyle(fontSize: 12, color: Colors.orangeAccent),
                                             ),
                                           ),
                                         ],
                                       ),
-                                    // Show message when jamaat times not available (GPS mode in unsupported location)
+                                    // Show message when jamaat times not available (GPS mode)
                                     if (_locationConfig != null &&
                                         _locationConfig!.jamaatSource == JamaatSource.none &&
                                         !isLoadingJamaat &&
@@ -1036,47 +1157,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Row(
                                         children: [
                                           const SizedBox(width: 16),
-                                          const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                                          const Icon(Icons.info_outline, size: 16, color: Colors.white70),
                                           const SizedBox(width: 8),
-                                          Expanded(
+                                          const Expanded(
                                             child: Text(
-                                              '📍 GPS Mode: Jamaat times not available for this location',
-                                              style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                                              'GPS Mode: Jamaat times not available for this location',
+                                              style: TextStyle(fontSize: 12, color: Colors.white70),
                                             ),
                                           ),
                                         ],
                                       ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.access_time, size: 18),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(
-                                              right: 24.0,
-                                            ),
-                                            child: FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              alignment: Alignment.centerLeft,
-                                              child: PrayerCountdownWidget(
-                                                prayerTimes: times,
-                                                selectedDate: selectedDate,
-                                                coordinates: _coords,
-                                                calculationParams: params,
-                                              ),
-                                            ),
-                                          ),
+                                    const SizedBox(height: 16),
+                                    // Countdown ring — visual centerpiece
+                                    Center(
+                                      child: PrayerCountdownWidget(
+                                        prayerTimes: times,
+                                        selectedDate: selectedDate,
+                                        coordinates: _coords,
+                                        calculationParams: params,
+                                        textStyle: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
                                         ),
-                                      ],
+                                        specialTextStyle: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 12),
+                                    // GPS location row
                                     Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.center,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.my_location),
+                                          icon: const Icon(Icons.my_location, color: Colors.white70),
                                           onPressed: _fetchUserLocation,
                                         ),
                                         Expanded(
@@ -1086,9 +1204,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       Axis.horizontal,
                                                   child: Text(
                                                     currentPlaceName!,
-                                                    style: Theme.of(
-                                                      context,
-                                                    ).textTheme.bodyMedium,
+                                                    style: const TextStyle(
+                                                      color: Colors.white70,
+                                                      fontSize: 13,
+                                                    ),
                                                     overflow:
                                                         TextOverflow.visible,
                                                   ),
@@ -1104,6 +1223,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     child:
                                                         CircularProgressIndicator(
                                                           strokeWidth: 2,
+                                                          color: Colors.white70,
                                                         ),
                                                   ),
                                                 )
@@ -1120,18 +1240,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
+                    // ── Prayer Times Section ──
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'Prayer Times',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: const Color(0xFF2E7D32),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        const SectionHeader(title: 'Prayer Times'),
                         if (_lastJamaatUpdate != null && !isLoadingJamaat)
                           Text(
                             'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
@@ -1143,7 +1257,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 8),
                     if (isLoadingJamaat)
                       const Center(child: CircularProgressIndicator()),
                     if (jamaatError != null)
@@ -1154,98 +1267,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: const TextStyle(color: Colors.orange),
                         ),
                       ),
-                    Table(
-                      border: TableBorder.all(color: Colors.grey.shade300),
-                      columnWidths: const {
-                        0: FlexColumnWidth(3),
-                        1: FlexColumnWidth(3),
-                        2: FlexColumnWidth(3),
-                      },
-                      children: [
-                        TableRow(
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF145A32)
-                                : const Color(0xFF43A047),
-                          ),
-                          children: const [
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text(
-                                'Prayer Name',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text(
-                                'Prayer Time',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text(
-                                'Jamaat Time',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Use pre-computed prayer table data (avoids expensive calculations in build)
-                        ..._prayerTableData.map((row) => TableRow(
-                          decoration: _getRowDecoration(row, context),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(row.name),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Center(
-                                child: Text(
-                                  row.timeStr,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      row.jamaatStr,
-                                      style: row.jamaatStr == '-'
-                                          ? const TextStyle(color: Colors.grey)
-                                          : (row.type == PrayerRowType.forbidden
-                                              ? const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)
-                                              : const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                                    ),
-                                    if (row.jamaatStr != '-' && row.type != PrayerRowType.forbidden) ...[
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.mosque, size: 12, color: Colors.green),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        )),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                    // Card-based prayer rows
+                    ..._prayerTableData.map((row) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: _buildPrayerCard(row, context),
+                    )),
+                    const SizedBox(height: 16),
 
-                    // Sahri & Iftar Times Table
+                    // ── Sahri & Iftar Times Section ──
+                    const SectionHeader(title: 'Sahri & Iftar Times'),
                     SahriIftarWidget(
                       fajrTime: times['Fajr'],
                       maghribTime: times['Maghrib'],
+                      showTitle: false,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                    // Forbidden Prayer Times Table
+                    // ── Forbidden Prayer Times Section ──
+                    const SectionHeader(title: 'Forbidden Prayer Times'),
                     ForbiddenTimesWidget(
                       prayerTimes: prayerTimes,
                     ),

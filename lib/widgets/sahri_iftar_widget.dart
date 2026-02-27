@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/screen_awake_service.dart';
+import 'shared_ui_widgets.dart';
 
 enum SahriIftarType { sahri, iftar }
 
@@ -195,11 +196,13 @@ class _SahriIftarVisualSpec {
 class SahriIftarWidget extends StatefulWidget {
   final DateTime? fajrTime;
   final DateTime? maghribTime;
+  final bool showTitle;
 
   const SahriIftarWidget({
     super.key,
     required this.fajrTime,
     required this.maghribTime,
+    this.showTitle = false,
   });
 
   @override
@@ -302,16 +305,17 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8.0),
-          child: Text(
-            'Sahri & Iftar Times',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: const Color(0xFF2E7D32),
-              fontWeight: FontWeight.bold,
+        if (widget.showTitle)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8.0),
+            child: Text(
+              'Sahri & Iftar Times',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: const Color(0xFF2E7D32),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-        ),
         _buildCardEntry(
           duration: entryDuration,
           child: _SahriIftarCard(
@@ -522,7 +526,7 @@ class _SahriIftarCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              _InfoChip(
+                              InfoChip(
                                 icon: Icons.schedule_outlined,
                                 label:
                                     '${isSahri ? 'Ends at' : 'Begins at'} $timeText',
@@ -593,7 +597,7 @@ class _SahriIftarCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              _InfoChip(
+                              InfoChip(
                                 icon: Icons.open_in_full_rounded,
                                 label: 'Focus',
                                 accent: spec.accent,
@@ -870,7 +874,7 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      _AccentIconBadge(
+                                      AccentIconBadge(
                                         icon: _icon,
                                         accent: spec.accent,
                                         tint: spec.glassTint,
@@ -1001,7 +1005,7 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                         },
                                       ),
                                       const SizedBox(height: 18),
-                                      _InfoChip(
+                                      InfoChip(
                                         icon: Icons.schedule_rounded,
                                         label:
                                             '${_isSahri ? 'Ends at' : 'Begins at'} $timeText',
@@ -1041,92 +1045,4 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
   }
 }
 
-class _AccentIconBadge extends StatelessWidget {
-  final IconData icon;
-  final Color accent;
-  final Color tint;
-  final double size;
-  final double iconSize;
-
-  const _AccentIconBadge({
-    required this.icon,
-    required this.accent,
-    required this.tint,
-    this.size = 52,
-    this.iconSize = 28,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: tint.withValues(alpha: 0.85),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.28),
-            blurRadius: 14,
-            spreadRadius: 0.8,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Icon(icon, color: accent, size: iconSize),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color accent;
-  final Color textColor;
-  final Color fill;
-  final EdgeInsetsGeometry padding;
-  final double iconSize;
-  final TextStyle? textStyle;
-
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.accent,
-    required this.textColor,
-    required this.fill,
-    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-    this.iconSize = 14,
-    this.textStyle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: fill,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
-      ),
-      child: Padding(
-        padding: padding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: iconSize, color: accent),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style:
-                  textStyle ??
-                  Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// AccentIconBadge and InfoChip are now in shared_ui_widgets.dart
