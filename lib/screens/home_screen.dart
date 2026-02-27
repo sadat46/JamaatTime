@@ -1020,241 +1020,233 @@ class _HomeScreenState extends State<HomeScreen> {
                                 padding: EdgeInsets.symmetric(
                                   horizontal: constraints.maxWidth < 400
                                       ? 12.0
-                                      : 20.0,
-                                  vertical: 20.0,
+                                      : 16.0,
+                                  vertical: 16.0,
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    // Location row
-                                    Row(
-                                      children: [
-                                        Text(
-                                          _locationConfig != null &&
-                                                  _locationConfig!.jamaatSource == JamaatSource.none
-                                              ? 'GPS Location: '
-                                              : 'Your Mosque at: ',
-                                          style: const TextStyle(color: Colors.white70),
-                                        ),
-                                        if (_locationConfig == null ||
-                                            _locationConfig!.jamaatSource != JamaatSource.none)
-                                          DropdownButton<String>(
-                                            value: selectedCity,
-                                            items: _buildCityDropdownItems(),
-                                            dropdownColor: AppConstants.brandGreenDark,
-                                            style: const TextStyle(color: Colors.white, fontSize: 14),
-                                            iconEnabledColor: Colors.white70,
-                                            underline: Container(height: 1, color: Colors.white38),
-                                            onChanged: (value) async {
-                                            if (value == null || value == selectedCity) return;
-
-                                            setState(() {
-                                              selectedCity = value;
-                                            });
-
-                                            // Update location config
-                                            _locationConfig = _locationConfigService.getConfigForCity(value);
-                                            _locationConfigService.setCurrentConfig(_locationConfig!);
-                                            _notificationService.setLocationConfig(_locationConfig!);
-
-                                            // Update calculation parameters
-                                            params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
-
-                                            // Only apply madhab for Bangladesh
-                                            if (_locationConfig!.country == Country.bangladesh) {
-                                              final madhab = await _settingsService.getMadhab();
-                                              params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-                                            }
-
-                                            // Cancel existing notifications and reschedule
-                                            _notificationsScheduled = false;
-
-                                            // Update coordinates for the new location
-                                            _coords = Coordinates(
-                                              _locationConfig!.latitude,
-                                              _locationConfig!.longitude,
-                                            );
-
-                                            // Recalculate prayer times
-                                            _updatePrayerTimes();
-
-                                            // Fetch/calculate jamaat times based on location
-                                            if (_locationConfig!.jamaatSource == JamaatSource.server) {
-                                              await _fetchJamaatTimes(value);
-                                            } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
-                                              _calculateLocalJamaatTimes();
-                                            }
-                                          },
-                                        ),
-                                        // Show current location name in GPS mode
-                                        if (_locationConfig != null &&
-                                            _locationConfig!.jamaatSource == JamaatSource.none)
-                                          Flexible(
-                                            child: Text(
-                                              currentPlaceName ?? 'Detecting...',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    // Date + clock row
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              dateStr,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            Text(
-                                              hijriStr,
-                                              style: const TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.access_time,
-                                              size: 18,
-                                              color: Colors.white70,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            LiveClockWidget(
-                                              textStyle: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    // Jamaat times status
-                                    if (isLoadingJamaat)
-                                      const Row(
-                                        children: [
-                                          SizedBox(width: 16),
-                                          SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text('Loading jamaat times...', style: TextStyle(fontSize: 12, color: Colors.white60)),
-                                        ],
+                                    // ── LEFT SIDE: Countdown ring ──
+                                    PrayerCountdownWidget(
+                                      prayerTimes: times,
+                                      selectedDate: selectedDate,
+                                      coordinates: _coords,
+                                      calculationParams: params,
+                                      textStyle: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
-                                    if (jamaatError != null)
-                                      Row(
-                                        children: [
-                                          const SizedBox(width: 16),
-                                          const Icon(Icons.error, size: 16, color: Colors.orangeAccent),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              jamaatError!,
-                                              style: const TextStyle(fontSize: 12, color: Colors.orangeAccent),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    // Show message when jamaat times not available (GPS mode)
-                                    if (_locationConfig != null &&
-                                        _locationConfig!.jamaatSource == JamaatSource.none &&
-                                        !isLoadingJamaat &&
-                                        jamaatError == null)
-                                      Row(
-                                        children: [
-                                          const SizedBox(width: 16),
-                                          const Icon(Icons.info_outline, size: 16, color: Colors.white70),
-                                          const SizedBox(width: 8),
-                                          const Expanded(
-                                            child: Text(
-                                              'GPS Mode: Jamaat times not available for this location',
-                                              style: TextStyle(fontSize: 12, color: Colors.white70),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    const SizedBox(height: 16),
-                                    // Countdown ring — visual centerpiece
-                                    Center(
-                                      child: PrayerCountdownWidget(
-                                        prayerTimes: times,
-                                        selectedDate: selectedDate,
-                                        coordinates: _coords,
-                                        calculationParams: params,
-                                        textStyle: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                        specialTextStyle: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
+                                      specialTextStyle: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
-                                    // GPS location row
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.my_location, color: Colors.white70),
-                                          onPressed: _fetchUserLocation,
-                                        ),
-                                        Expanded(
-                                          child: currentPlaceName != null
-                                              ? SingleChildScrollView(
-                                                  scrollDirection:
-                                                      Axis.horizontal,
+                                    const SizedBox(width: 16),
+                                    // ── RIGHT SIDE: Info stack ──
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          // Location row (right-aligned)
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                _locationConfig != null &&
+                                                        _locationConfig!.jamaatSource == JamaatSource.none
+                                                    ? 'GPS Location: '
+                                                    : 'Mosque: ',
+                                                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                              ),
+                                              if (_locationConfig == null ||
+                                                  _locationConfig!.jamaatSource != JamaatSource.none)
+                                                Expanded(
+                                                  child: DropdownButton<String>(
+                                                    isExpanded: true,
+                                                    value: selectedCity,
+                                                    items: _buildCityDropdownItems(),
+                                                    dropdownColor: AppConstants.brandGreenDark,
+                                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                                    iconEnabledColor: Colors.white70,
+                                                    underline: Container(height: 1, color: Colors.white38),
+                                                    isDense: true,
+                                                    onChanged: (value) async {
+                                                    if (value == null || value == selectedCity) {
+                                                      return;
+                                                    }
+
+                                                    setState(() {
+                                                      selectedCity = value;
+                                                    });
+
+                                                    _locationConfig = _locationConfigService.getConfigForCity(value);
+                                                    _locationConfigService.setCurrentConfig(_locationConfig!);
+                                                    _notificationService.setLocationConfig(_locationConfig!);
+
+                                                    params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
+
+                                                    if (_locationConfig!.country == Country.bangladesh) {
+                                                      final madhab = await _settingsService.getMadhab();
+                                                      params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+                                                    }
+
+                                                    _notificationsScheduled = false;
+
+                                                    _coords = Coordinates(
+                                                      _locationConfig!.latitude,
+                                                      _locationConfig!.longitude,
+                                                    );
+
+                                                    _updatePrayerTimes();
+
+                                                    if (_locationConfig!.jamaatSource == JamaatSource.server) {
+                                                      await _fetchJamaatTimes(value);
+                                                    } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+                                                      _calculateLocalJamaatTimes();
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                              if (_locationConfig != null &&
+                                                  _locationConfig!.jamaatSource == JamaatSource.none)
+                                                Flexible(
                                                   child: Text(
-                                                    currentPlaceName!,
+                                                    currentPlaceName ?? 'Detecting...',
                                                     style: const TextStyle(
-                                                      color: Colors.white70,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.white,
                                                       fontSize: 13,
                                                     ),
-                                                    overflow:
-                                                        TextOverflow.visible,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
-                                                )
-                                              : isFetchingPlaceName
-                                              ? const Padding(
-                                                  padding: EdgeInsets.only(
-                                                    left: 8.0,
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          // Clock row
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.access_time,
+                                                size: 16,
+                                                color: Colors.white70,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              LiveClockWidget(
+                                                textStyle: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          // Date strings
+                                          Text(
+                                            dateStr,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          Text(
+                                            hijriStr,
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          // GPS location row
+                                          GestureDetector(
+                                            onTap: _fetchUserLocation,
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.my_location, size: 16, color: Colors.white70),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: currentPlaceName != null
+                                                      ? Text(
+                                                          currentPlaceName!,
+                                                          style: const TextStyle(
+                                                            color: Colors.white70,
+                                                            fontSize: 12,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        )
+                                                      : isFetchingPlaceName
+                                                      ? const SizedBox(
+                                                          height: 14,
+                                                          width: 14,
+                                                          child: CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                            color: Colors.white70,
+                                                          ),
+                                                        )
+                                                      : const SizedBox.shrink(),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Jamaat times status (conditional)
+                                          if (isLoadingJamaat)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Row(
+                                                children: const [
+                                                  SizedBox(
+                                                    width: 14,
+                                                    height: 14,
+                                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
                                                   ),
-                                                  child: SizedBox(
-                                                    height: 20,
-                                                    width: 20,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          color: Colors.white70,
-                                                        ),
+                                                  SizedBox(width: 6),
+                                                  Flexible(
+                                                    child: Text('Loading jamaat times...', style: TextStyle(fontSize: 11, color: Colors.white60)),
                                                   ),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
-                                      ],
+                                                ],
+                                              ),
+                                            ),
+                                          if (jamaatError != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.error, size: 14, color: Colors.orangeAccent),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      jamaatError!,
+                                                      style: const TextStyle(fontSize: 11, color: Colors.orangeAccent),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          if (_locationConfig != null &&
+                                              _locationConfig!.jamaatSource == JamaatSource.none &&
+                                              !isLoadingJamaat &&
+                                              jamaatError == null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Row(
+                                                children: const [
+                                                  Icon(Icons.info_outline, size: 14, color: Colors.white70),
+                                                  SizedBox(width: 6),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'GPS Mode: No jamaat times',
+                                                      style: TextStyle(fontSize: 11, color: Colors.white70),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1306,10 +1298,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       maghribTime: times['Maghrib'],
                       showTitle: false,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
                     // ── Forbidden Prayer Times Section ──
-                    const SectionHeader(title: 'Forbidden Prayer Times'),
                     ForbiddenTimesWidget(
                       prayerTimes: prayerTimes,
                     ),

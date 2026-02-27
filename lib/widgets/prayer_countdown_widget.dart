@@ -272,22 +272,11 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     }
 
     // Normal state: circular progress ring with countdown
-    const double ringSize = 140.0;
+    const double ringSize = 110.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Prayer name label above the ring
-        Text(
-          _periodName,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 6),
         // Circular ring
         SizedBox(
           width: ringSize,
@@ -303,7 +292,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
               child: Text(
                 _countdownTimeStr,
                 style: (widget.textStyle ?? const TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 )).copyWith(
@@ -312,6 +301,17 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
               ),
             ),
           ),
+        ),
+        const SizedBox(height: 4),
+        // Prayer name label below the ring
+        Text(
+          _periodName,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
