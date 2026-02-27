@@ -272,7 +272,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     }
 
     // Normal state: circular progress ring with countdown
-    const double ringSize = 110.0;
+    const double ringSize = 120.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

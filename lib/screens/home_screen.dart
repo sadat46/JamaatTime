@@ -889,9 +889,12 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final city in AppConstants.bangladeshCities) {
       items.add(DropdownMenuItem(
         value: city,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Text(city),
+        child: Row(
+          children: [
+            const Icon(Icons.mosque, size: 15, color: Colors.white70),
+            const SizedBox(width: 6),
+            Text(city),
+          ],
         ),
       ));
     }
@@ -911,9 +914,12 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final city in AppConstants.saudiCities) {
       items.add(DropdownMenuItem(
         value: city,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Text(city),
+        child: Row(
+          children: [
+            const Icon(Icons.mosque, size: 15, color: Colors.white70),
+            const SizedBox(width: 6),
+            Text(city),
+          ],
         ),
       ));
     }
@@ -1033,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       coordinates: _coords,
                                       calculationParams: params,
                                       textStyle: const TextStyle(
-                                        fontSize: 20,
+                                        fontSize: 22,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
@@ -1043,88 +1049,73 @@ class _HomeScreenState extends State<HomeScreen> {
                                         color: Colors.white,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: 28),
                                     // ── RIGHT SIDE: Info stack ──
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          // Location row (right-aligned)
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                _locationConfig != null &&
-                                                        _locationConfig!.jamaatSource == JamaatSource.none
-                                                    ? 'GPS Location: '
-                                                    : 'Mosque: ',
-                                                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                          // Location selector
+                                          if (_locationConfig == null ||
+                                              _locationConfig!.jamaatSource != JamaatSource.none)
+                                            DropdownButton<String>(
+                                              isExpanded: true,
+                                              value: selectedCity,
+                                              items: _buildCityDropdownItems(),
+                                              dropdownColor: AppConstants.brandGreenDark,
+                                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                                              iconEnabledColor: Colors.white70,
+                                              underline: Container(height: 1, color: Colors.white38),
+                                              isDense: true,
+                                              padding: EdgeInsets.zero,
+                                              onChanged: (value) async {
+                                                if (value == null || value == selectedCity) {
+                                                  return;
+                                                }
+
+                                                setState(() {
+                                                  selectedCity = value;
+                                                });
+
+                                                _locationConfig = _locationConfigService.getConfigForCity(value);
+                                                _locationConfigService.setCurrentConfig(_locationConfig!);
+                                                _notificationService.setLocationConfig(_locationConfig!);
+
+                                                params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
+
+                                                if (_locationConfig!.country == Country.bangladesh) {
+                                                  final madhab = await _settingsService.getMadhab();
+                                                  params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+                                                }
+
+                                                _notificationsScheduled = false;
+
+                                                _coords = Coordinates(
+                                                  _locationConfig!.latitude,
+                                                  _locationConfig!.longitude,
+                                                );
+
+                                                _updatePrayerTimes();
+
+                                                if (_locationConfig!.jamaatSource == JamaatSource.server) {
+                                                  await _fetchJamaatTimes(value);
+                                                } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+                                                  _calculateLocalJamaatTimes();
+                                                }
+                                              },
+                                            ),
+                                          if (_locationConfig != null &&
+                                              _locationConfig!.jamaatSource == JamaatSource.none)
+                                            Text(
+                                              currentPlaceName ?? 'Detecting...',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                fontSize: 13,
                                               ),
-                                              if (_locationConfig == null ||
-                                                  _locationConfig!.jamaatSource != JamaatSource.none)
-                                                Expanded(
-                                                  child: DropdownButton<String>(
-                                                    isExpanded: true,
-                                                    value: selectedCity,
-                                                    items: _buildCityDropdownItems(),
-                                                    dropdownColor: AppConstants.brandGreenDark,
-                                                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                                                    iconEnabledColor: Colors.white70,
-                                                    underline: Container(height: 1, color: Colors.white38),
-                                                    isDense: true,
-                                                    onChanged: (value) async {
-                                                    if (value == null || value == selectedCity) {
-                                                      return;
-                                                    }
-
-                                                    setState(() {
-                                                      selectedCity = value;
-                                                    });
-
-                                                    _locationConfig = _locationConfigService.getConfigForCity(value);
-                                                    _locationConfigService.setCurrentConfig(_locationConfig!);
-                                                    _notificationService.setLocationConfig(_locationConfig!);
-
-                                                    params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
-
-                                                    if (_locationConfig!.country == Country.bangladesh) {
-                                                      final madhab = await _settingsService.getMadhab();
-                                                      params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-                                                    }
-
-                                                    _notificationsScheduled = false;
-
-                                                    _coords = Coordinates(
-                                                      _locationConfig!.latitude,
-                                                      _locationConfig!.longitude,
-                                                    );
-
-                                                    _updatePrayerTimes();
-
-                                                    if (_locationConfig!.jamaatSource == JamaatSource.server) {
-                                                      await _fetchJamaatTimes(value);
-                                                    } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
-                                                      _calculateLocalJamaatTimes();
-                                                    }
-                                                  },
-                                                ),
-                                              ),
-                                              if (_locationConfig != null &&
-                                                  _locationConfig!.jamaatSource == JamaatSource.none)
-                                                Flexible(
-                                                  child: Text(
-                                                    currentPlaceName ?? 'Detecting...',
-                                                    style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.white,
-                                                      fontSize: 13,
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           const SizedBox(height: 6),
                                           // Clock row
                                           Row(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../core/constants.dart';
 import '../services/screen_awake_service.dart';
 import 'shared_ui_widgets.dart';
 
@@ -121,51 +122,51 @@ class _SahriIftarVisualSpec {
   });
 
   static const _SahriIftarVisualSpec _sahriLight = _SahriIftarVisualSpec(
-    panelColors: [Color(0xFFF9F5ED), Color(0xFFF1E8D8)],
-    ambientColors: [Color(0xFFF5F8FE), Color(0xFFEEF3FC)],
-    accent: Color(0xFF8A6A2F),
-    primaryText: Color(0xFF2B2E34),
-    secondaryText: Color(0xFF61656D),
-    border: Color(0x7AFFFFFF),
+    panelColors: [Color(0xFFEFF8F1), Color(0xFFDFF0E4)],
+    ambientColors: [Color(0xFFF5FBF6), Color(0xFFEAF6EE)],
+    accent: AppConstants.brandGreenDark,
+    primaryText: Color(0xFF1F2E24),
+    secondaryText: Color(0xFF516659),
+    border: Color(0x85FFFFFF),
     glassTint: Color(0x26FFFFFF),
-    glow: Color(0x408A6A2F),
-    ringTrack: Color(0x248A6A2F),
+    glow: Color(0x33145A32),
+    ringTrack: Color(0x24145A32),
   );
 
   static const _SahriIftarVisualSpec _iftarLight = _SahriIftarVisualSpec(
-    panelColors: [Color(0xFFF9EEE8), Color(0xFFF3DFD5)],
-    ambientColors: [Color(0xFFFCF4EF), Color(0xFFF8EDE7)],
-    accent: Color(0xFF9C573A),
-    primaryText: Color(0xFF2D3037),
-    secondaryText: Color(0xFF666A72),
-    border: Color(0x73FFFFFF),
+    panelColors: [Color(0xFFEAF5EC), Color(0xFFD6EAD9)],
+    ambientColors: [Color(0xFFF2FAF4), Color(0xFFE6F3E9)],
+    accent: AppConstants.brandGreen,
+    primaryText: Color(0xFF1E2C22),
+    secondaryText: Color(0xFF4F6458),
+    border: Color(0x7AFFFFFF),
     glassTint: Color(0x24FFFFFF),
-    glow: Color(0x3D9C573A),
-    ringTrack: Color(0x269C573A),
+    glow: Color(0x33388E3C),
+    ringTrack: Color(0x26388E3C),
   );
 
   static const _SahriIftarVisualSpec _sahriDark = _SahriIftarVisualSpec(
-    panelColors: [Color(0xFF1F2B3F), Color(0xFF182234)],
-    ambientColors: [Color(0xFF111B2D), Color(0xFF0B1220)],
-    accent: Color(0xFFE3BC65),
-    primaryText: Color(0xFFE9ECF2),
-    secondaryText: Color(0xFFC0C8D8),
-    border: Color(0x3DD9E6FF),
-    glassTint: Color(0x121F2E45),
-    glow: Color(0x33E3BC65),
-    ringTrack: Color(0x28E3BC65),
+    panelColors: [Color(0xFF173325), Color(0xFF10261B)],
+    ambientColors: [Color(0xFF0F2319), Color(0xFF09180F)],
+    accent: Color(0xFF8DD79A),
+    primaryText: Color(0xFFE7F5EB),
+    secondaryText: Color(0xFFC0DCC8),
+    border: Color(0x405EDB7A),
+    glassTint: Color(0x1A1A3A2A),
+    glow: Color(0x338DD79A),
+    ringTrack: Color(0x288DD79A),
   );
 
   static const _SahriIftarVisualSpec _iftarDark = _SahriIftarVisualSpec(
-    panelColors: [Color(0xFF3A2C29), Color(0xFF2A1F1D)],
-    ambientColors: [Color(0xFF241917), Color(0xFF16100F)],
-    accent: Color(0xFFF0B193),
-    primaryText: Color(0xFFF2EDE9),
-    secondaryText: Color(0xFFD9C7BC),
-    border: Color(0x3DFFE6DC),
-    glassTint: Color(0x1A352824),
-    glow: Color(0x30F0B193),
-    ringTrack: Color(0x28F0B193),
+    panelColors: [Color(0xFF1E3A2B), Color(0xFF14291E)],
+    ambientColors: [Color(0xFF12261C), Color(0xFF0A1812)],
+    accent: Color(0xFFA5E7AF),
+    primaryText: Color(0xFFEAF7EE),
+    secondaryText: Color(0xFFC7E2CE),
+    border: Color(0x3F73E08A),
+    glassTint: Color(0x1A1F3F2E),
+    glow: Color(0x30A5E7AF),
+    ringTrack: Color(0x28A5E7AF),
   );
 
   static _SahriIftarVisualSpec from({
@@ -311,7 +312,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
             child: Text(
               'Sahri & Iftar Times',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: const Color(0xFF2E7D32),
+                color: AppConstants.brandGreenDark,
                 fontWeight: FontWeight.bold,
               ),
             ),
