@@ -13,7 +13,6 @@ import 'user_management_screen.dart';
 import 'admin_jamaat_panel.dart';
 import 'notification_monitor_screen.dart';
 import 'bookmarks_screen.dart';
-import '../main.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -41,6 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Settings state variables
   String _madhab = 'hanafi';
+  int _bangladeshHijriOffsetDays = SettingsService.defaultBangladeshHijriOffsetDays;
   int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   String _version = '';
@@ -80,10 +80,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadSettings() async {
     final madhab = await _settingsService.getMadhab();
+    final bangladeshHijriOffset = await _settingsService.getBangladeshHijriOffsetDays();
     final prayerSoundMode = await _settingsService.getPrayerNotificationSoundMode();
     final jamaatSoundMode = await _settingsService.getJamaatNotificationSoundMode();
     setState(() {
       _madhab = madhab;
+      _bangladeshHijriOffsetDays = bangladeshHijriOffset;
       _prayerNotificationSoundMode = prayerSoundMode;
       _jamaatNotificationSoundMode = jamaatSoundMode;
     });
@@ -504,6 +506,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   if (val != null) {
                                     await _settingsService.setMadhab(val);
                                     setState(() => _madhab = val);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Bangladesh Hijri date offset
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Bangladesh Hijri Offset'),
+                              DropdownButton<int>(
+                                value: _bangladeshHijriOffsetDays,
+                                items: const [
+                                  DropdownMenuItem(value: -2, child: Text('-2 day')),
+                                  DropdownMenuItem(value: -1, child: Text('-1 day')),
+                                  DropdownMenuItem(value: 0, child: Text('0 day')),
+                                  DropdownMenuItem(value: 1, child: Text('+1 day')),
+                                  DropdownMenuItem(value: 2, child: Text('+2 day')),
+                                ],
+                                onChanged: (val) async {
+                                  if (val != null) {
+                                    await _settingsService.setBangladeshHijriOffsetDays(val);
+                                    setState(() => _bangladeshHijriOffsetDays = val);
                                   }
                                 },
                               ),

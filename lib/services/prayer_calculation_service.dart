@@ -3,6 +3,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../models/location_config.dart';
+import 'hijri_date_converter.dart';
 
 /// Represents a forbidden prayer time window
 class ForbiddenWindow {
@@ -75,11 +76,8 @@ class PrayerCalculationService {
   }
 
   /// Check if current date is during Ramadan (Hijri month 9)
-  /// TODO: Implement proper Hijri calendar conversion or use package:hijri_calendar
   bool _isRamadan() {
-    // Simplified check - always returns false for now
-    // In production, this should use a proper Hijri calendar library
-    return false;
+    return HijriDateConverter.isRamadan(DateTime.now());
   }
 
   /// Calculate prayer times for given coordinates and date

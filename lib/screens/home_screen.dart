@@ -9,11 +9,13 @@ import '../services/jamaat_service.dart';
 import '../services/location_config_service.dart';
 import '../models/location_config.dart';
 import '../services/prayer_calculation_service.dart';
+import '../services/hijri_date_converter.dart';
 import '../widgets/live_clock_widget.dart';
 import '../widgets/prayer_countdown_widget.dart';
 import '../widgets/sahri_iftar_widget.dart';
 import '../widgets/forbidden_times_widget.dart';
 import '../widgets/shared_ui_widgets.dart';
+import '../utils/bangla_calendar.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
@@ -91,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _lastScheduledDate = DateTime.now().subtract(
     const Duration(days: 1),
   );
+  int _bangladeshHijriOffsetDays = SettingsService.defaultBangladeshHijriOffsetDays;
 
   // Pre-computed prayer table data (avoids recalculation in build())
   List<PrayerRowData> _prayerTableData = [];
@@ -126,6 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final madhab = await _settingsService.getMadhab();
       params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
     }
+    _bangladeshHijriOffsetDays =
+        await _settingsService.getBangladeshHijriOffsetDays();
 
     // Initialize times with default values to avoid null issues
     final coords = Coordinates(
@@ -187,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Single listener for all settings changes (combining madhab and notification settings)
     _settingsSubscription = _settingsService.onSettingsChanged.listen((_) async {
       await _loadMadhab();
+      await _loadBangladeshHijriOffset();
       await _handleNotificationSettingsChange();
     });
   }
@@ -407,6 +413,17 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       _updatePrayerTimes();
+    });
+  }
+
+  Future<void> _loadBangladeshHijriOffset() async {
+    final offset = await _settingsService.getBangladeshHijriOffsetDays();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _bangladeshHijriOffsetDays = offset;
     });
   }
 
@@ -974,35 +991,23 @@ class _HomeScreenState extends State<HomeScreen> {
     return items;
   }
 
-  /// Converts a Gregorian date to a Hijri date string using the tabular algorithm.
   String _toHijriString(DateTime date) {
-    const hijriMonths = [
-      'Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani",
-      'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', "Sha'ban",
-      'Ramadan', 'Shawwal', "Dhu al-Qi'dah", 'Dhu al-Hijjah',
-    ];
-    final d = date.day, m = date.month, y = date.year;
-    final a = (14 - m) ~/ 12;
-    final yy = y + 4800 - a;
-    final mm = m + 12 * a - 3;
-    final jdn = d + (153 * mm + 2) ~/ 5 + 365 * yy + yy ~/ 4 - yy ~/ 100 + yy ~/ 400 - 32045;
-    var l = jdn - 1948440 + 10632;
-    final n = (l - 1) ~/ 10631;
-    l = l - 10631 * n + 354;
-    final j = ((10985 - l) ~/ 5316) * ((50 * l) ~/ 17719) +
-              (l ~/ 5670) * ((43 * l) ~/ 15238);
-    l = l - ((30 - j) ~/ 15) * ((17719 * j) ~/ 50) -
-        (j ~/ 16) * ((15238 * j) ~/ 43) + 29;
-    final hYear = 30 * n + j - 30;
-    final hMonth = (24 * l) ~/ 709;
-    final hDay = l - (709 * hMonth) ~/ 24;
-    return '$hDay ${hijriMonths[hMonth - 1]} $hYear AH';
+    final offset =
+        _locationConfig?.country == Country.bangladesh
+            ? _bangladeshHijriOffsetDays
+            : 0;
+
+    return HijriDateConverter.formatHijriDate(
+      date,
+      dayOffset: offset,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('EEE, d MMM, yyyy').format(selectedDate);
     final hijriStr = _toHijriString(selectedDate);
+    final banglaDateStr = BanglaCalendar.fromGregorian(selectedDate);
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color prayerBandColor = isDarkMode
         ? const Color(0xFF18261E)
@@ -1209,6 +1214,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: const TextStyle(
                                               color: Colors.white70,
                                               fontSize: 11,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            banglaDateStr,
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.7),
+                                              fontSize: 10,
                                             ),
                                           ),
                                           const SizedBox(height: 6),

@@ -2,12 +2,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class SettingsService {
+  static const int defaultBangladeshHijriOffsetDays = -1;
+
   static const String _themeKey = 'theme_mode';
   static const String _madhabKey = 'madhab';
   static const String _themeIndexKey = 'theme_index';
   static const String _keyNotificationSoundMode = 'notification_sound_mode';
   static const String _keyPrayerNotificationSoundMode = 'prayer_notification_sound_mode';
   static const String _keyJamaatNotificationSoundMode = 'jamaat_notification_sound_mode';
+  static const String _keyBangladeshHijriOffsetDays = 'bangladesh_hijri_offset_days';
   final StreamController<void> _controller = StreamController.broadcast();
 
   // Cached SharedPreferences instance
@@ -89,6 +92,18 @@ class SettingsService {
     final prefs = await _prefs;
     await prefs.setInt(_keyJamaatNotificationSoundMode, mode);
     // Notify listeners that notification settings have changed
+    _controller.add(null);
+  }
+
+  Future<int> getBangladeshHijriOffsetDays() async {
+    final prefs = await _prefs;
+    return prefs.getInt(_keyBangladeshHijriOffsetDays) ??
+        defaultBangladeshHijriOffsetDays;
+  }
+
+  Future<void> setBangladeshHijriOffsetDays(int days) async {
+    final prefs = await _prefs;
+    await prefs.setInt(_keyBangladeshHijriOffsetDays, days);
     _controller.add(null);
   }
 } 
