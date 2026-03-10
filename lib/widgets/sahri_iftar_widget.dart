@@ -60,10 +60,10 @@ class _SahriIftarCountdownLogic {
     );
   }
 
-  static const Duration gracePeriod = Duration(minutes: 3);
+  static const Duration gracePeriod = Duration(minutes: 2);
   static const Duration warningThreshold = Duration(minutes: 2);
 
-  /// Returns elapsed duration since [targetTime] if within the 3-minute
+  /// Returns elapsed duration since [targetTime] if within the 2-minute
   /// grace period. Returns null if not in grace period.
   static Duration? graceElapsed(DateTime? targetTime, DateTime now) {
     if (targetTime == null) return null;

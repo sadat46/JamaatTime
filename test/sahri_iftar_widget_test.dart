@@ -56,4 +56,31 @@ void main() {
     expect(find.byKey(const Key('sahri-fullscreen')), findsNothing);
     expect(find.byKey(const Key('sahri-card')), findsOneWidget);
   });
+
+  testWidgets('shows grace label for Sehri within 2 minutes after time', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await tester.pumpWidget(
+      buildTestWidget(
+        fajrTime: now.subtract(const Duration(minutes: 1, seconds: 30)),
+        maghribTime: now.add(const Duration(hours: 8)),
+      ),
+    );
+
+    expect(find.text('Sehri time finished'), findsOneWidget);
+  });
+
+  testWidgets('stops grace label for Sehri after 2 minutes', (tester) async {
+    final now = DateTime.now();
+    await tester.pumpWidget(
+      buildTestWidget(
+        fajrTime: now.subtract(const Duration(minutes: 2, seconds: 1)),
+        maghribTime: now.add(const Duration(hours: 8)),
+      ),
+    );
+
+    expect(find.text('Sehri time finished'), findsNothing);
+    expect(find.text('Remaining Time'), findsNWidgets(2));
+  });
 }
