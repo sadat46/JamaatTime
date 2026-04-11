@@ -8,7 +8,7 @@
     android:padding="16dp"
     android:clipToOutline="true">
 
-    <!-- Row 1: Current prayer + remaining time + refresh -->
+    <!-- Row 1: Current prayer + remaining time -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -66,17 +66,6 @@
                 android:maxLines="1"/>
         </LinearLayout>
 
-        <!-- Refresh button -->
-        <ImageView
-            android:id="@+id/refresh_button"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:src="@android:drawable/ic_popup_sync"
-            android:tint="#FFFFFF"
-            android:contentDescription="Refresh"
-            android:clickable="true"
-            android:background="?android:attr/selectableItemBackgroundBorderless"/>
     </LinearLayout>
 
     <!-- Row 2: 4 prayer times (excludes current prayer) -->
@@ -188,7 +177,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="24dp">
 
         <!-- Line 1: App icon + calendar icon + Hijri & Bangla date -->
         <LinearLayout
@@ -221,13 +210,13 @@
                 android:ellipsize="end"/>
         </LinearLayout>
 
-        <!-- Line 2: Location icon + name -->
+        <!-- Line 2: Location icon + name + refresh (bottom-right) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="4dp"
             android:paddingStart="24dp">
             <ImageView
                 android:layout_width="15dp"
@@ -238,13 +227,25 @@
                 android:layout_marginEnd="6dp"/>
             <TextView
                 android:id="@+id/location"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Location"
                 android:textColor="#B3FFFFFF"
                 android:textSize="13sp"
                 android:maxLines="1"
                 android:ellipsize="end"/>
+
+            <ImageView
+                android:id="@+id/refresh_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:src="@android:drawable/ic_popup_sync"
+                android:tint="#FFFFFF"
+                android:contentDescription="Refresh"
+                android:clickable="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"/>
         </LinearLayout>
     </LinearLayout>
 
