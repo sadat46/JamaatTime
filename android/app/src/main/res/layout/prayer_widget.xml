@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:orientation="vertical"
-    android:background="#CC000000"
+    android:background="@drawable/widget_background"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="8dp">
+    android:padding="12dp"
+    android:clipToOutline="true">
 
+    <!-- Row 1: Current prayer + remaining time + refresh -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
+        <!-- Left: Prayer name + time -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -22,17 +27,21 @@
                 android:layout_height="wrap_content"
                 android:text="Prayer"
                 android:textColor="#FFFFFF"
-                android:textSize="20sp"
-                android:textStyle="bold"/>
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"/>
             <TextView
                 android:id="@+id/prayer_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp"/>
+                android:textSize="14sp"
+                android:maxLines="1"/>
         </LinearLayout>
 
+        <!-- Center-right: Remaining label + countdown -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -42,62 +51,222 @@
                 android:id="@+id/remaining_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Remaining"
+                android:text="Remaining Time"
                 android:textColor="#B3FFFFFF"
-                android:textSize="14sp"/>
+                android:textSize="11sp"
+                android:maxLines="1"/>
             <TextView
                 android:id="@+id/remaining_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"/>
+        </LinearLayout>
+
+        <!-- Refresh button -->
+        <ImageView
+            android:id="@+id/refresh_button"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:src="@android:drawable/ic_popup_sync"
+            android:tint="#B3FFFFFF"
+            android:contentDescription="Refresh"
+            android:clickable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"/>
+    </LinearLayout>
+
+    <!-- Row 2: 4 prayer times -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp">
+
+        <!-- Fajr -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fajr"
+                android:textColor="#B3FFFFFF"
+                android:textSize="11sp"/>
+            <TextView
+                android:id="@+id/fajr_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="13sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Dhuhr -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dhuhr"
+                android:textColor="#B3FFFFFF"
+                android:textSize="11sp"/>
+            <TextView
+                android:id="@+id/dhuhr_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--:--"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Asr -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Asr"
+                android:textColor="#B3FFFFFF"
+                android:textSize="11sp"/>
+            <TextView
+                android:id="@+id/asr_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--:--"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Maghrib -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Maghrib"
+                android:textColor="#B3FFFFFF"
+                android:textSize="11sp"/>
+            <TextView
+                android:id="@+id/maghrib_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--:--"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Isha -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Isha"
+                android:textColor="#B3FFFFFF"
+                android:textSize="11sp"/>
+            <TextView
+                android:id="@+id/isha_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--:--"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
                 android:textStyle="bold"/>
         </LinearLayout>
     </LinearLayout>
 
-    <GridLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:columnCount="4"
-        android:rowCount="2"
-        android:layout_marginTop="8dp">
-        
-        <TextView android:text="Fajr" android:textColor="#B3FFFFFF" android:textSize="12sp"/>
-        <TextView android:text="Asr" android:textColor="#B3FFFFFF" android:textSize="12sp"/>
-        <TextView android:text="Maghrib" android:textColor="#B3FFFFFF" android:textSize="12sp"/>
-        <TextView android:text="Isha" android:textColor="#B3FFFFFF" android:textSize="12sp"/>
-        
-        <TextView android:id="@+id/fajr_time" android:text="--:--" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold"/>
-        <TextView android:id="@+id/asr_time" android:text="--:--" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold"/>
-        <TextView android:id="@+id/maghrib_time" android:text="--:--" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold"/>
-        <TextView android:id="@+id/isha_time" android:text="--:--" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold"/>
-    </GridLayout>
-
+    <!-- Row 3: Hijri date + location -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="4dp">
-        
-        <TextView
-            android:id="@+id/islamic_date"
-            android:layout_width="match_parent"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical">
+
+        <!-- Left: App icon + calendar icon + Hijri date -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Islamic Date"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"/>
-            
-        <TextView
-            android:id="@+id/location"
-            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@mipmap/launcher_icon"
+                android:contentDescription="App icon"
+                android:layout_marginEnd="4dp"/>
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@android:drawable/ic_menu_my_calendar"
+                android:tint="#FFFFFF"
+                android:contentDescription="Calendar"
+                android:layout_marginEnd="4dp"/>
+            <TextView
+                android:id="@+id/islamic_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Islamic Date"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+        </LinearLayout>
+
+        <!-- Right: Location icon + name -->
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Location"
-            android:textColor="#B3FFFFFF"
-            android:textSize="12sp"
-            android:maxLines="1"
-            android:ellipsize="end"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginStart="8dp">
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@android:drawable/ic_menu_mylocation"
+                android:tint="#B3FFFFFF"
+                android:contentDescription="Location"
+                android:layout_marginEnd="4dp"/>
+            <TextView
+                android:id="@+id/location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Location"
+                android:textColor="#B3FFFFFF"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:maxWidth="120dp"/>
+        </LinearLayout>
     </LinearLayout>
 
-</LinearLayout> 
+</LinearLayout>

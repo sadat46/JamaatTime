@@ -16,6 +16,7 @@ import '../widgets/sahri_iftar_widget.dart';
 import '../widgets/forbidden_times_widget.dart';
 import '../widgets/shared_ui_widgets.dart';
 import '../utils/bangla_calendar.dart';
+import '../services/widget_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
@@ -761,6 +762,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     _prayerTableData = tableData;
+    _updateHomeWidget();
+  }
+
+  void _updateHomeWidget() {
+    if (times.isEmpty || _locationConfig == null || params == null) return;
+    // Only update widget for today's date
+    final now = DateTime.now();
+    final todayOnly = DateTime(now.year, now.month, now.day);
+    final selectedOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    if (selectedOnly != todayOnly) return;
+
+    final hijriOffset = _locationConfig!.country == Country.bangladesh
+        ? _bangladeshHijriOffsetDays
+        : 0;
+
+    WidgetService.updateWidgetData(
+      times: times,
+      locationName: currentPlaceName ?? _locationConfig!.cityName,
+      date: selectedDate,
+      hijriOffsetDays: hijriOffset,
+    );
   }
 
   IconData _prayerIconForName(String prayerName) {

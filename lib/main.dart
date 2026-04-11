@@ -6,8 +6,10 @@ import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/ebadat/ebadat_screen.dart';
 import 'screens/profile_screen.dart';
+import 'package:home_widget/home_widget.dart';
 import 'services/notification_service.dart';
 import 'services/bookmark_service.dart';
+import 'services/widget_service.dart';
 import 'themes/green_theme.dart';
 
 void main() async {
@@ -39,6 +41,9 @@ void main() async {
   } catch (e) {
     // Continue with the app even if notification service fails to initialize
   }
+
+  // Register home widget background callback for refresh button
+  HomeWidget.registerInteractivityCallback(backgroundCallback);
 
   runApp(const MyApp());
 }
