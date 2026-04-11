@@ -9,6 +9,7 @@ import '../models/location_config.dart';
 import '../services/location_config_service.dart';
 import '../services/prayer_calculation_service.dart';
 import '../services/settings_service.dart';
+import '../utils/bangla_calendar.dart';
 import 'hijri_date_converter.dart';
 
 /// Top-level background callback for home widget refresh button.
@@ -61,9 +62,10 @@ Future<void> backgroundCallback(Uri? uri) async {
     final effectiveHijriOffset =
         config.country == Country.bangladesh ? hijriOffset : 0;
 
+    final placeName = prefs.getString('last_location_name');
     await WidgetService.updateWidgetData(
       times: times,
-      locationName: config.cityName,
+      locationName: placeName ?? config.cityName,
       date: now,
       hijriOffsetDays: effectiveHijriOffset,
     );
@@ -74,7 +76,7 @@ Future<void> backgroundCallback(Uri? uri) async {
 
 class WidgetService {
   static const String _androidWidgetName = 'PrayerWidgetProvider';
-  static const _fmt = 'HH:mm';
+  static const _fmt = 'hh:mm a';
   static const _prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
   static Future<void> updateWidgetData({
@@ -85,7 +87,9 @@ class WidgetService {
   }) async {
     try {
       final now = DateTime.now();
+      final currentPrayer = _getCurrentPrayerName(times, now);
       final nextPrayer = _getNextPrayerName(times, now);
+      final currentPrayerTime = times[currentPrayer];
       final nextPrayerTime = times[nextPrayer];
 
       final remaining = nextPrayerTime != null && now.isBefore(nextPrayerTime)
@@ -94,45 +98,44 @@ class WidgetService {
 
       final timeFormat = DateFormat(_fmt);
 
+      // Build 4-prayer row excluding current prayer
+      final rowPrayers = _prayerOrder.where((p) => p != currentPrayer).toList();
+      // Ensure exactly 4 entries (fallback if current prayer not in list)
+      while (rowPrayers.length < 4) {
+        rowPrayers.add('-');
+      }
+
+      final hijriDate = HijriDateConverter.formatHijriDate(date, dayOffset: hijriOffsetDays);
+      final banglaDate = BanglaCalendar.fromGregorian(date);
+
       await Future.wait([
-        HomeWidget.saveWidgetData<String>('prayer_name', nextPrayer),
+        HomeWidget.saveWidgetData<String>('prayer_name', currentPrayer),
         HomeWidget.saveWidgetData<String>(
           'prayer_time',
-          nextPrayerTime != null
-              ? timeFormat.format(nextPrayerTime.toLocal())
+          currentPrayerTime != null
+              ? timeFormat.format(currentPrayerTime.toLocal())
               : '-',
         ),
         HomeWidget.saveWidgetData<String>(
           'remaining_label',
-          'Until $nextPrayer',
+          '$currentPrayer Time Remaining',
         ),
         HomeWidget.saveWidgetData<String>(
           'remaining_time',
           _formatRemaining(remaining),
         ),
-        HomeWidget.saveWidgetData<String>(
-          'fajr_time',
-          _formatPrayerTime(times['Fajr'], timeFormat),
-        ),
-        HomeWidget.saveWidgetData<String>(
-          'dhuhr_time',
-          _formatPrayerTime(times['Dhuhr'], timeFormat),
-        ),
-        HomeWidget.saveWidgetData<String>(
-          'asr_time',
-          _formatPrayerTime(times['Asr'], timeFormat),
-        ),
-        HomeWidget.saveWidgetData<String>(
-          'maghrib_time',
-          _formatPrayerTime(times['Maghrib'], timeFormat),
-        ),
-        HomeWidget.saveWidgetData<String>(
-          'isha_time',
-          _formatPrayerTime(times['Isha'], timeFormat),
-        ),
+        // 4 dynamic prayer row slots
+        HomeWidget.saveWidgetData<String>('row_label_1', rowPrayers[0]),
+        HomeWidget.saveWidgetData<String>('row_time_1', _formatPrayerTime(times[rowPrayers[0]], timeFormat)),
+        HomeWidget.saveWidgetData<String>('row_label_2', rowPrayers[1]),
+        HomeWidget.saveWidgetData<String>('row_time_2', _formatPrayerTime(times[rowPrayers[1]], timeFormat)),
+        HomeWidget.saveWidgetData<String>('row_label_3', rowPrayers[2]),
+        HomeWidget.saveWidgetData<String>('row_time_3', _formatPrayerTime(times[rowPrayers[2]], timeFormat)),
+        HomeWidget.saveWidgetData<String>('row_label_4', rowPrayers[3]),
+        HomeWidget.saveWidgetData<String>('row_time_4', _formatPrayerTime(times[rowPrayers[3]], timeFormat)),
         HomeWidget.saveWidgetData<String>(
           'islamic_date',
-          HijriDateConverter.formatHijriDate(date, dayOffset: hijriOffsetDays),
+          '$hijriDate  |  $banglaDate',
         ),
         HomeWidget.saveWidgetData<String>('location', locationName),
       ]);
@@ -143,6 +146,21 @@ class WidgetService {
     }
   }
 
+  /// Current prayer = the last prayer whose time has already passed.
+  static String _getCurrentPrayerName(
+      Map<String, DateTime?> times, DateTime now) {
+    String current = 'Isha'; // default: after all prayers
+    for (final name in _prayerOrder) {
+      final t = times[name];
+      if (t != null && now.isBefore(t)) {
+        break;
+      }
+      current = name;
+    }
+    return current;
+  }
+
+  /// Next prayer = the first prayer whose time hasn't passed yet.
   static String _getNextPrayerName(
       Map<String, DateTime?> times, DateTime now) {
     for (final name in _prayerOrder) {
@@ -158,8 +176,8 @@ class WidgetService {
     if (duration <= Duration.zero) return '-';
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}h ${minutes}m';
-    return '${minutes}m';
+    if (hours > 0) return '${hours.toString().padLeft(2, '0')}hrs, ${minutes.toString().padLeft(2, '0')}mins';
+    return '${minutes}mins';
   }
 
   static String _formatPrayerTime(DateTime? time, DateFormat fmt) {

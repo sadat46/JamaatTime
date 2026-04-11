@@ -4,8 +4,8 @@
     android:orientation="vertical"
     android:background="@drawable/widget_background"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="12dp"
+    android:layout_height="match_parent"
+    android:padding="16dp"
     android:clipToOutline="true">
 
     <!-- Row 1: Current prayer + remaining time + refresh -->
@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:text="Prayer"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="26sp"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end"/>
@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp"
+                android:textSize="20sp"
                 android:maxLines="1"/>
         </LinearLayout>
 
@@ -53,7 +53,7 @@
                 android:layout_height="wrap_content"
                 android:text="Remaining Time"
                 android:textColor="#B3FFFFFF"
-                android:textSize="11sp"
+                android:textSize="13sp"
                 android:maxLines="1"/>
             <TextView
                 android:id="@+id/remaining_time"
@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:maxLines="1"/>
         </LinearLayout>
@@ -69,24 +69,24 @@
         <!-- Refresh button -->
         <ImageView
             android:id="@+id/refresh_button"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:src="@android:drawable/ic_popup_sync"
-            android:tint="#B3FFFFFF"
+            android:tint="#FFFFFF"
             android:contentDescription="Refresh"
             android:clickable="true"
             android:background="?android:attr/selectableItemBackgroundBorderless"/>
     </LinearLayout>
 
-    <!-- Row 2: 4 prayer times -->
+    <!-- Row 2: 4 prayer times (excludes current prayer) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="10dp">
+        android:layout_marginTop="14dp">
 
-        <!-- Fajr -->
+        <!-- Slot 1 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -94,22 +94,23 @@
             android:orientation="vertical"
             android:gravity="center">
             <TextView
+                android:id="@+id/row_label_1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Fajr"
+                android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="11sp"/>
+                android:textSize="14sp"/>
             <TextView
-                android:id="@+id/fajr_time"
+                android:id="@+id/row_time_1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
-        <!-- Dhuhr -->
+        <!-- Slot 2 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -117,22 +118,23 @@
             android:orientation="vertical"
             android:gravity="center">
             <TextView
+                android:id="@+id/row_label_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Dhuhr"
+                android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="11sp"/>
+                android:textSize="14sp"/>
             <TextView
-                android:id="@+id/dhuhr_time"
+                android:id="@+id/row_time_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
-        <!-- Asr -->
+        <!-- Slot 3 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -140,22 +142,23 @@
             android:orientation="vertical"
             android:gravity="center">
             <TextView
+                android:id="@+id/row_label_3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Asr"
+                android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="11sp"/>
+                android:textSize="14sp"/>
             <TextView
-                android:id="@+id/asr_time"
+                android:id="@+id/row_time_3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
-        <!-- Maghrib -->
+        <!-- Slot 4 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -163,73 +166,49 @@
             android:orientation="vertical"
             android:gravity="center">
             <TextView
+                android:id="@+id/row_label_4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Maghrib"
+                android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="11sp"/>
+                android:textSize="14sp"/>
             <TextView
-                android:id="@+id/maghrib_time"
+                android:id="@+id/row_time_4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"/>
-        </LinearLayout>
-
-        <!-- Isha -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Isha"
-                android:textColor="#B3FFFFFF"
-                android:textSize="11sp"/>
-            <TextView
-                android:id="@+id/isha_time"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="--:--"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Row 3: Hijri date + location -->
+    <!-- Row 3: Hijri + Bangla date (line 1) + location (line 2) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="6dp"
-        android:gravity="center_vertical">
+        android:orientation="vertical"
+        android:layout_marginTop="12dp">
 
-        <!-- Left: App icon + calendar icon + Hijri date -->
+        <!-- Line 1: App icon + calendar icon + Hijri & Bangla date -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="horizontal"
             android:gravity="center_vertical">
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@mipmap/launcher_icon"
                 android:contentDescription="App icon"
                 android:layout_marginEnd="4dp"/>
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
                 android:src="@android:drawable/ic_menu_my_calendar"
                 android:tint="#FFFFFF"
                 android:contentDescription="Calendar"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="6dp"/>
             <TextView
                 android:id="@+id/islamic_date"
                 android:layout_width="0dp"
@@ -237,35 +216,35 @@
                 android:layout_weight="1"
                 android:text="Islamic Date"
                 android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:textSize="13sp"
                 android:maxLines="1"
                 android:ellipsize="end"/>
         </LinearLayout>
 
-        <!-- Right: Location icon + name -->
+        <!-- Line 2: Location icon + name -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginStart="8dp">
+            android:layout_marginTop="3dp"
+            android:paddingStart="24dp">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="15dp"
+                android:layout_height="15dp"
                 android:src="@android:drawable/ic_menu_mylocation"
                 android:tint="#B3FFFFFF"
                 android:contentDescription="Location"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="6dp"/>
             <TextView
                 android:id="@+id/location"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Location"
                 android:textColor="#B3FFFFFF"
-                android:textSize="11sp"
+                android:textSize="13sp"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:maxWidth="120dp"/>
+                android:ellipsize="end"/>
         </LinearLayout>
     </LinearLayout>
 
