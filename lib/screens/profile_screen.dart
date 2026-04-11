@@ -40,7 +40,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Settings state variables
   String _madhab = 'hanafi';
-  int _bangladeshHijriOffsetDays = SettingsService.defaultBangladeshHijriOffsetDays;
+  int _bangladeshHijriOffsetDays =
+      SettingsService.defaultBangladeshHijriOffsetDays;
   int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
   String _version = '';
@@ -80,9 +81,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadSettings() async {
     final madhab = await _settingsService.getMadhab();
-    final bangladeshHijriOffset = await _settingsService.getBangladeshHijriOffsetDays();
-    final prayerSoundMode = await _settingsService.getPrayerNotificationSoundMode();
-    final jamaatSoundMode = await _settingsService.getJamaatNotificationSoundMode();
+    final bangladeshHijriOffset = await _settingsService
+        .getBangladeshHijriOffsetDays();
+    final prayerSoundMode = await _settingsService
+        .getPrayerNotificationSoundMode();
+    final jamaatSoundMode = await _settingsService
+        .getJamaatNotificationSoundMode();
     setState(() {
       _madhab = madhab;
       _bangladeshHijriOffsetDays = bangladeshHijriOffset;
@@ -109,7 +113,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://api.github.com/repos/sadat46/jaamat-time-release/releases/latest'),
+        Uri.parse(
+          'https://api.github.com/repos/sadat46/jaamat-time-release/releases/latest',
+        ),
         headers: const {'Accept': 'application/vnd.github+json'},
       );
 
@@ -139,7 +145,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (asset is Map<String, dynamic>) {
           final name = asset['name'] as String?;
           final url = asset['browser_download_url'] as String?;
-          if (name != null && name.toLowerCase().endsWith('.apk') && url != null) {
+          if (name != null &&
+              name.toLowerCase().endsWith('.apk') &&
+              url != null) {
             downloadUrl = url;
             break;
           }
@@ -164,11 +172,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Current version: $current'),
-                if (_buildNumber != null)
-                  Text('Build: $_buildNumber'),
+                if (_buildNumber != null) Text('Build: $_buildNumber'),
                 const SizedBox(height: 12),
                 Text('Latest version: $latestTag'),
-                if (data['body'] is String && (data['body'] as String).isNotEmpty) ...[
+                if (data['body'] is String &&
+                    (data['body'] as String).isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
                     data['body'] as String,
@@ -219,8 +227,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showUpdateSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   int _compareVersions(String current, String latest) {
@@ -237,12 +246,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return [0];
       }
 
-      return segments
-          .map((segment) {
-            final match = RegExp(r'\d+').firstMatch(segment);
-            return match != null ? int.parse(match.group(0)!) : 0;
-          })
-          .toList();
+      return segments.map((segment) {
+        final match = RegExp(r'\d+').firstMatch(segment);
+        return match != null ? int.parse(match.group(0)!) : 0;
+      }).toList();
     }
 
     final currentParts = parse(current);
@@ -261,149 +268,212 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return 0;
   }
 
-
+  Widget _buildAppInfoSection() {
+    return Column(
+      children: [
+        const SizedBox(height: 32),
+        if (_version.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              'App Version:  $_version',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        const SizedBox(height: 12),
+        Center(
+          child: ElevatedButton.icon(
+            onPressed: _isChecking ? null : _checkForUpdate,
+            icon: _isChecking
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.system_update_alt),
+            label: Text(_isChecking ? 'Checking...' : 'Check for Update'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF388E3C),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Copyright (c) 2025 sadat46\nStatic Signal Coy,Savar\nAll rights reserved.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-         title: const Text('Profile'),
+        title: const Text('Profile'),
         centerTitle: true,
         backgroundColor: const Color(0xFF388E3C),
         foregroundColor: Colors.white,
-        elevation: 2,),
+        elevation: 2,
+      ),
       body: StreamBuilder<User?>(
         stream: _authService.userChanges,
         builder: (context, snapshot) {
           final user = snapshot.data;
           if (user == null) {
             // Not logged in
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    _showRegister ? 'Register' : 'Login',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: max(0, constraints.maxHeight - 48),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _passwordVisible ? Icons.visibility : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _passwordVisible = !_passwordVisible;
-                          });
-                        },
-                      ),
-                    ),
-                    obscureText: !_passwordVisible,
-                  ),
-                  if (_showRegister) ...[
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _confirmPasswordController,
-                      decoration: InputDecoration(
-                        labelText: 'Confirm Password',
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          _showRegister ? 'Register' : 'Login',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _confirmPasswordVisible = !_confirmPasswordVisible;
-                            });
-                          },
                         ),
-                      ),
-                      obscureText: !_confirmPasswordVisible,
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  if (_error != null)
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                  ElevatedButton(
-                    onPressed: _loading
-                        ? null
-                        : () async {
-                            setState(() {
-                              _loading = true;
-                              _error = null;
-                              _adminChecked = false; // Reset before checking
-                            });
-                            try {
-                              if (_showRegister) {
-                                if (_passwordController.text !=
-                                    _confirmPasswordController.text) {
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(labelText: 'Email'),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _passwordController,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _passwordVisible
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _passwordVisible = !_passwordVisible;
+                                });
+                              },
+                            ),
+                          ),
+                          obscureText: !_passwordVisible,
+                        ),
+                        if (_showRegister) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _confirmPasswordController,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _confirmPasswordVisible
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
+                                onPressed: () {
                                   setState(() {
-                                    _error = 'Passwords do not match';
-                                    _loading = false;
+                                    _confirmPasswordVisible =
+                                        !_confirmPasswordVisible;
                                   });
-                                  return;
-                                }
-                                await _authService.register(
-                                  _emailController.text.trim(),
-                                  _passwordController.text.trim(),
-                                );
-                              } else {
-                                await _authService.signIn(
-                                  _emailController.text.trim(),
-                                  _passwordController.text.trim(),
-                                );
-                              }
+                                },
+                              ),
+                            ),
+                            obscureText: !_confirmPasswordVisible,
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        if (_error != null)
+                          Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ElevatedButton(
+                          onPressed: _loading
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _loading = true;
+                                    _error = null;
+                                    _adminChecked =
+                                        false; // Reset before checking
+                                  });
+                                  try {
+                                    if (_showRegister) {
+                                      if (_passwordController.text !=
+                                          _confirmPasswordController.text) {
+                                        setState(() {
+                                          _error = 'Passwords do not match';
+                                          _loading = false;
+                                        });
+                                        return;
+                                      }
+                                      await _authService.register(
+                                        _emailController.text.trim(),
+                                        _passwordController.text.trim(),
+                                      );
+                                    } else {
+                                      await _authService.signIn(
+                                        _emailController.text.trim(),
+                                        _passwordController.text.trim(),
+                                      );
+                                    }
 
-                              // Initialize BookmarkService after successful login/registration
-                              await BookmarkService().initialize();
+                                    // Initialize BookmarkService after successful login/registration
+                                    await BookmarkService().initialize();
 
-                              await _checkAdmin();
-                            } catch (e) {
-                              setState(() {
-                                _error =
-                                    "${_showRegister ? 'Registration' : 'Login'} failed: ${e.toString()}";
-                              });
-                            } finally {
-                              setState(() {
-                                _loading = false;
-                              });
-                            }
-                          },
-                    child: _loading
-                        ? const CircularProgressIndicator()
-                        : Text(_showRegister ? 'Register' : 'Login'),
-                  ),
-                  TextButton(
-                    onPressed: _loading
-                        ? null
-                        : () {
-                            setState(() {
-                              _showRegister = !_showRegister;
-                              _error = null;
-                            });
-                          },
-                    child: Text(
-                      _showRegister
-                          ? 'Already have an account? Login'
-                          : 'Don\'t have an account? Register',
+                                    await _checkAdmin();
+                                  } catch (e) {
+                                    setState(() {
+                                      _error =
+                                          "${_showRegister ? 'Registration' : 'Login'} failed: ${e.toString()}";
+                                    });
+                                  } finally {
+                                    setState(() {
+                                      _loading = false;
+                                    });
+                                  }
+                                },
+                          child: _loading
+                              ? const CircularProgressIndicator()
+                              : Text(_showRegister ? 'Register' : 'Login'),
+                        ),
+                        TextButton(
+                          onPressed: _loading
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _showRegister = !_showRegister;
+                                    _error = null;
+                                  });
+                                },
+                          child: Text(
+                            _showRegister
+                                ? 'Already have an account? Login'
+                                : 'Don\'t have an account? Register',
+                          ),
+                        ),
+                        _buildAppInfoSection(),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             );
           } else {
             // Logged in
@@ -434,14 +504,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Logged in as: ${_isSuperAdmin ? 'Superadmin' : _isAdmin ? 'Admin' : 'User'}',
+                            'Logged in as: ${_isSuperAdmin
+                                ? 'Superadmin'
+                                : _isAdmin
+                                ? 'Admin'
+                                : 'User'}',
                           ),
                           if (_isSuperAdmin || _isAdmin)
-                      Text(
+                            Text(
                               'Role: ${_isSuperAdmin ? 'Superadmin' : 'Admin'}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _isSuperAdmin ? Colors.red : Colors.orange,
+                                color: _isSuperAdmin
+                                    ? Colors.red
+                                    : Colors.orange,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -449,15 +525,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Column(
                         children: [
-                      ElevatedButton(
-                        onPressed: () async {
-                          await _authService.signOut();
-                          setState(() {
-                            _isAdmin = false;
-                            _isSuperAdmin = false;
-                          });
-                        },
-                        child: const Text('Logout'),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await _authService.signOut();
+                              setState(() {
+                                _isAdmin = false;
+                                _isSuperAdmin = false;
+                              });
+                            },
+                            child: const Text('Logout'),
                           ),
                         ],
                       ),
@@ -472,7 +548,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: ExpansionTile(
-                      tilePadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      tilePadding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
                       leading: const Icon(
                         Icons.settings,
                         color: Color(0xFF388E3C),
@@ -480,10 +559,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       title: Text(
                         'সেটিংস',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF388E3C),
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF388E3C),
+                            ),
                       ),
                       children: [
                         Padding(
@@ -491,161 +571,228 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                          // Madhab Setting
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Prayer Time Method'),
-                              DropdownButton<String>(
-                                value: _madhab,
-                                items: const [
-                                  DropdownMenuItem(value: 'hanafi', child: Text('Hanafi')),
-                                  DropdownMenuItem(value: 'shafi', child: Text('Shafi')),
+                              // Madhab Setting
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Prayer Time Method'),
+                                  DropdownButton<String>(
+                                    value: _madhab,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'hanafi',
+                                        child: Text('Hanafi'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'shafi',
+                                        child: Text('Shafi'),
+                                      ),
+                                    ],
+                                    onChanged: (val) async {
+                                      if (val != null) {
+                                        await _settingsService.setMadhab(val);
+                                        setState(() => _madhab = val);
+                                      }
+                                    },
+                                  ),
                                 ],
-                                onChanged: (val) async {
-                                  if (val != null) {
-                                    await _settingsService.setMadhab(val);
-                                    setState(() => _madhab = val);
-                                  }
-                                },
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
+                              const SizedBox(height: 12),
 
-                          // Bangladesh Hijri date offset
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Bangladesh Hijri Offset'),
-                              DropdownButton<int>(
-                                value: _bangladeshHijriOffsetDays,
-                                items: const [
-                                  DropdownMenuItem(value: -2, child: Text('-2 day')),
-                                  DropdownMenuItem(value: -1, child: Text('-1 day')),
-                                  DropdownMenuItem(value: 0, child: Text('0 day')),
-                                  DropdownMenuItem(value: 1, child: Text('+1 day')),
-                                  DropdownMenuItem(value: 2, child: Text('+2 day')),
-                                ],
-                                onChanged: (val) async {
-                                  if (val != null) {
-                                    await _settingsService.setBangladeshHijriOffsetDays(val);
-                                    setState(() => _bangladeshHijriOffsetDays = val);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Prayer Notification Setting
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Prayer Notification'),
-                              DropdownButton<int>(
-                                value: _prayerNotificationSoundMode,
-                                items: const [
-                                  DropdownMenuItem(value: 0, child: Text('Custom Sound')),
-                                  DropdownMenuItem(value: 1, child: Text('System Sound')),
-                                  DropdownMenuItem(value: 2, child: Text('No Sound')),
-                                ],
-                                onChanged: (val) async {
-                                  if (val != null) {
-                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
-                                    await _settingsService.setPrayerNotificationSoundMode(val);
-                                    setState(() => _prayerNotificationSoundMode = val);
-
-                                    // Handle notification sound mode change
-                                    try {
-                                      await _notificationService.handleNotificationSoundModeChange();
-
-                                      // Show success message
-                                      if (mounted) {
-                                        scaffoldMessenger.showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Prayer notification sound setting updated successfully!',
-                                            ),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
+                              // Bangladesh Hijri date offset
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Bangladesh Hijri Offset'),
+                                  DropdownButton<int>(
+                                    value: _bangladeshHijriOffsetDays,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: -2,
+                                        child: Text('-2 day'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: -1,
+                                        child: Text('-1 day'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 0,
+                                        child: Text('0 day'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 1,
+                                        child: Text('+1 day'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 2,
+                                        child: Text('+2 day'),
+                                      ),
+                                    ],
+                                    onChanged: (val) async {
+                                      if (val != null) {
+                                        await _settingsService
+                                            .setBangladeshHijriOffsetDays(val);
+                                        setState(
+                                          () =>
+                                              _bangladeshHijriOffsetDays = val,
                                         );
                                       }
-                                    } catch (e) {
-                                      // Show error message
-                                      if (mounted) {
-                                        scaffoldMessenger.showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Error updating prayer notification settings: $e',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                            duration: const Duration(seconds: 3),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Jamaat Notification Setting
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Jamaat Notification'),
-                              DropdownButton<int>(
-                                value: _jamaatNotificationSoundMode,
-                                items: const [
-                                  DropdownMenuItem(value: 0, child: Text('Custom Sound')),
-                                  DropdownMenuItem(value: 1, child: Text('System Sound')),
-                                  DropdownMenuItem(value: 2, child: Text('No Sound')),
+                                    },
+                                  ),
                                 ],
-                                onChanged: (val) async {
-                                  if (val != null) {
-                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
-                                    await _settingsService.setJamaatNotificationSoundMode(val);
-                                    setState(() => _jamaatNotificationSoundMode = val);
-
-                                    // Handle notification sound mode change
-                                    try {
-                                      await _notificationService.handleNotificationSoundModeChange();
-
-                                      // Show success message
-                                      if (mounted) {
-                                        scaffoldMessenger.showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Jamaat notification sound setting updated successfully!',
-                                            ),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      // Show error message
-                                      if (mounted) {
-                                        scaffoldMessenger.showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Error updating jamaat notification settings: $e',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                            duration: const Duration(seconds: 3),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  }
-                                },
                               ),
-                            ],
-                          ),
+                              const SizedBox(height: 12),
+
+                              // Prayer Notification Setting
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Prayer Notification'),
+                                  DropdownButton<int>(
+                                    value: _prayerNotificationSoundMode,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 0,
+                                        child: Text('Custom Sound'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 1,
+                                        child: Text('System Sound'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 2,
+                                        child: Text('No Sound'),
+                                      ),
+                                    ],
+                                    onChanged: (val) async {
+                                      if (val != null) {
+                                        final scaffoldMessenger =
+                                            ScaffoldMessenger.of(context);
+                                        await _settingsService
+                                            .setPrayerNotificationSoundMode(
+                                              val,
+                                            );
+                                        setState(
+                                          () => _prayerNotificationSoundMode =
+                                              val,
+                                        );
+
+                                        // Handle notification sound mode change
+                                        try {
+                                          await _notificationService
+                                              .handleNotificationSoundModeChange();
+
+                                          // Show success message
+                                          if (mounted) {
+                                            scaffoldMessenger.showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Prayer notification sound setting updated successfully!',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // Show error message
+                                          if (mounted) {
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Error updating prayer notification settings: $e',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Jamaat Notification Setting
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Jamaat Notification'),
+                                  DropdownButton<int>(
+                                    value: _jamaatNotificationSoundMode,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 0,
+                                        child: Text('Custom Sound'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 1,
+                                        child: Text('System Sound'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 2,
+                                        child: Text('No Sound'),
+                                      ),
+                                    ],
+                                    onChanged: (val) async {
+                                      if (val != null) {
+                                        final scaffoldMessenger =
+                                            ScaffoldMessenger.of(context);
+                                        await _settingsService
+                                            .setJamaatNotificationSoundMode(
+                                              val,
+                                            );
+                                        setState(
+                                          () => _jamaatNotificationSoundMode =
+                                              val,
+                                        );
+
+                                        // Handle notification sound mode change
+                                        try {
+                                          await _notificationService
+                                              .handleNotificationSoundModeChange();
+
+                                          // Show success message
+                                          if (mounted) {
+                                            scaffoldMessenger.showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Jamaat notification sound setting updated successfully!',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // Show error message
+                                          if (mounted) {
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Error updating jamaat notification settings: $e',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -709,10 +856,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Superadmin Controls',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
                                 ),
                               ],
                             ),
@@ -721,7 +869,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onPressed: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) => const UserManagementScreen(),
+                                    builder: (context) =>
+                                        const UserManagementScreen(),
                                   ),
                                 );
                               },
@@ -730,7 +879,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -747,7 +899,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // Admin Jamaat Management Section
                   if (_isAdmin) ...[
                     // Admin Controls Card
@@ -771,10 +923,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Admin Controls',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                      ),
                                 ),
                               ],
                             ),
@@ -786,7 +939,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     onPressed: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (context) => const AdminJamaatPanel(),
+                                          builder: (context) =>
+                                              const AdminJamaatPanel(),
                                         ),
                                       );
                                     },
@@ -795,7 +949,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.orange,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -816,7 +973,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Notification Motor Card
                     Card(
                       elevation: 4,
@@ -838,10 +995,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Notification Motor',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                      ),
                                 ),
                               ],
                             ),
@@ -853,7 +1011,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     onPressed: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (context) => const NotificationMonitorScreen(),
+                                          builder: (context) =>
+                                              const NotificationMonitorScreen(),
                                         ),
                                       );
                                     },
@@ -862,7 +1021,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.blue,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -885,50 +1047,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Version and Copyright Info
-                  const SizedBox(height: 32),
-                  if (_version.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4.0),
-                      child: Text(
-                        'App Version:  $_version',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  // Check for Update Button
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: _isChecking ? null : _checkForUpdate,
-                      icon: _isChecking
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.system_update_alt),
-                      label: Text(_isChecking ? 'Checking...' : 'Check for Update'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF388E3C),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Copyright (c) 2025 sadat46\nStatic Signal Coy,Savar\nAll rights reserved.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 100),
+                  _buildAppInfoSection(),
                 ],
               ),
             );
@@ -938,5 +1057,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-
-
