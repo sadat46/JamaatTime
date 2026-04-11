@@ -1,15 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/ebadat/ebadat_screen.dart';
+import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/notification_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/widget_service.dart';
+import 'core/constants.dart';
 import 'themes/green_theme.dart';
 
 void main() async {
@@ -73,8 +75,9 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   static const List<Widget> _screens = <Widget>[
     HomeScreen(),      // index: 0
-    EbadatScreen(),    // index: 1 - NEW
-    ProfileScreen(),   // index: 2
+    EbadatScreen(),    // index: 1
+    CalendarScreen(),  // index: 2
+    ProfileScreen(),   // index: 3
   ];
 
   void _onItemTapped(int index) {
@@ -93,6 +96,12 @@ class _MainScaffoldState extends State<MainScaffold> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppConstants.brandGreen,
+        unselectedItemColor: Colors.black54,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -100,7 +109,11 @@ class _MainScaffoldState extends State<MainScaffold> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.mosque),
-            label: 'ইবাদত',
+            label: 'Ebadat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month),
+            label: 'Calendar',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

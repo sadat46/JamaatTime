@@ -1165,6 +1165,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   selectedCity = value;
                                                 });
 
+                                                final prefs = await SharedPreferences.getInstance();
+                                                await prefs.setBool('is_gps_mode', false);
+                                                await prefs.setString('selected_city', value);
+
                                                 _locationConfig = _locationConfigService.getConfigForCity(value);
                                                 _locationConfigService.setCurrentConfig(_locationConfig!);
                                                 _notificationService.setLocationConfig(_locationConfig!);
