@@ -5,7 +5,7 @@
     android:background="@drawable/widget_background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
+    android:padding="12dp"
     android:clipToOutline="true">
 
     <!-- Row 1: Current prayer + remaining time -->
@@ -71,9 +71,11 @@
     <!-- Row 2: 4 prayer times (excludes current prayer) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="horizontal"
-        android:layout_marginTop="14dp">
+        android:gravity="center_vertical"
+        android:layout_marginTop="10dp">
 
         <!-- Slot 1 -->
         <LinearLayout
@@ -88,14 +90,14 @@
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="14sp"/>
+                android:textSize="12sp"/>
             <TextView
                 android:id="@+id/row_time_1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
@@ -112,14 +114,14 @@
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="14sp"/>
+                android:textSize="12sp"/>
             <TextView
                 android:id="@+id/row_time_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
@@ -136,14 +138,14 @@
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="14sp"/>
+                android:textSize="12sp"/>
             <TextView
                 android:id="@+id/row_time_3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
@@ -160,14 +162,14 @@
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#B3FFFFFF"
-                android:textSize="14sp"/>
+                android:textSize="12sp"/>
             <TextView
                 android:id="@+id/row_time_4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textColor="#FFFFFF"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold"/>
         </LinearLayout>
     </LinearLayout>
@@ -177,7 +179,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="24dp">
+        android:layout_marginTop="12dp">
 
         <!-- Line 1: App icon + calendar icon + Hijri & Bangla date -->
         <LinearLayout
@@ -216,7 +218,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:paddingStart="24dp">
             <ImageView
                 android:layout_width="15dp"
@@ -238,8 +240,8 @@
 
             <ImageView
                 android:id="@+id/refresh_button"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:layout_marginStart="8dp"
                 android:src="@android:drawable/ic_popup_sync"
                 android:tint="#FFFFFF"
