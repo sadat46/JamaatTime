@@ -8,14 +8,31 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Bundle;
 import android.util.Log;
 import android.widget.RemoteViews;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
+    private static final int COMPACT_LAYOUT_MAX_MIN_HEIGHT_DP = 190;
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        updateWidgets(context, appWidgetManager, appWidgetIds);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(
+        Context context,
+        AppWidgetManager appWidgetManager,
+        int appWidgetId,
+        Bundle newOptions
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+        updateWidgets(context, appWidgetManager, new int[]{appWidgetId});
+    }
+
+    private void updateWidgets(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         try {
             // Must match home_widget plugin's PREFERENCES constant (HomeWidgetPlugin.kt)
             SharedPreferences prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE);
@@ -38,7 +55,10 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             Log.d(TAG, "Widget update - prayer: " + prayerName + ", time: " + prayerTime);
 
             for (int appWidgetId : appWidgetIds) {
-                RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.prayer_widget);
+                RemoteViews views = new RemoteViews(
+                    context.getPackageName(),
+                    resolveLayoutId(appWidgetManager, appWidgetId)
+                );
                 views.setTextViewText(R.id.prayer_name, prayerName);
                 views.setTextViewText(R.id.prayer_time, prayerTime);
                 views.setTextViewText(R.id.remaining_label, remainingLabel);
@@ -79,6 +99,18 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         } catch (Exception e) {
             Log.e(TAG, "Error updating widget", e);
         }
+    }
+
+    private int resolveLayoutId(AppWidgetManager appWidgetManager, int appWidgetId) {
+        Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+        int minHeight = 0;
+        if (options != null) {
+            minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        }
+        if (minHeight <= 0 || minHeight < COMPACT_LAYOUT_MAX_MIN_HEIGHT_DP) {
+            return R.layout.prayer_widget_compact;
+        }
+        return R.layout.prayer_widget;
     }
 
     @Override
