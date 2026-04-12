@@ -62,12 +62,23 @@ Future<void> backgroundCallback(Uri? uri) async {
     final effectiveHijriOffset =
         config.country == Country.bangladesh ? hijriOffset : 0;
 
+    final tomorrow =
+        DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    final tomorrowTimes = PrayerTimes(
+      coordinates: coords,
+      date: tomorrow,
+      calculationParameters: params,
+      precision: true,
+    );
+    final tomorrowMap = calcService.createPrayerTimesMap(tomorrowTimes);
+
     final placeName = prefs.getString('last_location_name');
     await WidgetService.updateWidgetData(
       times: times,
       locationName: placeName ?? config.cityName,
       date: now,
       hijriOffsetDays: effectiveHijriOffset,
+      tomorrowFajr: tomorrowMap['Fajr'],
     );
   } catch (e) {
     // Background callback errors are non-fatal
@@ -84,17 +95,24 @@ class WidgetService {
     required String locationName,
     required DateTime date,
     required int hijriOffsetDays,
+    DateTime? tomorrowFajr,
   }) async {
     try {
       final now = DateTime.now();
       final currentPrayer = _getCurrentPrayerName(times, now);
       final nextPrayer = _getNextPrayerName(times, now);
       final currentPrayerTime = times[currentPrayer];
-      final nextPrayerTime = times[nextPrayer];
-
-      final remaining = nextPrayerTime != null && now.isBefore(nextPrayerTime)
-          ? nextPrayerTime.difference(now)
-          : Duration.zero;
+      final todayNextTime = times[nextPrayer];
+      // After Isha, _getNextPrayerName falls back to "Fajr" but today's Fajr is
+      // already in the past. Use tomorrow's Fajr so the countdown keeps working.
+      final effectiveNextTime =
+          (todayNextTime != null && now.isBefore(todayNextTime))
+              ? todayNextTime
+              : tomorrowFajr;
+      final remaining =
+          effectiveNextTime != null && now.isBefore(effectiveNextTime)
+              ? effectiveNextTime.difference(now)
+              : Duration.zero;
 
       final timeFormat = DateFormat(_fmt);
 

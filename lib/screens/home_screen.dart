@@ -777,11 +777,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ? _bangladeshHijriOffsetDays
         : 0;
 
+    final coords = _coords ??
+        Coordinates(_locationConfig!.latitude, _locationConfig!.longitude);
+    final tomorrow =
+        DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    final tomorrowTimes = PrayerTimes(
+      coordinates: coords,
+      date: tomorrow,
+      calculationParameters: params!,
+      precision: true,
+    );
+    final tomorrowFajr = PrayerCalculationService.instance
+        .createPrayerTimesMap(tomorrowTimes)['Fajr'];
+
     WidgetService.updateWidgetData(
       times: times,
       locationName: currentPlaceName ?? _locationConfig!.cityName,
       date: selectedDate,
       hijriOffsetDays: hijriOffset,
+      tomorrowFajr: tomorrowFajr,
     );
   }
 
