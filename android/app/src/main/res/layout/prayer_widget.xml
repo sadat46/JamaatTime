@@ -55,7 +55,7 @@
                 android:textColor="#B3FFFFFF"
                 android:textSize="13sp"
                 android:maxLines="1"/>
-            <TextView
+            <Chronometer
                 android:id="@+id/remaining_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

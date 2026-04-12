@@ -109,10 +109,11 @@ class WidgetService {
           (todayNextTime != null && now.isBefore(todayNextTime))
               ? todayNextTime
               : tomorrowFajr;
-      final remaining =
-          effectiveNextTime != null && now.isBefore(effectiveNextTime)
-              ? effectiveNextTime.difference(now)
-              : Duration.zero;
+      final countdownRunning =
+          effectiveNextTime != null && now.isBefore(effectiveNextTime);
+      final nextEpochMillis = countdownRunning
+          ? effectiveNextTime.millisecondsSinceEpoch
+          : 0;
 
       final timeFormat = DateFormat(_fmt);
 
@@ -138,9 +139,13 @@ class WidgetService {
           'remaining_label',
           '$currentPrayer Time Remaining',
         ),
-        HomeWidget.saveWidgetData<String>(
-          'remaining_time',
-          _formatRemaining(remaining),
+        HomeWidget.saveWidgetData<int>(
+          'next_prayer_epoch_millis',
+          nextEpochMillis,
+        ),
+        HomeWidget.saveWidgetData<bool>(
+          'countdown_running',
+          countdownRunning,
         ),
         // 4 dynamic prayer row slots
         HomeWidget.saveWidgetData<String>('row_label_1', rowPrayers[0]),
@@ -188,14 +193,6 @@ class WidgetService {
       }
     }
     return 'Fajr';
-  }
-
-  static String _formatRemaining(Duration duration) {
-    if (duration <= Duration.zero) return '-';
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours.toString().padLeft(2, '0')}hrs, ${minutes.toString().padLeft(2, '0')}mins';
-    return '${minutes}mins';
   }
 
   static String _formatPrayerTime(DateTime? time, DateFormat fmt) {

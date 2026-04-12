@@ -1,5 +1,6 @@
 package com.example.jamaat_time;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -8,11 +9,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.SystemClock;
 import android.util.Log;
 import android.widget.RemoteViews;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
+    private static final int ALARM_REQUEST_CODE = 2;
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -22,7 +25,8 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String prayerName = prefs.getString("prayer_name", "-");
             String prayerTime = prefs.getString("prayer_time", "-");
             String remainingLabel = prefs.getString("remaining_label", "Remaining Time");
-            String remainingTime = prefs.getString("remaining_time", "-");
+            long nextEpoch = prefs.getLong("next_prayer_epoch_millis", 0L);
+            boolean running = prefs.getBoolean("countdown_running", false);
             // 4 dynamic prayer row slots (current prayer excluded by Flutter side)
             String rowLabel1 = prefs.getString("row_label_1", "-");
             String rowTime1 = prefs.getString("row_time_1", "-");
@@ -35,14 +39,23 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String islamicDate = prefs.getString("islamic_date", "-");
             String location = prefs.getString("location", "-");
 
-            Log.d(TAG, "Widget update - prayer: " + prayerName + ", time: " + prayerTime);
+            Log.d(TAG, "Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
 
             for (int appWidgetId : appWidgetIds) {
                 RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.prayer_widget);
                 views.setTextViewText(R.id.prayer_name, prayerName);
                 views.setTextViewText(R.id.prayer_time, prayerTime);
                 views.setTextViewText(R.id.remaining_label, remainingLabel);
-                views.setTextViewText(R.id.remaining_time, remainingTime);
+
+                if (running && nextEpoch > System.currentTimeMillis()) {
+                    long base = SystemClock.elapsedRealtime() + (nextEpoch - System.currentTimeMillis());
+                    views.setChronometerCountDown(R.id.remaining_time, true);
+                    views.setChronometer(R.id.remaining_time, base, null, true);
+                } else {
+                    views.setChronometer(R.id.remaining_time, 0, null, false);
+                    views.setTextViewText(R.id.remaining_time, "-");
+                }
+
                 views.setTextViewText(R.id.row_label_1, rowLabel1);
                 views.setTextViewText(R.id.row_time_1, rowTime1);
                 views.setTextViewText(R.id.row_label_2, rowLabel2);
@@ -76,9 +89,57 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
 
                 appWidgetManager.updateAppWidget(appWidgetId, views);
             }
+
+            if (running && nextEpoch > System.currentTimeMillis()) {
+                scheduleBoundaryAlarm(context, nextEpoch);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error updating widget", e);
         }
+    }
+
+    private void scheduleBoundaryAlarm(Context context, long epochMillis) {
+        try {
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent intent = new Intent(context, PrayerWidgetProvider.class)
+                .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids = AppWidgetManager.getInstance(context)
+                .getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+            PendingIntent pi = PendingIntent.getBroadcast(
+                context, ALARM_REQUEST_CODE, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            // +1s so Flutter's current/next-prayer logic has crossed the boundary before we read prefs
+            long fireAt = epochMillis + 1000L;
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
+            Log.d(TAG, "Boundary alarm scheduled for " + fireAt);
+        } catch (SecurityException e) {
+            // Inexact fallback if exact-alarm permission was revoked at runtime (API 31+)
+            Log.w(TAG, "Exact alarm denied, falling back to inexact", e);
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent intent = new Intent(context, PrayerWidgetProvider.class)
+                .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids = AppWidgetManager.getInstance(context)
+                .getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+            PendingIntent pi = PendingIntent.getBroadcast(
+                context, ALARM_REQUEST_CODE, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            am.set(AlarmManager.RTC_WAKEUP, epochMillis + 1000L, pi);
+        }
+    }
+
+    private void cancelBoundaryAlarm(Context context) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Intent intent = new Intent(context, PrayerWidgetProvider.class)
+            .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context, ALARM_REQUEST_CODE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        am.cancel(pi);
     }
 
     @Override
@@ -90,6 +151,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         super.onDisabled(context);
+        cancelBoundaryAlarm(context);
         Log.d(TAG, "Widget disabled");
     }
 }
