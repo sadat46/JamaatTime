@@ -289,14 +289,25 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
               trackColor: Colors.white.withValues(alpha: 0.15),
             ),
             child: Center(
-              child: Text(
-                _countdownTimeStr,
-                style: (widget.textStyle ?? const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                )).copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: MediaQuery.withClampedTextScaling(
+                    maxScaleFactor: 1.0,
+                    child: Text(
+                      _countdownTimeStr,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: (widget.textStyle ?? const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      )).copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
