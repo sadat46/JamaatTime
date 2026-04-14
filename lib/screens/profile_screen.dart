@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
+import '../widgets/profile/profile_logged_in_content.dart';
 import 'admin_jamaat_panel.dart';
 import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
@@ -265,6 +266,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return const Color(0xFF2E7D32);
   }
 
+  Future<void> _handleLogout() async {
+    await _authService.signOut();
+    if (!mounted) return;
+    setState(() {
+      _isAdmin = false;
+      _isSuperAdmin = false;
+      _adminChecked = true;
+    });
+  }
+
   Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -277,36 +288,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           letterSpacing: 0.2,
         ),
       ),
-    );
-  }
-
-  Widget _buildActionTile({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      minLeadingWidth: 0,
-      horizontalTitleGap: 12,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: iconColor.withAlpha(26),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
     );
   }
 
@@ -399,187 +380,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildSectionLabel('Account'),
-          Card(
-            elevation: 1.5,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_cardRadius),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Color(0x1A388E3C),
-                        child: Icon(Icons.person, color: _brandGreen),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.email ?? 'Logged in user',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _roleColor().withAlpha(30),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                _roleLabel(),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: _roleColor(),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await _authService.signOut();
-                        if (!mounted) return;
-                        setState(() {
-                          _isAdmin = false;
-                          _isSuperAdmin = false;
-                          _adminChecked = true;
-                        });
-                      },
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Logout'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildSectionLabel('Quick Actions'),
-          Card(
-            elevation: 1.5,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_cardRadius),
-            ),
-            child: Column(
-              children: [
-                _buildActionTile(
-                  icon: Icons.settings,
-                  iconColor: _brandGreen,
-                  title: 'Settings',
-                  subtitle:
-                      'Prayer calculation, Hijri date, and reminder sound',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                Divider(height: 1, color: Colors.grey[200]),
-                _buildActionTile(
-                  icon: Icons.bookmark,
-                  iconColor: _brandGreen,
-                  title: 'My Bookmarks',
-                  subtitle: 'Saved ayat and dua for quick reading',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BookmarksScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (_isAdmin || _isSuperAdmin) ...[
-            const SizedBox(height: 14),
-            _buildSectionLabel('Admin Tools'),
-            Card(
-              elevation: 1.5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(_cardRadius),
-              ),
-              child: Column(
-                children: [
-                  if (_isSuperAdmin)
-                    _buildActionTile(
-                      icon: Icons.admin_panel_settings,
-                      iconColor: Colors.red,
-                      title: 'Manage Users',
-                      subtitle: 'Roles, permissions, and account access',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const UserManagementScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  if (_isSuperAdmin && _isAdmin)
-                    Divider(height: 1, color: Colors.grey[200]),
-                  if (_isAdmin)
-                    _buildActionTile(
-                      icon: Icons.file_upload,
-                      iconColor: Colors.orange,
-                      title: 'Edit/Import Data',
-                      subtitle:
-                          'Import schedules and manage yearly jamaat data',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AdminJamaatPanel(),
-                          ),
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          _buildSectionLabel('App'),
-          _buildAppInfoCard(),
-        ],
-      ),
+    return ProfileLoggedInContent(
+      email: user.email ?? 'Logged in user',
+      roleLabel: _roleLabel(),
+      roleColor: _roleColor(),
+      isAdmin: _isAdmin,
+      isSuperAdmin: _isSuperAdmin,
+      onLogout: () {
+        _handleLogout();
+      },
+      onBookmarksTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const BookmarksScreen()),
+        );
+      },
+      onSettingsTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+        );
+      },
+      onManageUsersTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
+        );
+      },
+      onEditImportTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const AdminJamaatPanel()),
+        );
+      },
+      appInfoCard: _buildAppInfoCard(),
+      brandGreen: _brandGreen,
+      cardRadius: _cardRadius,
     );
   }
 
