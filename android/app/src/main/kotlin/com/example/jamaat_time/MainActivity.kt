@@ -1,5 +1,6 @@
 package com.example.jamaat_time
 
+import com.example.jamaat_time.focusguard.FocusGuardChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -30,5 +31,7 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        FocusGuardChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
     }
 }

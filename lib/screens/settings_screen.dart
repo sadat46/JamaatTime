@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import '../services/settings_service.dart';
+import 'focus_guard_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,8 +20,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _madhab = 'hanafi';
   int _bangladeshHijriOffsetDays =
       SettingsService.defaultBangladeshHijriOffsetDays;
-  int _prayerNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
-  int _jamaatNotificationSoundMode = 0; // 0: Custom, 1: System, 2: None
+  int _prayerNotificationSoundMode = 0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
+  int _jamaatNotificationSoundMode = 0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
   bool _loading = true;
 
   @override
@@ -54,8 +55,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'System sound';
       case 2:
         return 'No sound';
+      case 3:
+        return 'Custom sound 2';
+      case 4:
+        return 'Custom sound 3';
       default:
-        return 'Custom sound';
+        return 'Custom sound 1';
     }
   }
 
@@ -306,7 +311,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: 'Prayer reminder sound',
                       initialValue: _prayerNotificationSoundMode,
                       items: const [
-                        DropdownMenuItem(value: 0, child: Text('Custom Sound')),
+                        DropdownMenuItem(value: 0, child: Text('Custom Sound 1')),
+                        DropdownMenuItem(value: 3, child: Text('Custom Sound 2')),
+                        DropdownMenuItem(value: 4, child: Text('Custom Sound 3')),
                         DropdownMenuItem(value: 1, child: Text('System Sound')),
                         DropdownMenuItem(value: 2, child: Text('No Sound')),
                       ],
@@ -320,7 +327,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: 'Jamaat reminder sound',
                       initialValue: _jamaatNotificationSoundMode,
                       items: const [
-                        DropdownMenuItem(value: 0, child: Text('Custom Sound')),
+                        DropdownMenuItem(value: 0, child: Text('Custom Sound 1')),
+                        DropdownMenuItem(value: 3, child: Text('Custom Sound 2')),
+                        DropdownMenuItem(value: 4, child: Text('Custom Sound 3')),
                         DropdownMenuItem(value: 1, child: Text('System Sound')),
                         DropdownMenuItem(value: 2, child: Text('No Sound')),
                       ],
@@ -330,6 +339,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 1.5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_cardRadius),
+                  ),
+                  child: ListTile(
+                    leading: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: _brandGreen.withAlpha(26),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.shield_outlined,
+                        color: _brandGreen,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text(
+                      'Focus Guard',
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Block YouTube Shorts to stay focused.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        height: 1.35,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const FocusGuardScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Container(
