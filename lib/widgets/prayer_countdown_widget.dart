@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import '../core/constants.dart';
+import '../services/prayer_time_engine.dart';
 
 /// A self-contained countdown widget that updates every second.
 /// Shows time remaining until the next prayer as a circular progress ring.
@@ -36,10 +37,6 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   String _countdownTimeStr = '';
   bool _isSpecialPrayer = false;
   double _progressValue = 0.0;
-
-  // Default coordinates (Dhaka, Bangladesh)
-  static const double _defaultLatitude = 23.8376;
-  static const double _defaultLongitude = 90.2820;
 
   @override
   void initState() {
@@ -93,8 +90,16 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       progress = 0.0;
     } else {
       // Today - show countdown with current period name
-      final currentPeriod = _getCurrentPrayerPeriodName(now);
-      final timeToNext = _getTimeToNextPrayer(now);
+      final currentPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+        times: widget.prayerTimes,
+        now: now,
+      );
+      final timeToNext = PrayerTimeEngine.instance.getTimeToNextPrayerSafe(
+        times: widget.prayerTimes,
+        now: now,
+        coordinates: widget.coordinates,
+        params: widget.calculationParams,
+      );
       progress = _calculateProgress(now);
 
       // Format as HH:MM:SS
@@ -120,74 +125,6 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
         _progressValue = progress;
       });
     }
-  }
-
-  String _getCurrentPrayerPeriodName(DateTime now) {
-    final times = widget.prayerTimes;
-    final order = [
-      'Fajr',
-      'Sunrise',
-      'Dhuhr',
-      'Asr',
-      'Maghrib',
-      'Isha',
-    ];
-
-    // Find which period we're currently in
-    String currentPeriod = 'Isha'; // Default (between midnight and Fajr)
-
-    for (int i = 0; i < order.length; i++) {
-      final t = times[order[i]];
-      if (t != null) {
-        if (now.isBefore(t)) {
-          // We haven't reached this prayer yet, so we're in the previous period
-          return i > 0 ? order[i - 1] : 'Isha';
-        }
-        // We've passed this prayer, update current period
-        currentPeriod = order[i];
-      }
-    }
-
-    return currentPeriod; // We've passed all prayers (Isha period)
-  }
-
-  Duration _getTimeToNextPrayer(DateTime now) {
-    final times = widget.prayerTimes;
-    final order = [
-      'Fajr',
-      'Sunrise',
-      'Dhuhr',
-      'Asr',
-      'Maghrib',
-      'Isha',
-    ];
-
-    for (final name in order) {
-      final t = times[name];
-      if (t != null && now.isBefore(t)) {
-        return t.difference(now);
-      }
-    }
-
-    // All prayers passed - calculate tomorrow's Fajr
-    final tomorrow = now.add(const Duration(days: 1));
-    final coords = widget.coordinates ??
-        Coordinates(_defaultLatitude, _defaultLongitude);
-
-    if (widget.calculationParams != null) {
-      final tomorrowPrayerTimes = PrayerTimes(
-        coordinates: coords,
-        date: tomorrow,
-        calculationParameters: widget.calculationParams!,
-        precision: true,
-      );
-      final tomorrowFajr = tomorrowPrayerTimes.fajr;
-      if (tomorrowFajr != null) {
-        return tomorrowFajr.difference(now);
-      }
-    }
-
-    return Duration.zero;
   }
 
   double _calculateProgress(DateTime now) {

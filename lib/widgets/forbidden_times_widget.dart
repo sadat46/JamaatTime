@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:adhan_dart/adhan_dart.dart';
-import '../services/prayer_calculation_service.dart';
+import '../services/prayer_time_engine.dart';
 
 class _ForbiddenVisualSpec {
   final List<Color> panelColors;
@@ -169,7 +169,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
       return const SizedBox.shrink();
     }
 
-    final forbiddenWindows = PrayerCalculationService.instance
+    final forbiddenWindows = PrayerTimeEngine.instance
         .calculateForbiddenWindows(widget.prayerTimes!);
 
     if (forbiddenWindows.isEmpty) {

@@ -8,9 +8,9 @@ import '../core/constants.dart';
 import '../models/location_config.dart';
 import '../services/hijri_date_converter.dart';
 import '../services/jamaat_service.dart';
-import '../services/jamaat_time_utility.dart';
+import '../services/prayer_aux_calculator.dart';
 import '../services/location_config_service.dart';
-import '../services/prayer_calculation_service.dart';
+import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
 
@@ -44,10 +44,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'Dhu al-Hijjah',
   ];
 
-  final PrayerCalculationService _prayerCalculationService =
-      PrayerCalculationService.instance;
+  final PrayerTimeEngine _prayerCalculationService =
+      PrayerTimeEngine.instance;
   final JamaatService _jamaatService = JamaatService();
-  final JamaatTimeUtility _jamaatTimeUtility = JamaatTimeUtility.instance;
+  final PrayerAuxCalculator _jamaatTimeUtility = PrayerAuxCalculator.instance;
   final LocationConfigService _locationConfigService = LocationConfigService();
   final SettingsService _settingsService = SettingsService();
 
@@ -148,9 +148,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           }
           break;
         case JamaatSource.localOffset:
-          jamaatMap = _buildOffsetJamaatTimes(
-            prayerMap,
-            _locationConfig!.jamaatOffsets,
+          jamaatMap = PrayerAuxCalculator.instance.buildOffsetJamaatTimes(
+            prayerTimes: prayerMap,
+            offsets: _locationConfig!.jamaatOffsets,
           );
           break;
         case JamaatSource.none:
@@ -220,34 +220,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return prefs.getString('last_location_name') ?? 'GPS Location';
     }
     return activeConfig.cityName;
-  }
-
-  Map<String, dynamic> _buildOffsetJamaatTimes(
-    Map<String, DateTime?> prayerMap,
-    Map<String, int>? offsets,
-  ) {
-    const keyByPrayer = <String, String>{
-      'Fajr': 'fajr',
-      'Dhuhr': 'dhuhr',
-      'Asr': 'asr',
-      'Maghrib': 'maghrib',
-      'Isha': 'isha',
-    };
-    final result = <String, dynamic>{};
-
-    for (final prayerName in _prayerOrder) {
-      final prayerTime = prayerMap[prayerName];
-      final key = keyByPrayer[prayerName];
-      if (prayerTime == null || key == null) {
-        continue;
-      }
-      final offsetMinutes = offsets?[key] ?? 0;
-      final jamaatTime =
-          prayerTime.toLocal().add(Duration(minutes: offsetMinutes));
-      result[key] = DateFormat('HH:mm').format(jamaatTime);
-    }
-
-    return result;
   }
 
   Future<void> _refreshCalendarData() async {

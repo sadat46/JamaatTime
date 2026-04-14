@@ -8,7 +8,8 @@ import '../services/notification_service.dart';
 import '../services/jamaat_service.dart';
 import '../services/location_config_service.dart';
 import '../models/location_config.dart';
-import '../services/prayer_calculation_service.dart';
+import '../services/prayer_time_engine.dart';
+import '../services/prayer_aux_calculator.dart';
 import '../services/hijri_date_converter.dart';
 import '../widgets/live_clock_widget.dart';
 import '../widgets/prayer_countdown_widget.dart';
@@ -123,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _notificationService.setLocationConfig(_locationConfig!);
 
     // Get calculation parameters based on location
-    params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
+    params = PrayerTimeEngine.instance.getCalculationParametersForConfig(_locationConfig!);
 
     // Only apply madhab for Bangladesh (not applicable for Saudi)
     if (_locationConfig!.country == Country.bangladesh) {
@@ -219,7 +220,11 @@ class _HomeScreenState extends State<HomeScreen> {
         final completeJamaatTimes = Map<String, dynamic>.from(times);
 
         // Add calculated Maghrib jamaat time to the map
-        final maghribJamaatTime = _calculateMaghribJamaatTime();
+        final maghribJamaatTime = PrayerAuxCalculator.instance
+            .calculateMaghribJamaatTime(
+              maghribPrayerTime: this.times['Maghrib'],
+              selectedCity: selectedCity,
+            );
         if (maghribJamaatTime != '-') {
           completeJamaatTimes['maghrib'] = maghribJamaatTime;
         }
@@ -332,7 +337,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // Update jamaat times if they exist, to recalculate Maghrib jamaat time
     if (jamaatTimes != null) {
       final updatedJamaatTimes = Map<String, dynamic>.from(jamaatTimes!);
-      final maghribJamaatTime = _calculateMaghribJamaatTime();
+      final maghribJamaatTime = PrayerAuxCalculator.instance
+          .calculateMaghribJamaatTime(
+            maghribPrayerTime: times['Maghrib'],
+            selectedCity: selectedCity,
+          );
       if (maghribJamaatTime != '-') {
         updatedJamaatTimes['maghrib'] = maghribJamaatTime;
       }
@@ -473,7 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _notificationService.setLocationConfig(_locationConfig!);
 
         // Update calculation parameters (no Bangladesh/Saudi adjustments)
-        params = PrayerCalculationService.instance
+        params = PrayerTimeEngine.instance
             .getCalculationParametersForConfig(_locationConfig!);
 
         // Clear jamaat times - not available for random locations
@@ -500,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _locationConfigService.setCurrentConfig(_locationConfig!);
           _notificationService.setLocationConfig(_locationConfig!);
 
-          params = PrayerCalculationService.instance
+          params = PrayerTimeEngine.instance
               .getCalculationParametersForConfig(_locationConfig!);
 
           // Calculate local jamaat times for Saudi
@@ -519,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _locationConfigService.setCurrentConfig(_locationConfig!);
           _notificationService.setLocationConfig(_locationConfig!);
 
-          params = PrayerCalculationService.instance
+          params = PrayerTimeEngine.instance
               .getCalculationParametersForConfig(_locationConfig!);
 
           final madhab = await _settingsService.getMadhab();
@@ -639,53 +648,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _formatJamaatTime(String value) {
-    value = value.trim();
-    if (value.isEmpty) return '-';
-    try {
-      final time = DateFormat('HH:mm').parseStrict(value);
-      return DateFormat('HH:mm').format(time);
-    } catch (_) {
-      try {
-        final time = DateFormat('hh:mm a').parseStrict(value);
-        return DateFormat('HH:mm').format(time);
-      } catch (_) {
-        return '-';
-      }
-    }
-  }
-
-  /// Get Maghrib offset in minutes based on cantt name
-  int _getMaghribOffset(String city) {
-    switch (city) {
-      case 'Savar Cantt':
-      case 'Dhaka Cantt':
-      case 'Kumilla Cantt':
-        return 13;
-      case 'Rangpur Cantt':
-      case 'Jashore Cantt':
-      case 'Bogra Cantt':
-        return 10;
-      default:
-        return 7;
-    }
-  }
-
-  /// Calculate Maghrib jamaat time from prayer time with cantt-specific offset
-  String _calculateMaghribJamaatTime() {
-    final maghribPrayerTime = times['Maghrib'];
-    if (maghribPrayerTime != null && selectedCity != null) {
-      final offset = _getMaghribOffset(selectedCity!);
-
-      // Use device local time to support global usage
-      final maghribLocal = maghribPrayerTime.toLocal();
-      final maghribJamaatTime = maghribLocal.add(Duration(minutes: offset));
-
-      return DateFormat('HH:mm').format(maghribJamaatTime);
-    }
-    return '-';
-  }
-
   /// Pre-compute prayer table data to avoid expensive calculations in build()
   void _computePrayerTableData() {
     final currentPrayer = _getCurrentPrayerName();
@@ -744,11 +706,16 @@ class _HomeScreenState extends State<HomeScreen> {
       // Compute jamaat string
       String jamaatStr = '-';
       if (name == 'Maghrib') {
-        jamaatStr = _calculateMaghribJamaatTime();
+        jamaatStr = PrayerAuxCalculator.instance.calculateMaghribJamaatTime(
+          maghribPrayerTime: times['Maghrib'],
+          selectedCity: selectedCity,
+        );
       } else if (jamaatTimes != null && jamaatTimes!.containsKey(jamaatKey)) {
         final value = jamaatTimes![jamaatKey];
         if (value != null && value.toString().isNotEmpty) {
-          jamaatStr = _formatJamaatTime(value.toString());
+          jamaatStr = PrayerAuxCalculator.instance.formatJamaatTime(
+            value.toString(),
+          );
         }
       }
 
@@ -787,7 +754,7 @@ class _HomeScreenState extends State<HomeScreen> {
       calculationParameters: params!,
       precision: true,
     );
-    final tomorrowFajr = PrayerCalculationService.instance
+    final tomorrowFajr = PrayerTimeEngine.instance
         .createPrayerTimesMap(tomorrowTimes)['Fajr'];
 
     WidgetService.updateWidgetData(
@@ -1187,7 +1154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 _locationConfigService.setCurrentConfig(_locationConfig!);
                                                 _notificationService.setLocationConfig(_locationConfig!);
 
-                                                params = PrayerCalculationService.instance.getCalculationParametersForConfig(_locationConfig!);
+                                                params = PrayerTimeEngine.instance.getCalculationParametersForConfig(_locationConfig!);
 
                                                 if (_locationConfig!.country == Country.bangladesh) {
                                                   final madhab = await _settingsService.getMadhab();

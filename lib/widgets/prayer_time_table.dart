@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/jamaat_time_utility.dart';
+import '../services/prayer_aux_calculator.dart';
 import '../core/constants.dart';
 
 class PrayerTimeTable extends StatelessWidget {
@@ -90,7 +90,7 @@ class PrayerTimeTable extends StatelessWidget {
 
           String jamaatStr = '-';
           if (showJamaatTimes) {
-            jamaatStr = JamaatTimeUtility.instance.getJamaatTimeString(
+            jamaatStr = PrayerAuxCalculator.instance.getJamaatTimeString(
               jamaatTimes: jamaatTimes,
               prayerName: name,
               maghribPrayerTime: times['Maghrib'],

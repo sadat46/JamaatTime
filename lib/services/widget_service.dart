@@ -8,7 +8,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import '../core/constants.dart';
 import '../models/location_config.dart';
 import '../services/location_config_service.dart';
-import '../services/prayer_calculation_service.dart';
+import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
 import 'hijri_date_converter.dart';
@@ -46,7 +46,7 @@ Future<void> backgroundCallback(Uri? uri) async {
       coords = Coordinates(config.latitude, config.longitude);
     }
 
-    final calcService = PrayerCalculationService.instance;
+    final calcService = PrayerTimeEngine.instance;
     final params = calcService.getCalculationParametersForConfig(config);
 
     if (config.country == Country.bangladesh) {
@@ -95,15 +95,6 @@ Future<void> backgroundCallback(Uri? uri) async {
 class WidgetService {
   static const String _androidWidgetName = 'PrayerWidgetProvider';
   static const _fmt = 'hh:mm a';
-  static const _mainPrayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-  static const _periodOrder = [
-    'Fajr',
-    'Sunrise',
-    'Dhuhr',
-    'Asr',
-    'Maghrib',
-    'Isha',
-  ];
 
   static Future<void> updateWidgetData({
     required Map<String, DateTime?> times,
@@ -184,8 +175,9 @@ class WidgetService {
     required DateFormat timeFormat,
     DateTime? tomorrowFajr,
   }) {
-    final currentPeriod = _getCurrentPeriodName(times, now);
-    final nextPeriod = _getNextPeriodName(times, now);
+    final engine = PrayerTimeEngine.instance;
+    final currentPeriod = engine.getCurrentPrayerPeriod(times: times, now: now);
+    final nextPeriod = engine.getNextPrayerForWidget(times: times, now: now);
     final currentPeriodTime = times[currentPeriod];
     final todayNextTime = times[nextPeriod];
 
@@ -202,8 +194,11 @@ class WidgetService {
         : 0;
 
     // Row 2 remains main-prayer focused and excludes the current main prayer.
-    final currentMainPrayer = _getCurrentMainPrayerName(times, now);
-    final rowPrayers = _mainPrayerOrder
+    final currentMainPrayer = engine.getCurrentPrayerForWidget(
+      times: times,
+      now: now,
+    );
+    final rowPrayers = PrayerTimeEngine.mainPrayerOrder
         .where((p) => p != currentMainPrayer)
         .take(4)
         .toList();
@@ -227,49 +222,6 @@ class WidgetService {
       rowLabels: rowPrayers,
       rowTimes: rowTimes,
     );
-  }
-
-  /// Current main prayer = the last main prayer whose time has already passed.
-  static String _getCurrentMainPrayerName(
-    Map<String, DateTime?> times,
-    DateTime now,
-  ) {
-    String current = 'Isha'; // default: after all prayers
-    for (final name in _mainPrayerOrder) {
-      final t = times[name];
-      if (t != null && now.isBefore(t)) {
-        break;
-      }
-      current = name;
-    }
-    return current;
-  }
-
-  /// Current period includes Sunrise and is used in row 1.
-  static String _getCurrentPeriodName(
-    Map<String, DateTime?> times,
-    DateTime now,
-  ) {
-    String current = 'Isha'; // default: after all periods
-    for (final name in _periodOrder) {
-      final t = times[name];
-      if (t != null && now.isBefore(t)) {
-        break;
-      }
-      current = name;
-    }
-    return current;
-  }
-
-  /// Next period boundary includes Sunrise.
-  static String _getNextPeriodName(Map<String, DateTime?> times, DateTime now) {
-    for (final name in _periodOrder) {
-      final t = times[name];
-      if (t != null && now.isBefore(t)) {
-        return name;
-      }
-    }
-    return 'Fajr';
   }
 
   static String _formatPrayerTime(DateTime? time, DateFormat fmt) {

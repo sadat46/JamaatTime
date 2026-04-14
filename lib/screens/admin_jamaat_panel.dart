@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import '../services/jamaat_service.dart';
+import '../services/location_config_service.dart';
+import '../services/prayer_time_engine.dart';
+import '../services/prayer_aux_calculator.dart';
+import '../models/location_config.dart';
 import '../core/constants.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
@@ -15,6 +19,7 @@ class AdminJamaatPanel extends StatefulWidget {
 
 class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerProviderStateMixin {
   final JamaatService _jamaatService = JamaatService();
+  final LocationConfigService _locationConfigService = LocationConfigService();
   TabController? _tabController;
   
   // Manual Entry Variables
@@ -547,47 +552,25 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  /// Get Maghrib offset in minutes based on cantt name
-  int _getMaghribOffset(String city) {
-    switch (city) {
-      case 'Savar Cantt':
-      case 'Dhaka Cantt':
-      case 'Kumilla Cantt':
-        return 13;
-      case 'Rangpur Cantt':
-      case 'Jashore Cantt':
-      case 'Bogra Cantt':
-        return 10;
-      default:
-        return 7;
-    }
-  }
-
-  /// Calculate Maghrib jamaat time from prayer time with cantt-specific offset
+  /// Compute Maghrib jamaat string for the selected city/date, using the
+  /// same LocationConfig-driven pipeline as the home screen.
   String _calculateMaghribJamaatTime() {
-    // Get prayer times for the selected date and city
-    final coords = Coordinates(23.8376, 90.2820); // Default coordinates
-    final params = CalculationMethod.muslimWorldLeague();
-    params.madhab = Madhab.hanafi; // Default to Hanafi
-    
-    final prayerTimes = PrayerTimes(
-      coordinates: coords,
-      date: _selectedDate,
-      calculationParameters: params,
-      precision: true,
+    final LocationConfig config = _locationConfigService.getConfigForCity(
+      _selectedCity,
     );
-    
-    final maghribPrayerTime = prayerTimes.maghrib;
-    if (maghribPrayerTime != null) {
-      final offset = _getMaghribOffset(_selectedCity);
-      
-      // Convert to local time before adding offset
-      final localMaghribTime = maghribPrayerTime.toLocal();
-      final maghribJamaatTime = localMaghribTime.add(Duration(minutes: offset));
-      
-      return DateFormat('HH:mm').format(maghribJamaatTime);
-    }
-    return '';
+    final params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+      config,
+    );
+    final prayerTimes = PrayerTimeEngine.instance.calculatePrayerTimes(
+      coordinates: Coordinates(config.latitude, config.longitude),
+      date: _selectedDate,
+      parameters: params,
+    );
+    final result = PrayerAuxCalculator.instance.calculateMaghribJamaatTime(
+      maghribPrayerTime: prayerTimes.maghrib,
+      selectedCity: _selectedCity,
+    );
+    return result == '-' ? '' : result;
   }
 
   /// Calculate Maghrib time from sunset time (3 minutes after sunset)
