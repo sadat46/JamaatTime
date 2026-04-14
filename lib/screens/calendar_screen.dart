@@ -13,6 +13,21 @@ import '../services/location_config_service.dart';
 import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
+import '../widgets/calendar_selected_date_card.dart';
+
+class _SelectedDateCardData {
+  const _SelectedDateCardData({
+    required this.gregorianDate,
+    required this.weekday,
+    required this.banglaDate,
+    required this.hijriDate,
+  });
+
+  final String gregorianDate;
+  final String weekday;
+  final String banglaDate;
+  final String hijriDate;
+}
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -44,8 +59,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'Dhu al-Hijjah',
   ];
 
-  final PrayerTimeEngine _prayerCalculationService =
-      PrayerTimeEngine.instance;
+  final PrayerTimeEngine _prayerCalculationService = PrayerTimeEngine.instance;
   final JamaatService _jamaatService = JamaatService();
   final PrayerAuxCalculator _jamaatTimeUtility = PrayerAuxCalculator.instance;
   final LocationConfigService _locationConfigService = LocationConfigService();
@@ -133,10 +147,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
             if (serverTimes != null) {
               jamaatMap = Map<String, dynamic>.from(serverTimes);
-              final maghribJamaat = _jamaatTimeUtility.calculateMaghribJamaatTime(
-                maghribPrayerTime: prayerMap['Maghrib'],
-                selectedCity: _locationConfig!.cityName,
-              );
+              final maghribJamaat = _jamaatTimeUtility
+                  .calculateMaghribJamaatTime(
+                    maghribPrayerTime: prayerMap['Maghrib'],
+                    selectedCity: _locationConfig!.cityName,
+                  );
               if (maghribJamaat != '-') {
                 jamaatMap['maghrib'] = maghribJamaat;
               }
@@ -175,8 +190,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _loadLocationContext() async {
     final prefs = await SharedPreferences.getInstance();
-    _bangladeshHijriOffsetDays =
-        await _settingsService.getBangladeshHijriOffsetDays();
+    _bangladeshHijriOffsetDays = await _settingsService
+        .getBangladeshHijriOffsetDays();
 
     LocationConfig? activeConfig = _locationConfigService.currentConfig;
 
@@ -328,6 +343,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return BanglaCalendar.fromGregorian(day);
   }
 
+  _SelectedDateCardData _selectedDateCardData(DateTime day) {
+    return _SelectedDateCardData(
+      gregorianDate: _englishDateLine(day),
+      weekday: _weekdayLine(day),
+      banglaDate: _banglaDateLine(day),
+      hijriDate: _hijriDateLine(day),
+    );
+  }
+
   String _timesSourceCaption() {
     if (_locationConfig?.jamaatSource == JamaatSource.none) {
       return 'Jamaat unavailable in GPS mode';
@@ -470,50 +494,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildDateChip(
+  Widget _buildSelectedDateCard(
     BuildContext context, {
-    required String label,
-    required String value,
+    required Color cardBackground,
+    required Color borderColor,
   }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDarkMode
-            ? AppConstants.brandGreen.withValues(alpha: 0.16)
-            : AppConstants.brandGreen.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode
-              ? AppConstants.brandGreen.withValues(alpha: 0.35)
-              : AppConstants.brandGreen.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.white70 : AppConstants.brandGreenDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-        ],
-      ),
+    final dateData = _selectedDateCardData(_selectedDay);
+    return CalendarSelectedDateCard(
+      gregorianDate: dateData.gregorianDate,
+      weekday: dateData.weekday,
+      banglaDate: dateData.banglaDate,
+      hijriDate: dateData.hijriDate,
+      cardBackground: cardBackground,
+      borderColor: borderColor,
     );
   }
 
@@ -831,7 +824,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       color: isDarkMode
                                           ? Colors.white70
                                           : AppConstants.brandGreenDark
-                                              .withValues(alpha: 0.8),
+                                                .withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ],
@@ -869,11 +862,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           onDaySelected: _onDaySelected,
                           daysOfWeekStyle: DaysOfWeekStyle(
                             weekdayStyle: TextStyle(
-                              color: isDarkMode ? Colors.white70 : Colors.black54,
+                              color: isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black54,
                               fontWeight: FontWeight.w700,
                             ),
                             weekendStyle: TextStyle(
-                              color: isDarkMode ? Colors.white70 : Colors.black54,
+                              color: isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black54,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -932,100 +929,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  Container(
-                    decoration: BoxDecoration(
-                      color: cardBackground,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: borderColor),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: isDarkMode
-                                    ? AppConstants.brandGreen.withValues(
-                                        alpha: 0.2,
-                                      )
-                                    : AppConstants.brandGreen.withValues(
-                                        alpha: 0.12,
-                                      ),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.event,
-                                size: 18,
-                                color: isDarkMode
-                                    ? Colors.white70
-                                    : AppConstants.brandGreenDark,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _englishDateLine(_selectedDay),
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w800,
-                                      color: isDarkMode
-                                          ? Colors.white
-                                          : AppConstants.brandGreenDark,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _weekdayLine(_selectedDay),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDarkMode
-                                          ? Colors.white70
-                                          : Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDateChip(
-                                context,
-                                label: 'English',
-                                value: _englishDateLine(_selectedDay),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildDateChip(
-                                context,
-                                label: 'Bangla',
-                                value: _banglaDateLine(_selectedDay),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildDateChip(
-                                context,
-                                label: 'Hijri',
-                                value: _hijriDateLine(_selectedDay),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                  _buildSelectedDateCard(
+                    context,
+                    cardBackground: cardBackground,
+                    borderColor: borderColor,
                   ),
                   const SizedBox(height: 16),
 
