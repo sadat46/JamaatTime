@@ -16,6 +16,12 @@ import android.widget.RemoteViews;
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
     private static final int ALARM_REQUEST_CODE = 2;
+    private static final int SELF_HEAL_REQUEST_CODE = 3;
+    private static final String HOME_WIDGET_BACKGROUND_ACTION =
+        "es.antonborri.home_widget.action.BACKGROUND";
+    private static final String HOME_WIDGET_BACKGROUND_RECEIVER =
+        "es.antonborri.home_widget.HomeWidgetBackgroundReceiver";
+    private static final String BOUNDARY_URI = "homewidget://boundary";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -92,26 +98,32 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
 
             if (running && nextEpoch > System.currentTimeMillis()) {
                 scheduleBoundaryAlarm(context, nextEpoch);
+            } else if (running && nextEpoch > 0L && nextEpoch <= System.currentTimeMillis()) {
+                // Self-heal: prefs say countdown is running but next-epoch is in the past.
+                // Trigger Dart background callback to recompute fresh prayer data.
+                triggerDartRefresh(context);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error updating widget", e);
         }
     }
 
+    private PendingIntent buildBoundaryPendingIntent(Context context) {
+        Intent intent = new Intent(HOME_WIDGET_BACKGROUND_ACTION)
+            .setComponent(new ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
+            .setData(Uri.parse(BOUNDARY_URI));
+        return PendingIntent.getBroadcast(
+            context, ALARM_REQUEST_CODE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     private void scheduleBoundaryAlarm(Context context, long epochMillis) {
+        // +1s so Flutter's current/next-prayer logic has crossed the boundary before we read prefs
+        long fireAt = epochMillis + 1000L;
+        PendingIntent pi = buildBoundaryPendingIntent(context);
         try {
             AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
             if (am == null) return;
-            Intent intent = new Intent(context, PrayerWidgetProvider.class)
-                .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            int[] ids = AppWidgetManager.getInstance(context)
-                .getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-            PendingIntent pi = PendingIntent.getBroadcast(
-                context, ALARM_REQUEST_CODE, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            // +1s so Flutter's current/next-prayer logic has crossed the boundary before we read prefs
-            long fireAt = epochMillis + 1000L;
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
             Log.d(TAG, "Boundary alarm scheduled for " + fireAt);
         } catch (SecurityException e) {
@@ -119,27 +131,29 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             Log.w(TAG, "Exact alarm denied, falling back to inexact", e);
             AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
             if (am == null) return;
-            Intent intent = new Intent(context, PrayerWidgetProvider.class)
-                .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            int[] ids = AppWidgetManager.getInstance(context)
-                .getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-            PendingIntent pi = PendingIntent.getBroadcast(
-                context, ALARM_REQUEST_CODE, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            am.set(AlarmManager.RTC_WAKEUP, epochMillis + 1000L, pi);
+            am.set(AlarmManager.RTC_WAKEUP, fireAt, pi);
+        }
+    }
+
+    private void triggerDartRefresh(Context context) {
+        Intent intent = new Intent(HOME_WIDGET_BACKGROUND_ACTION)
+            .setComponent(new ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
+            .setData(Uri.parse(BOUNDARY_URI));
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context, SELF_HEAL_REQUEST_CODE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        try {
+            pi.send();
+            Log.d(TAG, "Self-heal: triggered Dart refresh for stale prefs");
+        } catch (PendingIntent.CanceledException e) {
+            Log.w(TAG, "Self-heal pending intent cancelled", e);
         }
     }
 
     private void cancelBoundaryAlarm(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
-        Intent intent = new Intent(context, PrayerWidgetProvider.class)
-            .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-        PendingIntent pi = PendingIntent.getBroadcast(
-            context, ALARM_REQUEST_CODE, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        am.cancel(pi);
+        am.cancel(buildBoundaryPendingIntent(context));
     }
 
     @Override

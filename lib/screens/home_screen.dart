@@ -100,6 +100,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Pre-computed prayer table data (avoids recalculation in build())
   List<PrayerRowData> _prayerTableData = [];
 
+  // Last-seen current prayer period; used to detect boundary crossings on minute ticks.
+  String? _lastCurrentPeriod;
+
   // Stream subscription for settings changes (must be cancelled in dispose)
   StreamSubscription<void>? _settingsSubscription;
 
@@ -185,6 +188,21 @@ class _HomeScreenState extends State<HomeScreen> {
             _fetchJamaatTimes(selectedCity!);
           } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
             _calculateLocalJamaatTimes();
+          }
+        }
+      } else if (times.isNotEmpty) {
+        // Same day: detect prayer boundary crossing so the table highlight
+        // and home-widget update without waiting for the next day.
+        final newPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+          times: times,
+          now: newNow,
+        );
+        if (newPeriod != _lastCurrentPeriod) {
+          _now = newNow;
+          if (mounted) {
+            setState(_computePrayerTableData);
+          } else {
+            _computePrayerTableData();
           }
         }
       }
@@ -729,6 +747,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     _prayerTableData = tableData;
+    if (times.isNotEmpty) {
+      _lastCurrentPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+        times: times,
+        now: DateTime.now(),
+      );
+    }
     _updateHomeWidget();
   }
 
