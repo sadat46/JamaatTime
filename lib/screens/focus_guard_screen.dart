@@ -95,6 +95,10 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     await _save(_settings.copyWith(tempAllowMinutes: minutes));
   }
 
+  Future<void> _handleQuickAllowToggle(bool value) async {
+    await _save(_settings.copyWith(quickAllowEnabled: value));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -319,45 +323,61 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
   }
 
   Widget _tempAllowCard() {
+    final quickAllowOn = _settings.quickAllowEnabled;
+    final subtitle = quickAllowOn
+        ? 'Overlay will show "Allow ${_settings.tempAllowMinutes} min".'
+        : 'Overlay will only show "Go Back".';
     return Card(
       elevation: 1.2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Quick allow duration',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            SwitchListTile(
+              value: quickAllowOn,
+              onChanged:
+                  _settings.enabled ? (v) => _handleQuickAllowToggle(v) : null,
+              activeThumbColor: AppConstants.brandGreen,
+              title: const Text(
+                'Allow quick bypass',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Used when you tap "Allow" on the block overlay.',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<int>(
-              segments: _tempAllowOptions
-                  .map(
-                    (m) => ButtonSegment<int>(
-                      value: m,
-                      label: Text('$m min'),
-                    ),
-                  )
-                  .toList(),
-              selected: {_settings.tempAllowMinutes},
-              onSelectionChanged: (set) {
-                if (set.isEmpty) return;
-                _handleTempAllowChange(set.first);
-              },
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return AppConstants.brandGreen.withAlpha(40);
-                  }
-                  return null;
-                }),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+              child: Opacity(
+                opacity: quickAllowOn ? 1.0 : 0.45,
+                child: SegmentedButton<int>(
+                  segments: _tempAllowOptions
+                      .map(
+                        (m) => ButtonSegment<int>(
+                          value: m,
+                          label: Text('$m min'),
+                        ),
+                      )
+                      .toList(),
+                  selected: {_settings.tempAllowMinutes},
+                  onSelectionChanged: quickAllowOn
+                      ? (set) {
+                          if (set.isEmpty) return;
+                          _handleTempAllowChange(set.first);
+                        }
+                      : null,
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppConstants.brandGreen.withAlpha(40);
+                      }
+                      return null;
+                    }),
+                  ),
+                ),
               ),
             ),
           ],
