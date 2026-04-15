@@ -53,15 +53,16 @@
                 android:layout_height="wrap_content"
                 android:text="Remaining Time"
                 android:textColor="#B3FFFFFF"
-                android:textSize="13sp"
-                android:maxLines="1"/>
+                android:textSize="15sp"
+                android:maxLines="1"
+                android:ellipsize="end"/>
             <Chronometer
                 android:id="@+id/remaining_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#FFFFFF"
-                android:textSize="24sp"
+                android:textSize="30sp"
                 android:textStyle="bold"
                 android:maxLines="1"/>
         </LinearLayout>
@@ -292,14 +293,16 @@
 
             <ImageView
                 android:id="@+id/refresh_button"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="30dp"
+                android:layout_height="42dp"
                 android:layout_marginStart="8dp"
+                android:padding="6dp"
                 android:src="@android:drawable/ic_popup_sync"
-                android:tint="#FFFFFF"
+                android:tint="#111111"
                 android:contentDescription="Refresh"
                 android:clickable="true"
-                android:background="?android:attr/selectableItemBackgroundBorderless"/>
+                android:scaleType="centerInside"
+                android:background="@drawable/widget_refresh_button_bg"/>
         </LinearLayout>
     </LinearLayout>
 
