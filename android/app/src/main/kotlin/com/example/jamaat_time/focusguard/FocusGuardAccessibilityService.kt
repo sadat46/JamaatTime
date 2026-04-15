@@ -20,7 +20,6 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         private const val TAG = "FocusGuard"
         private const val YOUTUBE_PACKAGE = "com.google.android.youtube"
         private const val DEBOUNCE_MS = 2000L
-        private const val KEY_TEMP_ALLOW_EXPIRY = "focus_guard_temp_allow_expiry"
     }
 
     private var lastActionTime = 0L
@@ -55,7 +54,11 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         if (!settings.youtubeBlocked) return
 
         val now = System.currentTimeMillis()
-        if (isTempAllowed(now)) return
+        val tempAllowed = isTempAllowed(now)
+        if (!settings.quickAllowEnabled && tempAllowed) {
+            clearTempAllow("quick_bypass_disabled")
+        }
+        if (settings.quickAllowEnabled && tempAllowed) return
         if (now - lastActionTime < DEBOUNCE_MS) return
 
         if (!detectShorts(event)) return
@@ -136,14 +139,20 @@ class FocusGuardAccessibilityService : AccessibilityService() {
 
     private fun isTempAllowed(now: Long): Boolean {
         val prefs = getSharedPreferences(FocusGuardChannel.NATIVE_PREFS, Context.MODE_PRIVATE)
-        val expiry = prefs.getLong(KEY_TEMP_ALLOW_EXPIRY, 0L)
+        val expiry = prefs.getLong(FocusGuardChannel.KEY_TEMP_ALLOW_EXPIRY, 0L)
         return expiry > now
     }
 
     private fun setTempAllow(minutes: Int) {
         val prefs = getSharedPreferences(FocusGuardChannel.NATIVE_PREFS, Context.MODE_PRIVATE)
         val expiry = System.currentTimeMillis() + minutes * 60_000L
-        prefs.edit().putLong(KEY_TEMP_ALLOW_EXPIRY, expiry).apply()
+        prefs.edit().putLong(FocusGuardChannel.KEY_TEMP_ALLOW_EXPIRY, expiry).apply()
+    }
+
+    private fun clearTempAllow(reason: String) {
+        val prefs = getSharedPreferences(FocusGuardChannel.NATIVE_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().remove(FocusGuardChannel.KEY_TEMP_ALLOW_EXPIRY).apply()
+        Log.d(TAG, "Temp allow revoked due to $reason")
     }
 
     // --- Overlay ---

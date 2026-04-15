@@ -5,15 +5,19 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.text.TextUtils
+import android.util.Log
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONObject
 
 class FocusGuardChannel(messenger: BinaryMessenger, private val context: Context) {
 
     companion object {
+        private const val TAG = "FocusGuardChannel"
         const val CHANNEL_NAME = "jamaat_time/focus_guard"
         const val NATIVE_PREFS = "focus_guard_native"
         const val KEY_SETTINGS_JSON = "focus_guard_native_settings"
+        const val KEY_TEMP_ALLOW_EXPIRY = "focus_guard_temp_allow_expiry"
     }
 
     private val channel = MethodChannel(messenger, CHANNEL_NAME)
@@ -42,6 +46,7 @@ class FocusGuardChannel(messenger: BinaryMessenger, private val context: Context
                     val json = call.argument<String>("json") ?: "{}"
                     val prefs = context.getSharedPreferences(NATIVE_PREFS, Context.MODE_PRIVATE)
                     prefs.edit().putString(KEY_SETTINGS_JSON, json).apply()
+                    revokeTempAllowIfNeeded(prefs, json)
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -64,5 +69,23 @@ class FocusGuardChannel(messenger: BinaryMessenger, private val context: Context
             }
         }
         return false
+    }
+
+    private fun revokeTempAllowIfNeeded(
+        prefs: android.content.SharedPreferences,
+        settingsJson: String,
+    ) {
+        try {
+            val json = JSONObject(settingsJson)
+            val enabled = json.optBoolean("enabled", false)
+            val quickAllowEnabled = json.optBoolean("quickAllowEnabled", false)
+            if (!enabled || !quickAllowEnabled) {
+                prefs.edit().remove(KEY_TEMP_ALLOW_EXPIRY).apply()
+                val reason = if (!enabled) "focus_guard_disabled" else "quick_bypass_disabled"
+                Log.d(TAG, "Temp allow revoked due to $reason")
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Skipping temp-allow revoke; invalid settings JSON", t)
+        }
     }
 }
