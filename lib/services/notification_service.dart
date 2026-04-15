@@ -95,6 +95,10 @@ class NotificationService {
         return 'prayer_channel_system';
       case 2:
         return 'prayer_channel_silent';
+      case 3:
+        return 'prayer_channel_custom_2';
+      case 4:
+        return 'prayer_channel_custom_3';
       default:
         return 'prayer_channel_custom';
     }
@@ -109,8 +113,31 @@ class NotificationService {
         return 'jamaat_channel_system';
       case 2:
         return 'jamaat_channel_silent';
+      case 3:
+        return 'jamaat_channel_custom_2';
+      case 4:
+        return 'jamaat_channel_custom_3';
       default:
         return 'jamaat_channel_custom';
+    }
+  }
+
+  /// Resolve custom sound resource by notification type and selected sound mode.
+  String? _getCustomSoundResource({
+    required String notificationType,
+    required int soundMode,
+  }) {
+    final isPrayer = notificationType == 'prayer';
+
+    switch (soundMode) {
+      case 0:
+        return isPrayer ? 'prayer_allahu_akbar' : 'jamaat_allahu_akbar';
+      case 3:
+        return isPrayer ? 'prayer_custom_2' : 'jamaat_custom_2';
+      case 4:
+        return isPrayer ? 'prayer_custom_3' : 'jamaat_custom_3';
+      default:
+        return null;
     }
   }
 
@@ -152,7 +179,29 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           showBadge: true,
-          sound: RawResourceAndroidNotificationSound('allahu_akbar'),
+          sound: RawResourceAndroidNotificationSound('prayer_allahu_akbar'),
+        );
+
+        final prayerCustomChannel2 = AndroidNotificationChannel(
+          'prayer_channel_custom_2',
+          'Prayer Notifications (Custom Sound 2)',
+          description: 'Prayer notifications with custom adhan sound 2',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('prayer_custom_2'),
+        );
+
+        final prayerCustomChannel3 = AndroidNotificationChannel(
+          'prayer_channel_custom_3',
+          'Prayer Notifications (Custom Sound 3)',
+          description: 'Prayer notifications with custom adhan sound 3',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('prayer_custom_3'),
         );
 
         const prayerSystemChannel = AndroidNotificationChannel(
@@ -186,7 +235,29 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           showBadge: true,
-          sound: RawResourceAndroidNotificationSound('allahu_akbar'),
+          sound: RawResourceAndroidNotificationSound('jamaat_allahu_akbar'),
+        );
+
+        final jamaatCustomChannel2 = AndroidNotificationChannel(
+          'jamaat_channel_custom_2',
+          'Jamaat Notifications (Custom Sound 2)',
+          description: 'Jamaat notifications with custom adhan sound 2',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('jamaat_custom_2'),
+        );
+
+        final jamaatCustomChannel3 = AndroidNotificationChannel(
+          'jamaat_channel_custom_3',
+          'Jamaat Notifications (Custom Sound 3)',
+          description: 'Jamaat notifications with custom adhan sound 3',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('jamaat_custom_3'),
         );
 
         const jamaatSystemChannel = AndroidNotificationChannel(
@@ -213,9 +284,13 @@ class NotificationService {
 
         // Create all channels
         await androidImplementation.createNotificationChannel(prayerCustomChannel);
+        await androidImplementation.createNotificationChannel(prayerCustomChannel2);
+        await androidImplementation.createNotificationChannel(prayerCustomChannel3);
         await androidImplementation.createNotificationChannel(prayerSystemChannel);
         await androidImplementation.createNotificationChannel(prayerSilentChannel);
         await androidImplementation.createNotificationChannel(jamaatCustomChannel);
+        await androidImplementation.createNotificationChannel(jamaatCustomChannel2);
+        await androidImplementation.createNotificationChannel(jamaatCustomChannel3);
         await androidImplementation.createNotificationChannel(jamaatSystemChannel);
         await androidImplementation.createNotificationChannel(jamaatSilentChannel);
       }
@@ -269,6 +344,10 @@ class NotificationService {
         notificationType: notificationType,
         soundMode: soundMode,
       );
+      final customSoundResource = _getCustomSoundResource(
+        notificationType: notificationType,
+        soundMode: soundMode,
+      );
 
       // Schedule the notification
       await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -288,8 +367,8 @@ class NotificationService {
             playSound: config['playSound'],
             icon: '@mipmap/launcher_icon',
             color: const Color(0xFF388E3C),
-            sound: config['playSound'] && soundMode == 0 
-                ? RawResourceAndroidNotificationSound('allahu_akbar')
+            sound: customSoundResource != null
+                ? RawResourceAndroidNotificationSound(customSoundResource)
                 : null,
             vibrationPattern: config['enableVibration']
                 ? Int64List.fromList([0, 5000])
