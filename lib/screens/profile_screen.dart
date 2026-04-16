@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  final ScrollController _authScrollController = ScrollController();
 
   String? _error;
   bool _loading = false;
@@ -55,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _authScrollController.dispose();
     super.dispose();
   }
 
@@ -276,6 +278,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  Future<void> _openBookmarksOrRedirectToLogin() async {
+    if (_authService.currentUser != null) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BookmarksScreen()),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _showRegister = false;
+      _error = 'Sign in to access My Bookmarks';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sign in to access My Bookmarks')),
+    );
+
+    if (_authScrollController.hasClients) {
+      await _authScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -291,7 +322,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLoggedOutSettingsCard() {
+  Widget _buildLoggedOutActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
     return Card(
       elevation: 1.8,
       shape: RoundedRectangleBorder(
@@ -308,24 +344,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: _brandGreen.withAlpha(26),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(Icons.settings, color: _brandGreen, size: 20),
+          child: Icon(icon, color: _brandGreen, size: 20),
         ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          'Prayer calculation, Hijri date, and reminder sound',
+          subtitle,
           style: TextStyle(color: Colors.grey[600], fontSize: 12),
         ),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsScreen()),
-          );
-        },
+        onTap: onTap,
       ),
+    );
+  }
+
+  Widget _buildLoggedOutBookmarksCard() {
+    return _buildLoggedOutActionCard(
+      icon: Icons.bookmark,
+      title: 'My Bookmarks',
+      subtitle: 'Saved ayat and dua for quick reading',
+      onTap: () {
+        _openBookmarksOrRedirectToLogin();
+      },
+    );
+  }
+
+  Widget _buildLoggedOutSettingsCard() {
+    return _buildLoggedOutActionCard(
+      icon: Icons.settings,
+      title: 'Settings',
+      subtitle: 'Prayer calculation, Hijri date, and reminder sound',
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+        );
+      },
     );
   }
 
@@ -428,10 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _handleLogout();
       },
       onBookmarksTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const BookmarksScreen()),
-        );
+        _openBookmarksOrRedirectToLogin();
       },
       onSettingsTap: () {
         Navigator.push(
@@ -457,6 +507,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAuthContent(BoxConstraints constraints) {
     return SingleChildScrollView(
+      controller: _authScrollController,
       padding: const EdgeInsets.all(16),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -624,6 +675,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
             _buildSectionLabel('Main Options'),
+            _buildLoggedOutBookmarksCard(),
+            const SizedBox(height: 10),
             _buildLoggedOutSettingsCard(),
             const SizedBox(height: 14),
             _buildSectionLabel('App'),
