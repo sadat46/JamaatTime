@@ -291,6 +291,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildLoggedOutSettingsCard() {
+    return Card(
+      elevation: 1.8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_cardRadius),
+      ),
+      child: ListTile(
+        minLeadingWidth: 0,
+        horizontalTitleGap: 12,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        leading: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: _brandGreen.withAlpha(26),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.settings, color: _brandGreen, size: 20),
+        ),
+        title: const Text(
+          'Settings',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          'Prayer calculation, Hijri date, and reminder sound',
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildAppInfoCard() {
     return Card(
       elevation: 1.5,
@@ -584,6 +622,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 14),
+            _buildSectionLabel('Main Options'),
+            _buildLoggedOutSettingsCard(),
             const SizedBox(height: 14),
             _buildSectionLabel('App'),
             _buildAppInfoCard(),
