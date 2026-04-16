@@ -17,11 +17,12 @@ class AdminJamaatPanel extends StatefulWidget {
   State<AdminJamaatPanel> createState() => _AdminJamaatPanelState();
 }
 
-class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerProviderStateMixin {
+class _AdminJamaatPanelState extends State<AdminJamaatPanel>
+    with SingleTickerProviderStateMixin {
   final JamaatService _jamaatService = JamaatService();
   final LocationConfigService _locationConfigService = LocationConfigService();
   TabController? _tabController;
-  
+
   // Manual Entry Variables
   String _selectedCity = AppConstants.canttNames.first;
   DateTime _selectedDate = DateTime.now();
@@ -73,7 +74,9 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
       if (times != null) {
         // Auto-calculate Maghrib jamaat time if not present
-        if (!times.containsKey('maghrib') || times['maghrib'] == null || times['maghrib'] == '-') {
+        if (!times.containsKey('maghrib') ||
+            times['maghrib'] == null ||
+            times['maghrib'] == '-') {
           final calculatedMaghrib = _calculateMaghribJamaatTime();
           times['maghrib'] = calculatedMaghrib;
         }
@@ -135,7 +138,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
         // Check CSV format and determine column mapping
         final header = csvData[0];
-        
+
         // Determine column indices based on header
         int dateIndex = -1;
         int fajrIndex = -1;
@@ -144,32 +147,26 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         int maghribIndex = -1;
         int sunsetIndex = -1;
         int ishaIndex = -1;
-        
+
         for (int i = 0; i < header.length; i++) {
           final column = header[i].toString().toLowerCase().trim();
           if (column.contains('date')) {
             dateIndex = i;
-          }
-          else if (column.contains('fajr')) {
+          } else if (column.contains('fajr')) {
             fajrIndex = i;
-          }
-          else if (column.contains('dhuhr') || column.contains('zuhr')) {
+          } else if (column.contains('dhuhr') || column.contains('zuhr')) {
             dhuhrIndex = i;
-          }
-          else if (column.contains('asr')) {
+          } else if (column.contains('asr')) {
             asrIndex = i;
-          }
-          else if (column.contains('maghrib') || column.contains('magrib')) {
+          } else if (column.contains('maghrib') || column.contains('magrib')) {
             maghribIndex = i;
-          }
-          else if (column.contains('sunset')) {
+          } else if (column.contains('sunset')) {
             sunsetIndex = i;
-          }
-          else if (column.contains('isha')) {
+          } else if (column.contains('isha')) {
             ishaIndex = i;
           }
         }
-        
+
         if (dateIndex == -1) {
           setState(() {
             _message = 'CSV must contain a Date column';
@@ -191,35 +188,47 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
             // Create times map with null safety
             final times = <String, String>{};
-            
+
             // Add times based on column mapping
-            if (fajrIndex >= 0 && fajrIndex < row.length && 
-                row[fajrIndex] != null && row[fajrIndex].toString().trim().isNotEmpty) {
+            if (fajrIndex >= 0 &&
+                fajrIndex < row.length &&
+                row[fajrIndex] != null &&
+                row[fajrIndex].toString().trim().isNotEmpty) {
               times['fajr'] = row[fajrIndex].toString().trim();
             }
-            
-            if (dhuhrIndex >= 0 && dhuhrIndex < row.length && 
-                row[dhuhrIndex] != null && row[dhuhrIndex].toString().trim().isNotEmpty) {
+
+            if (dhuhrIndex >= 0 &&
+                dhuhrIndex < row.length &&
+                row[dhuhrIndex] != null &&
+                row[dhuhrIndex].toString().trim().isNotEmpty) {
               times['dhuhr'] = row[dhuhrIndex].toString().trim();
             }
-            
-            if (asrIndex >= 0 && asrIndex < row.length && 
-                row[asrIndex] != null && row[asrIndex].toString().trim().isNotEmpty) {
+
+            if (asrIndex >= 0 &&
+                asrIndex < row.length &&
+                row[asrIndex] != null &&
+                row[asrIndex].toString().trim().isNotEmpty) {
               times['asr'] = row[asrIndex].toString().trim();
             }
-            
+
             // Handle Maghrib time - check if we have sunset time and calculate Maghrib
-            if (sunsetIndex >= 0 && sunsetIndex < row.length && 
-                row[sunsetIndex] != null && row[sunsetIndex].toString().trim().isNotEmpty) {
+            if (sunsetIndex >= 0 &&
+                sunsetIndex < row.length &&
+                row[sunsetIndex] != null &&
+                row[sunsetIndex].toString().trim().isNotEmpty) {
               final sunsetTime = row[sunsetIndex].toString().trim();
               times['maghrib'] = _calculateMaghribFromSunset(sunsetTime);
-            } else if (maghribIndex >= 0 && maghribIndex < row.length && 
-                       row[maghribIndex] != null && row[maghribIndex].toString().trim().isNotEmpty) {
+            } else if (maghribIndex >= 0 &&
+                maghribIndex < row.length &&
+                row[maghribIndex] != null &&
+                row[maghribIndex].toString().trim().isNotEmpty) {
               times['maghrib'] = row[maghribIndex].toString().trim();
             }
-            
-            if (ishaIndex >= 0 && ishaIndex < row.length && 
-                row[ishaIndex] != null && row[ishaIndex].toString().trim().isNotEmpty) {
+
+            if (ishaIndex >= 0 &&
+                ishaIndex < row.length &&
+                row[ishaIndex] != null &&
+                row[ishaIndex].toString().trim().isNotEmpty) {
               times['isha'] = row[ishaIndex].toString().trim();
             }
 
@@ -243,7 +252,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         }
 
         setState(() {
-          _message = 'Successfully imported $importedCount records from CSV. '
+          _message =
+              'Successfully imported $importedCount records from CSV. '
               'Columns found: ${header.join(', ')}';
           _isSuccess = true;
         });
@@ -272,7 +282,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       DateTime currentDate = DateTime(_selectedYear, 1, 1);
       final endDate = DateTime(_selectedYear, 12, 31);
 
-      while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
+      while (currentDate.isBefore(endDate) ||
+          currentDate.isAtSameMomentAs(endDate)) {
         final times = await _jamaatService.getJamaatTimes(
           city: _selectedCity,
           date: currentDate,
@@ -288,14 +299,15 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
             times['isha'] ?? '',
           ]);
         }
-        
+
         currentDate = currentDate.add(const Duration(days: 1));
       }
 
       // Save file (implementation depends on platform)
       // For now, just show success message
       setState(() {
-        _message = 'CSV data prepared for $_selectedCity ($_selectedYear). Data: ${csvData.length - 1} days';
+        _message =
+            'CSV data prepared for $_selectedCity ($_selectedYear). Data: ${csvData.length - 1} days';
         _isSuccess = true;
       });
     } catch (e) {
@@ -319,7 +331,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       DateTime currentDate = DateTime(_selectedYear, 1, 1);
       final endDate = DateTime(_selectedYear, 12, 31);
 
-      while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
+      while (currentDate.isBefore(endDate) ||
+          currentDate.isAtSameMomentAs(endDate)) {
         // Check if data already exists
         if (!_overwriteExisting) {
           final existingTimes = await _jamaatService.getJamaatTimes(
@@ -351,7 +364,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       }
 
       setState(() {
-        _message = 'Generated $generatedCount days of jamaat times for $_selectedCity ($_selectedYear)';
+        _message =
+            'Generated $generatedCount days of jamaat times for $_selectedCity ($_selectedYear)';
         _isSuccess = true;
       });
     } catch (e) {
@@ -375,7 +389,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       DateTime currentDate = DateTime(_selectedYear, 1, 1);
       final endDate = DateTime(_selectedYear, 12, 31);
 
-      while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
+      while (currentDate.isBefore(endDate) ||
+          currentDate.isAtSameMomentAs(endDate)) {
         // Check if data already exists
         if (!_overwriteExisting) {
           final existingTimes = await _jamaatService.getJamaatTimes(
@@ -390,7 +405,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
         // Get times based on date ranges for Savar Cantt
         final times = _getSavarCanttTimes(currentDate);
-        
+
         await _jamaatService.saveJamaatTimes(
           city: _selectedCity,
           date: currentDate,
@@ -401,7 +416,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       }
 
       setState(() {
-        _message = 'Generated $generatedCount days of Savar Cantt jamaat times for $_selectedYear';
+        _message =
+            'Generated $generatedCount days of Savar Cantt jamaat times for $_selectedYear';
         _isSuccess = true;
       });
     } catch (e) {
@@ -429,13 +445,13 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         fajrTime = '05:35';
       } else {
         fajrTime = '05:20';
-    }
+      }
     } else if (month == 4) {
       if (day <= 15) {
         fajrTime = '05:00';
       } else {
         fajrTime = '04:45';
-    }
+      }
     } else if (month == 5) {
       fajrTime = '04:35';
     } else if (month == 6) {
@@ -474,7 +490,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         asrTime = '16:25';
       } else {
         asrTime = '16:15';
-    }
+      }
     } else if (month == 11 || month == 12) {
       asrTime = '16:05';
     }
@@ -490,13 +506,13 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         maghribTime = '18:45';
       } else {
         maghribTime = '19:00';
-    }
+      }
     } else if (month == 4) {
       if (day <= 15) {
         maghribTime = '19:15';
       } else {
         maghribTime = '19:30';
-    }
+      }
     } else if (month == 5) {
       maghribTime = '19:45';
     } else if (month == 6) {
@@ -510,13 +526,13 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         maghribTime = '18:45';
       } else {
         maghribTime = '18:30';
-    }
+      }
     } else if (month == 10) {
       if (day <= 15) {
         maghribTime = '18:15';
       } else {
         maghribTime = '18:00';
-    }
+      }
     } else if (month == 11) {
       maghribTime = '17:45';
     } else if (month == 12) {
@@ -529,7 +545,11 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
       ishaTime = '19:45';
     } else if ((month == 3 && day >= 16) || (month == 4 && day <= 15)) {
       ishaTime = '20:00';
-    } else if ((month == 4 && day >= 16) || month == 5 || month == 6 || month == 7 || (month == 8 && day <= 15)) {
+    } else if ((month == 4 && day >= 16) ||
+        month == 5 ||
+        month == 6 ||
+        month == 7 ||
+        (month == 8 && day <= 15)) {
       ishaTime = '20:35';
     } else if ((month == 8 && day >= 16) || (month == 9 && day <= 15)) {
       ishaTime = '20:15';
@@ -586,7 +606,6 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
 
   /// Parse date from various formats
   DateTime? _parseDate(String dateString) {
-    
     try {
       // Try ISO format first (YYYY-MM-DD)
       final result = DateTime.parse(dateString);
@@ -604,7 +623,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
           }
         }
       }
-      
+
       // Try DD/MM/YYYY format (8/1/2025)
       if (dateString.contains('/') && dateString.split('/').length == 3) {
         final parts = dateString.split('/');
@@ -617,7 +636,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
           }
         }
       }
-      
+
       // Try MM/DD/YYYY format (1/8/2025)
       if (dateString.contains('/') && dateString.split('/').length == 3) {
         final parts = dateString.split('/');
@@ -630,7 +649,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
           }
         }
       }
-      
+
       return null;
     }
   }
@@ -643,520 +662,683 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel> with SingleTickerPr
         title: const Text('Admin Jamaat Panel'),
         centerTitle: true,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
+        foregroundColor:
+            Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
         elevation: 2,
-        bottom: _tabController != null ? TabBar(
-          controller: _tabController!,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.edit),
-              text: 'Manual Data Entry',
-            ),
-            Tab(
-              icon: Icon(Icons.upload_file),
-              text: 'Bulk Data Entry',
-            ),
-          ],
-        ) : null,
+        bottom: _tabController != null
+            ? TabBar(
+                controller: _tabController!,
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                tabs: const [
+                  Tab(icon: Icon(Icons.edit), text: 'Manual Data Entry'),
+                  Tab(icon: Icon(Icons.upload_file), text: 'Bulk Data Entry'),
+                ],
+              )
+            : null,
       ),
-      body: _tabController != null ? TabBarView(
-        controller: _tabController!,
+      body: _tabController != null
+          ? TabBarView(
+              controller: _tabController!,
+              children: [
+                // Manual Data Entry Tab
+                _buildManualDataEntryTab(),
+                // Bulk Data Entry Tab
+                _buildBulkDataEntryTab(),
+              ],
+            )
+          : const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required bool isCompact,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: isCompact ? 16 : 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  DropdownButtonFormField<String> _buildCityDropdown({
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      // ignore: deprecated_member_use
+      value: _selectedCity,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Cantt Name',
+        border: OutlineInputBorder(),
+      ),
+      selectedItemBuilder: (context) {
+        return AppConstants.canttNames.map((city) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Text(city, maxLines: 1, overflow: TextOverflow.ellipsis),
+          );
+        }).toList();
+      },
+      items: AppConstants.canttNames.map((city) {
+        return DropdownMenuItem(
+          value: city,
+          child: Text(city, maxLines: 1, overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildDateSelectorField() {
+    return InkWell(
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: _selectedDate,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2030),
+        );
+        if (date != null) {
+          setState(() => _selectedDate = date);
+          _loadJamaatTimes();
+          // Auto-calculate Maghrib when date changes
+          if (_jamaatControllers['Maghrib'] != null) {
+            final calculatedMaghrib = _calculateMaghribJamaatTime();
+            _jamaatControllers['Maghrib']!.text = calculatedMaghrib;
+          }
+        }
+      },
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Date',
+          border: OutlineInputBorder(),
+        ),
+        child: Text(
+          _formatDate(_selectedDate),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _savePrayerTime(String prayer) async {
+    final input = _jamaatControllers[prayer]?.text.trim() ?? '';
+    if (input.isEmpty) {
+      setState(() {
+        _adminMsg = 'Please enter a time for $prayer';
+      });
+      return;
+    }
+
+    DateTime? parsed;
+    try {
+      parsed = DateFormat('HH:mm').parseStrict(input);
+    } catch (_) {
+      try {
+        parsed = DateFormat('hh:mm a').parseStrict(input);
+      } catch (_) {}
+    }
+
+    if (parsed == null) {
+      setState(() {
+        _adminMsg =
+            'Invalid time format for $prayer. Use HH:mm or hh:mm AM/PM.';
+      });
+      return;
+    }
+
+    final formatted = DateFormat('HH:mm').format(parsed);
+    setState(() {
+      _adminLoading = true;
+      _adminMsg = null;
+    });
+
+    try {
+      await _jamaatService.updateSingleJamaatTime(
+        city: _selectedCity,
+        date: _selectedDate,
+        prayerName: prayer,
+        time: formatted,
+      );
+      setState(() {
+        _adminMsg = '$prayer time saved successfully!';
+        _editingPrayer = null;
+      });
+    } catch (e) {
+      setState(() {
+        _adminMsg = 'Error saving $prayer time: $e';
+      });
+    } finally {
+      setState(() {
+        _adminLoading = false;
+      });
+    }
+  }
+
+  Widget _buildPrayerRow(String prayer, {required bool isCompact}) {
+    final isEditingPrayer = _editingPrayer == prayer;
+    final canEdit =
+        !_adminLoading && (_editingPrayer == null || isEditingPrayer);
+    final canSave = !_adminLoading && isEditingPrayer;
+
+    final labelWidth = isCompact ? 58.0 : 72.0;
+    final actionSize = isCompact ? 36.0 : 40.0;
+    final spacing = isCompact ? 4.0 : 8.0;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isCompact ? 8 : 10),
+      child: Row(
         children: [
-          // Manual Data Entry Tab
-          _buildManualDataEntryTab(),
-          // Bulk Data Entry Tab
-          _buildBulkDataEntryTab(),
+          SizedBox(
+            width: labelWidth,
+            child: Text(prayer, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          SizedBox(width: spacing),
+          Expanded(
+            child: TextField(
+              controller: _jamaatControllers[prayer],
+              decoration: const InputDecoration(
+                labelText: 'Time',
+                isDense: true,
+              ),
+              enabled: isEditingPrayer,
+            ),
+          ),
+          SizedBox(width: spacing),
+          Tooltip(
+            message: 'Edit $prayer',
+            child: SizedBox(
+              width: actionSize,
+              height: actionSize,
+              child: ElevatedButton(
+                onPressed: canEdit
+                    ? () {
+                        setState(() {
+                          _editingPrayer = prayer;
+                        });
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size(actionSize, actionSize),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Icon(Icons.edit, size: 18),
+              ),
+            ),
+          ),
+          SizedBox(width: isCompact ? 4 : 6),
+          Tooltip(
+            message: 'Save $prayer',
+            child: SizedBox(
+              width: actionSize,
+              height: actionSize,
+              child: ElevatedButton(
+                onPressed: canSave
+                    ? () async {
+                        await _savePrayerTime(prayer);
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size(actionSize, actionSize),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: _adminLoading && isEditingPrayer
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_rounded, size: 18),
+              ),
+            ),
+          ),
         ],
-      ) : const Center(
-        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Widget _buildBulkActionButton({
+    required VoidCallback? onPressed,
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    double verticalPadding = 12,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(
+          vertical: verticalPadding,
+          horizontal: 12,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildManualDataEntryTab() {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 800),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // City and Date Selection
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.location_city, color: Colors.blue),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Select Cantt Name and Date',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                // ignore: deprecated_member_use
-                                value: _selectedCity,
-                                decoration: const InputDecoration(
-                                  labelText: 'Cantt Name',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: AppConstants.canttNames.map((city) {
-                                  return DropdownMenuItem(value: city, child: Text(city));
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() => _selectedCity = value);
-                                    _loadJamaatTimes();
-                                    // Auto-calculate Maghrib when city changes
-                                    if (_jamaatControllers['Maghrib'] != null) {
-                                      final calculatedMaghrib = _calculateMaghribJamaatTime();
-                                      _jamaatControllers['Maghrib']!.text = calculatedMaghrib;
-                                    }
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () async {
-                                  final date = await showDatePicker(
-                                    context: context,
-                                    initialDate: _selectedDate,
-                                    firstDate: DateTime(2020),
-                                    lastDate: DateTime(2030),
-                                  );
-                                  if (date != null) {
-                                    setState(() => _selectedDate = date);
-                                    _loadJamaatTimes();
-                                    // Auto-calculate Maghrib when date changes
-                                    if (_jamaatControllers['Maghrib'] != null) {
-                                      final calculatedMaghrib = _calculateMaghribJamaatTime();
-                                      _jamaatControllers['Maghrib']!.text = calculatedMaghrib;
-                                    }
-                                  }
-                                },
-                                child: InputDecorator(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Date',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  child: Text(_formatDate(_selectedDate)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 620;
+        final isCompact = constraints.maxWidth < 430;
+        final outerPadding = constraints.maxWidth < 430 ? 12.0 : 24.0;
+        final cardPadding = isCompact ? 12.0 : 16.0;
+        final fieldSpacing = isCompact ? 12.0 : 16.0;
 
-                // Jamaat Times Display Section (from profile screen)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+        final cityDropdown = _buildCityDropdown(
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => _selectedCity = value);
+              _loadJamaatTimes();
+              // Auto-calculate Maghrib when city changes
+              if (_jamaatControllers['Maghrib'] != null) {
+                final calculatedMaghrib = _calculateMaghribJamaatTime();
+                _jamaatControllers['Maghrib']!.text = calculatedMaghrib;
+              }
+            }
+          },
+        );
+
+        final dateSelector = _buildDateSelectorField();
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(outerPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // City and Date Selection
+                    Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(cardPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.schedule, color: Colors.green),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Jamaat Times',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            _buildSectionHeader(
+                              icon: Icons.location_city,
+                              color: Colors.blue,
+                              title: 'Select Cantt Name and Date',
+                              isCompact: isCompact,
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const Divider(height: 40),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Jamaat Times:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            const SizedBox(height: 16),
+                            if (isNarrow) ...[
+                              cityDropdown,
+                              SizedBox(height: fieldSpacing),
+                              dateSelector,
+                            ] else ...[
+                              Row(
+                                children: [
+                                  Expanded(child: cityDropdown),
+                                  SizedBox(width: fieldSpacing),
+                                  Expanded(child: dateSelector),
+                                ],
                               ),
                             ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Jamaat Times Display Section
+                    Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(cardPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionHeader(
+                              icon: Icons.schedule,
+                              color: Colors.green,
+                              title: 'Jamaat Times',
+                              isCompact: isCompact,
+                            ),
+                            const SizedBox(height: 16),
+                            const Divider(height: 40),
+                            const Text(
+                              'Jamaat Times:',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 12),
+                            for (final p in _prayers)
+                              _buildPrayerRow(p, isCompact: isCompact),
+                            const SizedBox(height: 12),
+                            if (_adminMsg != null)
+                              Text(
+                                _adminMsg!,
+                                style: const TextStyle(color: Colors.green),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Status Message
+                    if (_message != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _isSuccess
+                              ? Colors.green.shade100
+                              : Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _isSuccess ? Colors.green : Colors.red,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        for (final p in _prayers)
-                          Row(
-                            children: [
-                              Expanded(child: Text(p)),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: _jamaatControllers[p],
-                                  decoration: const InputDecoration(
-                                    labelText: 'Time',
-                                  ),
-                                  enabled: _editingPrayer == p,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: (_adminLoading || _editingPrayer != null && _editingPrayer != p)
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          _editingPrayer = p;
-                                        });
-                                      },
-                                child: const Text('Edit'),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: (_adminLoading || _editingPrayer != p)
-                                    ? null
-                                    : () async {
-                                        final input = _jamaatControllers[p]?.text.trim() ?? '';
-                                        if (input.isEmpty) {
-                                          setState(() {
-                                            _adminMsg = 'Please enter a time for $p';
-                                          });
-                                          return;
-                                        }
-                                        DateTime? parsed;
-                                        try {
-                                          parsed = DateFormat('HH:mm').parseStrict(input);
-                                        } catch (_) {
-                                          try {
-                                            parsed = DateFormat('hh:mm a').parseStrict(input);
-                                          } catch (_) {}
-                                        }
-                                        if (parsed == null) {
-                                          setState(() {
-                                            _adminMsg = 'Invalid time format for $p. Use HH:mm or hh:mm AM/PM.';
-                                          });
-                                          return;
-                                        }
-                                        final formatted = DateFormat('HH:mm').format(parsed);
-                                        setState(() {
-                                          _adminLoading = true;
-                                          _adminMsg = null;
-                                        });
-                                        try {
-                                          await _jamaatService.updateSingleJamaatTime(
-                                            city: _selectedCity,
-                                            date: _selectedDate,
-                                            prayerName: p,
-                                            time: formatted,
-                                          );
-                                          setState(() {
-                                            _adminMsg = '$p time saved successfully!';
-                                            _editingPrayer = null;
-                                          });
-                                        } catch (e) {
-                                          setState(() {
-                                            _adminMsg = 'Error saving $p time: $e';
-                                          });
-                                        } finally {
-                                          setState(() {
-                                            _adminLoading = false;
-                                          });
-                                        }
-                                      },
-                                child: _adminLoading
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Text('Save'),
-                              ),
+                        child: Text(
+                          _message!,
+                          style: TextStyle(
+                            color: _isSuccess
+                                ? Colors.green.shade800
+                                : Colors.red.shade800,
+                          ),
+                        ),
+                      ),
 
-                            ],
-                          ),
-                        const SizedBox(height: 12),
-                        if (_adminMsg != null)
-                          Text(
-                            _adminMsg!,
-                            style: const TextStyle(color: Colors.green),
-                          ),
-                      ],
-                    ),
-                  ),
+                    // Loading Indicator
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-
-                // Status Message
-                if (_message != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _isSuccess ? Colors.green.shade100 : Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _isSuccess ? Colors.green : Colors.red,
-                      ),
-                    ),
-                    child: Text(
-                      _message!,
-                      style: TextStyle(
-                        color: _isSuccess ? Colors.green.shade800 : Colors.red.shade800,
-                      ),
-                    ),
-                  ),
-
-                // Loading Indicator
-                if (_isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildBulkDataEntryTab() {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 800),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Bulk Operations Section
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.upload_file, color: Colors.orange),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Bulk Data Entry',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // City and Year Selection
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                // ignore: deprecated_member_use
-                                value: _selectedCity,
-                                decoration: const InputDecoration(
-                                  labelText: 'Cantt Name',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: AppConstants.canttNames.map((city) {
-                                  return DropdownMenuItem(value: city, child: Text(city));
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() => _selectedCity = value);
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: DropdownButtonFormField<int>(
-                                // ignore: deprecated_member_use
-                                value: _selectedYear,
-                                decoration: const InputDecoration(
-                                  labelText: 'Year',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: List.generate(10, (index) {
-                                  final year = DateTime.now().year + index;
-                                  return DropdownMenuItem(value: year, child: Text(year.toString()));
-                                }),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() => _selectedYear = value);
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Overwrite Option
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CheckboxListTile(
-                                title: const Text('Overwrite Existing'),
-                                value: _overwriteExisting,
-                                onChanged: (value) {
-                                  setState(() => _overwriteExisting = value ?? false);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 620;
+        final isCompact = constraints.maxWidth < 430;
+        final outerPadding = constraints.maxWidth < 430 ? 12.0 : 24.0;
+        final cardPadding = isCompact ? 12.0 : 16.0;
+        final fieldSpacing = isCompact ? 12.0 : 16.0;
 
-                        // Bulk Operation Buttons
-                        Row(
+        final cityDropdown = _buildCityDropdown(
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => _selectedCity = value);
+            }
+          },
+        );
+
+        final yearDropdown = DropdownButtonFormField<int>(
+          // ignore: deprecated_member_use
+          value: _selectedYear,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Year',
+            border: OutlineInputBorder(),
+          ),
+          items: List.generate(10, (index) {
+            final year = DateTime.now().year + index;
+            return DropdownMenuItem(value: year, child: Text(year.toString()));
+          }),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => _selectedYear = value);
+            }
+          },
+        );
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(outerPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Bulk Operations Section
+                    Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(cardPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _isLoading ? null : _importFromCSV,
-                                icon: const Icon(Icons.upload_file),
-                                label: const Text('Import CSV'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
+                            _buildSectionHeader(
+                              icon: Icons.upload_file,
+                              color: Colors.orange,
+                              title: 'Bulk Data Entry',
+                              isCompact: isCompact,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _isLoading ? null : _exportToCSV,
-                                icon: const Icon(Icons.download),
-                                label: const Text('Export CSV'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.purple,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
+                            const SizedBox(height: 16),
+
+                            // City and Year Selection
+                            if (isNarrow) ...[
+                              cityDropdown,
+                              SizedBox(height: fieldSpacing),
+                              yearDropdown,
+                            ] else ...[
+                              Row(
+                                children: [
+                                  Expanded(child: cityDropdown),
+                                  SizedBox(width: fieldSpacing),
+                                  Expanded(child: yearDropdown),
+                                ],
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _isLoading ? null : _generateYearlyTimes,
-                                icon: const Icon(Icons.auto_fix_high),
-                                label: const Text('Generate Year'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Savar Cantt Specific Button
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _isLoading ? null : _generateSavarCanttTimes,
-                                icon: const Icon(Icons.mosque),
-                                label: const Text('Generate Savar Cantt Times'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Instructions
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Bulk Operations Instructions:',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text('• Import CSV: Upload CSV file with jamaat times'),
-                              const Text('• CSV Format: Date, Fajr, Dhuhr, Asr, Sunset/Maghrib, Isha'),
-                              const Text('• Date formats: YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY'),
-                              const Text('• Empty cells are automatically skipped'),
-                              const Text('• Sunset times are converted to Maghrib (+3 minutes)'),
-                              const Text('• Export CSV: Download current data as CSV'),
-                              const Text('• Generate Year: Create default times for entire year'),
-                              const Text('• Generate Savar Cantt Times: Create specific times for Savar Cantt'),
                             ],
+                            const SizedBox(height: 16),
+
+                            // Overwrite Option
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Overwrite Existing'),
+                              value: _overwriteExisting,
+                              onChanged: (value) {
+                                setState(
+                                  () => _overwriteExisting = value ?? false,
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Bulk Operation Buttons
+                            LayoutBuilder(
+                              builder: (context, buttonConstraints) {
+                                const spacing = 8.0;
+                                final maxWidth = buttonConstraints.maxWidth;
+                                final buttonWidth = maxWidth < 430
+                                    ? maxWidth
+                                    : maxWidth < 720
+                                    ? (maxWidth - spacing) / 2
+                                    : (maxWidth - (spacing * 2)) / 3;
+
+                                return Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children: [
+                                    SizedBox(
+                                      width: buttonWidth,
+                                      child: _buildBulkActionButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _importFromCSV,
+                                        icon: Icons.upload_file,
+                                        label: 'Import CSV',
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: buttonWidth,
+                                      child: _buildBulkActionButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _exportToCSV,
+                                        icon: Icons.download,
+                                        label: 'Export CSV',
+                                        backgroundColor: Colors.purple,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: buttonWidth,
+                                      child: _buildBulkActionButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _generateYearlyTimes,
+                                        icon: Icons.auto_fix_high,
+                                        label: 'Generate Year',
+                                        backgroundColor: Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Savar Cantt Specific Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: _buildBulkActionButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : _generateSavarCanttTimes,
+                                icon: Icons.mosque,
+                                label: 'Generate Savar Cantt Times',
+                                backgroundColor: Colors.green,
+                                verticalPadding: isCompact ? 12 : 16,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Instructions
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Bulk Operations Instructions:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    '• Import CSV: Upload CSV file with jamaat times',
+                                  ),
+                                  const Text(
+                                    '• CSV Format: Date, Fajr, Dhuhr, Asr, Sunset/Maghrib, Isha',
+                                  ),
+                                  const Text(
+                                    '• Date formats: YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY',
+                                  ),
+                                  const Text(
+                                    '• Empty cells are automatically skipped',
+                                  ),
+                                  const Text(
+                                    '• Sunset times are converted to Maghrib (+3 minutes)',
+                                  ),
+                                  const Text(
+                                    '• Export CSV: Download current data as CSV',
+                                  ),
+                                  const Text(
+                                    '• Generate Year: Create default times for entire year',
+                                  ),
+                                  const Text(
+                                    '• Generate Savar Cantt Times: Create specific times for Savar Cantt',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Status Message
+                    if (_message != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _isSuccess
+                              ? Colors.green.shade100
+                              : Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _isSuccess ? Colors.green : Colors.red,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                        child: Text(
+                          _message!,
+                          style: TextStyle(
+                            color: _isSuccess
+                                ? Colors.green.shade800
+                                : Colors.red.shade800,
+                          ),
+                        ),
+                      ),
+
+                    // Loading Indicator
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-
-                // Status Message
-                if (_message != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _isSuccess ? Colors.green.shade100 : Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _isSuccess ? Colors.green : Colors.red,
-                      ),
-                    ),
-                    child: Text(
-                      _message!,
-                      style: TextStyle(
-                        color: _isSuccess ? Colors.green.shade800 : Colors.red.shade800,
-                      ),
-                    ),
-                  ),
-
-                // Loading Indicator
-                if (_isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
-} 
+}
