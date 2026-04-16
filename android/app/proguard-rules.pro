@@ -19,7 +19,7 @@
 -keep class es.antonborri.home_widget.** { *; }
 
 # Keep your custom widget provider
--keep class com.example.jamaat_time.PrayerWidgetProvider { *; }
+-keep class com.sadat.jamaattime.PrayerWidgetProvider { *; }
 
 # Keep timezone related classes
 -keep class net.time4j.** { *; }
@@ -58,7 +58,7 @@
 -keep class io.flutter.embedding.engine.** { *; }
 
 # Keep all classes in the app package
--keep class com.example.jamaat_time.** { *; }
+-keep class com.sadat.jamaattime.** { *; }
 
 # Additional Flutter rules
 -keep class io.flutter.plugins.** { *; }

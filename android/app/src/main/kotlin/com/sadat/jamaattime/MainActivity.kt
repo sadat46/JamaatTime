@@ -1,6 +1,6 @@
-package com.example.jamaat_time
+package com.sadat.jamaattime
 
-import com.example.jamaat_time.focusguard.FocusGuardChannel
+import com.sadat.jamaattime.focusguard.FocusGuardChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel

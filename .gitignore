@@ -54,7 +54,11 @@ secrets.dart
 *.key
 *.pem
 *.jks
+*.keystore
 secrets.dart
 google-services.json
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
+
+# Android signing config
+/android/key.properties

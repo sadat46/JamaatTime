@@ -7,5 +7,5 @@
     android:notificationTimeout="300"
     android:packageNames="com.google.android.youtube"
     android:canRetrieveWindowContent="true"
-    android:settingsActivity="com.example.jamaat_time.MainActivity"
+    android:settingsActivity="com.sadat.jamaattime.MainActivity"
     android:description="@string/focus_guard_description"/>

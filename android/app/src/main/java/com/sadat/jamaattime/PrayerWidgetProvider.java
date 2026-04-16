@@ -1,4 +1,4 @@
-package com.example.jamaat_time;
+package com.sadat.jamaattime;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;

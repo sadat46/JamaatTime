@@ -1,4 +1,4 @@
-package com.example.jamaat_time.focusguard
+package com.sadat.jamaattime.focusguard
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo

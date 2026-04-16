@@ -1,4 +1,4 @@
-package com.example.jamaat_time.focusguard
+package com.sadat.jamaattime.focusguard
 
 import android.content.Context
 import android.content.Intent
