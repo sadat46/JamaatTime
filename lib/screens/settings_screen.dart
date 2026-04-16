@@ -56,11 +56,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 2:
         return 'No sound';
       case 3:
-        return 'Custom sound 2';
+        return 'Call Sound Short 1';
       case 4:
-        return 'Custom sound 3';
+        return 'Call Sound short 2';
       default:
-        return 'Custom sound 1';
+        return 'Adhan sound';
     }
   }
 
@@ -311,9 +311,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: 'Prayer reminder sound',
                       initialValue: _prayerNotificationSoundMode,
                       items: const [
-                        DropdownMenuItem(value: 0, child: Text('Custom Sound 1')),
-                        DropdownMenuItem(value: 3, child: Text('Custom Sound 2')),
-                        DropdownMenuItem(value: 4, child: Text('Custom Sound 3')),
+                        DropdownMenuItem(value: 0, child: Text('Adhan sound')),
+                        DropdownMenuItem(value: 3, child: Text('Call Sound Short 1')),
+                        DropdownMenuItem(value: 4, child: Text('Call Sound short 2')),
                         DropdownMenuItem(value: 1, child: Text('System Sound')),
                         DropdownMenuItem(value: 2, child: Text('No Sound')),
                       ],
@@ -327,9 +327,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: 'Jamaat reminder sound',
                       initialValue: _jamaatNotificationSoundMode,
                       items: const [
-                        DropdownMenuItem(value: 0, child: Text('Custom Sound 1')),
-                        DropdownMenuItem(value: 3, child: Text('Custom Sound 2')),
-                        DropdownMenuItem(value: 4, child: Text('Custom Sound 3')),
+                        DropdownMenuItem(value: 0, child: Text('Adhan sound')),
+                        DropdownMenuItem(value: 3, child: Text('Call Sound Short 1')),
+                        DropdownMenuItem(value: 4, child: Text('Call Sound short 2')),
                         DropdownMenuItem(value: 1, child: Text('System Sound')),
                         DropdownMenuItem(value: 2, child: Text('No Sound')),
                       ],
