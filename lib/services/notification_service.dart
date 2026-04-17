@@ -38,17 +38,17 @@ class NotificationService {
   /// Initialize notification service
   Future<void> initialize([BuildContext? context]) async {
     if (_isInitialized) return;
-    
+
     try {
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/launcher_icon');
 
       const DarwinInitializationSettings initializationSettingsIOS =
           DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
-      );
+            requestAlertPermission: true,
+            requestBadgePermission: true,
+            requestSoundPermission: true,
+          );
 
       const InitializationSettings initializationSettings =
           InitializationSettings(
@@ -141,18 +141,16 @@ class NotificationService {
     }
   }
 
-
-
   /// Get notification configuration based on type and sound mode
   Map<String, dynamic> _getNotificationConfig({
     required String notificationType,
     required int soundMode,
   }) {
     final isPrayer = notificationType == 'prayer';
-    final channelId = isPrayer 
-        ? _getPrayerChannelId(soundMode) 
+    final channelId = isPrayer
+        ? _getPrayerChannelId(soundMode)
         : _getJamaatChannelId(soundMode);
-    
+
     return {
       'channelId': channelId,
       'playSound': soundMode != 2,
@@ -283,16 +281,36 @@ class NotificationService {
         );
 
         // Create all channels
-        await androidImplementation.createNotificationChannel(prayerCustomChannel);
-        await androidImplementation.createNotificationChannel(prayerCustomChannel2);
-        await androidImplementation.createNotificationChannel(prayerCustomChannel3);
-        await androidImplementation.createNotificationChannel(prayerSystemChannel);
-        await androidImplementation.createNotificationChannel(prayerSilentChannel);
-        await androidImplementation.createNotificationChannel(jamaatCustomChannel);
-        await androidImplementation.createNotificationChannel(jamaatCustomChannel2);
-        await androidImplementation.createNotificationChannel(jamaatCustomChannel3);
-        await androidImplementation.createNotificationChannel(jamaatSystemChannel);
-        await androidImplementation.createNotificationChannel(jamaatSilentChannel);
+        await androidImplementation.createNotificationChannel(
+          prayerCustomChannel,
+        );
+        await androidImplementation.createNotificationChannel(
+          prayerCustomChannel2,
+        );
+        await androidImplementation.createNotificationChannel(
+          prayerCustomChannel3,
+        );
+        await androidImplementation.createNotificationChannel(
+          prayerSystemChannel,
+        );
+        await androidImplementation.createNotificationChannel(
+          prayerSilentChannel,
+        );
+        await androidImplementation.createNotificationChannel(
+          jamaatCustomChannel,
+        );
+        await androidImplementation.createNotificationChannel(
+          jamaatCustomChannel2,
+        );
+        await androidImplementation.createNotificationChannel(
+          jamaatCustomChannel3,
+        );
+        await androidImplementation.createNotificationChannel(
+          jamaatSystemChannel,
+        );
+        await androidImplementation.createNotificationChannel(
+          jamaatSilentChannel,
+        );
       }
     } catch (e) {
       developer.log(
@@ -336,7 +354,7 @@ class NotificationService {
           soundMode = await _settingsService.getPrayerNotificationSoundMode();
         }
       } catch (e) {
-        soundMode = 0; // Default to custom sound
+        soundMode = 3; // Default to custom sound 2
       }
 
       // Get notification configuration
@@ -358,8 +376,11 @@ class NotificationService {
         NotificationDetails(
           android: AndroidNotificationDetails(
             config['channelId'],
-            notificationType == 'prayer' ? 'Prayer Notifications' : 'Jamaat Notifications',
-            channelDescription: 'Notifications for ${notificationType == 'prayer' ? 'prayer' : 'jamaat'} times',
+            notificationType == 'prayer'
+                ? 'Prayer Notifications'
+                : 'Jamaat Notifications',
+            channelDescription:
+                'Notifications for ${notificationType == 'prayer' ? 'prayer' : 'jamaat'} times',
             importance: Importance.max,
             priority: Priority.high,
             showWhen: true,
@@ -418,49 +439,57 @@ class NotificationService {
       for (final entry in prayerTimes.entries) {
         if (entry.value != null) {
           // Convert to Bangladesh timezone
-          final localTime = tz.TZDateTime.from(entry.value!, tz.getLocation('Asia/Dhaka'));
+          final localTime = tz.TZDateTime.from(
+            entry.value!,
+            tz.getLocation('Asia/Dhaka'),
+          );
           localPrayerTimes[entry.key] = localTime;
         }
       }
 
       // Calculate notification times with correct logic using local prayer times:
       // Fajr notification = 20 minutes before Sunrise
-      if (localPrayerTimes.containsKey('Fajr') && localPrayerTimes.containsKey('Sunrise')) {
+      if (localPrayerTimes.containsKey('Fajr') &&
+          localPrayerTimes.containsKey('Sunrise')) {
         final sunriseTime = localPrayerTimes['Sunrise']!;
         final notifyTime = sunriseTime.subtract(const Duration(minutes: 20));
         notificationTimes['Fajr'] = notifyTime;
       }
-      
+
       // Dhuhr notification = 20 minutes before Asr
-      if (localPrayerTimes.containsKey('Dhuhr') && localPrayerTimes.containsKey('Asr')) {
+      if (localPrayerTimes.containsKey('Dhuhr') &&
+          localPrayerTimes.containsKey('Asr')) {
         final asrTime = localPrayerTimes['Asr']!;
         final notifyTime = asrTime.subtract(const Duration(minutes: 20));
         notificationTimes['Dhuhr'] = notifyTime;
       }
-      
+
       // Asr notification = 20 minutes before Maghrib
-      if (localPrayerTimes.containsKey('Asr') && localPrayerTimes.containsKey('Maghrib')) {
+      if (localPrayerTimes.containsKey('Asr') &&
+          localPrayerTimes.containsKey('Maghrib')) {
         final maghribTime = localPrayerTimes['Maghrib']!;
         final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
         notificationTimes['Asr'] = notifyTime;
       }
-      
+
       // Maghrib notification = 20 minutes before Isha
-      if (localPrayerTimes.containsKey('Maghrib') && localPrayerTimes.containsKey('Isha')) {
+      if (localPrayerTimes.containsKey('Maghrib') &&
+          localPrayerTimes.containsKey('Isha')) {
         final ishaTime = localPrayerTimes['Isha']!;
         final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
         notificationTimes['Maghrib'] = notifyTime;
       }
-      
+
       // Isha notification = 20 minutes before next day's Fajr
-      if (localPrayerTimes.containsKey('Isha') && localPrayerTimes.containsKey('Fajr')) {
+      if (localPrayerTimes.containsKey('Isha') &&
+          localPrayerTimes.containsKey('Fajr')) {
         final fajrTime = localPrayerTimes['Fajr']!;
         // Add 1 day to Fajr time for next day
         final nextDayFajr = fajrTime.add(const Duration(days: 1));
         final notifyTime = nextDayFajr.subtract(const Duration(minutes: 20));
         notificationTimes['Isha'] = notifyTime;
       }
-      
+
       return notificationTimes;
     } catch (e) {
       return {};
@@ -484,7 +513,10 @@ class NotificationService {
           final name = entry.key;
           final value = entry.value;
 
-          if (value != null && value is String && value.isNotEmpty && value != '-') {
+          if (value != null &&
+              value is String &&
+              value.isNotEmpty &&
+              value != '-') {
             try {
               final parts = value.split(':');
               if (parts.length != 2) {
@@ -581,7 +613,8 @@ class NotificationService {
 
       // Schedule notifications with correct logic using local prayer times:
       // Fajr notification = 20 minutes before Sunrise
-      if (localPrayerTimes.containsKey('Fajr') && localPrayerTimes.containsKey('Sunrise')) {
+      if (localPrayerTimes.containsKey('Fajr') &&
+          localPrayerTimes.containsKey('Sunrise')) {
         final sunriseTime = localPrayerTimes['Sunrise']!;
         final notifyTime = sunriseTime.subtract(const Duration(minutes: 20));
 
@@ -598,7 +631,8 @@ class NotificationService {
       }
 
       // Dhuhr notification = 20 minutes before Asr
-      if (localPrayerTimes.containsKey('Dhuhr') && localPrayerTimes.containsKey('Asr')) {
+      if (localPrayerTimes.containsKey('Dhuhr') &&
+          localPrayerTimes.containsKey('Asr')) {
         final asrTime = localPrayerTimes['Asr']!;
         final notifyTime = asrTime.subtract(const Duration(minutes: 20));
 
@@ -614,7 +648,8 @@ class NotificationService {
       }
 
       // Asr notification = 20 minutes before Maghrib
-      if (localPrayerTimes.containsKey('Asr') && localPrayerTimes.containsKey('Maghrib')) {
+      if (localPrayerTimes.containsKey('Asr') &&
+          localPrayerTimes.containsKey('Maghrib')) {
         final maghribTime = localPrayerTimes['Maghrib']!;
         final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
 
@@ -630,7 +665,8 @@ class NotificationService {
       }
 
       // Maghrib notification = 20 minutes before Isha
-      if (localPrayerTimes.containsKey('Maghrib') && localPrayerTimes.containsKey('Isha')) {
+      if (localPrayerTimes.containsKey('Maghrib') &&
+          localPrayerTimes.containsKey('Isha')) {
         final ishaTime = localPrayerTimes['Isha']!;
         final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
 
@@ -646,7 +682,8 @@ class NotificationService {
       }
 
       // Isha notification = 20 minutes before next day's Fajr
-      if (localPrayerTimes.containsKey('Isha') && localPrayerTimes.containsKey('Fajr')) {
+      if (localPrayerTimes.containsKey('Isha') &&
+          localPrayerTimes.containsKey('Fajr')) {
         final fajrTime = localPrayerTimes['Fajr']!;
         // Add 1 day to Fajr time for next day
         final nextDayFajr = fajrTime.add(const Duration(days: 1));
@@ -788,7 +825,8 @@ class NotificationService {
   /// Get pending notifications for debugging
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     try {
-      return await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      return await flutterLocalNotificationsPlugin
+          .pendingNotificationRequests();
     } catch (e) {
       developer.log(
         'Error getting pending notifications: $e',

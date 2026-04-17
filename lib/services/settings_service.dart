@@ -8,9 +8,15 @@ class SettingsService {
   static const String _madhabKey = 'madhab';
   static const String _themeIndexKey = 'theme_index';
   static const String _keyNotificationSoundMode = 'notification_sound_mode';
-  static const String _keyPrayerNotificationSoundMode = 'prayer_notification_sound_mode';
-  static const String _keyJamaatNotificationSoundMode = 'jamaat_notification_sound_mode';
-  static const String _keyBangladeshHijriOffsetDays = 'bangladesh_hijri_offset_days';
+  static const String _keyPrayerNotificationSoundMode =
+      'prayer_notification_sound_mode';
+  static const String _keyJamaatNotificationSoundMode =
+      'jamaat_notification_sound_mode';
+  static const String _keyNotificationSoundDefaultMigratedV2 =
+      'notification_sound_default_migrated_v2';
+  static const String _keyBangladeshHijriOffsetDays =
+      'bangladesh_hijri_offset_days';
+  static const int _defaultNotificationSoundMode = 3; // Custom 2 sound
   final StreamController<void> _controller = StreamController.broadcast();
 
   // Cached SharedPreferences instance
@@ -59,7 +65,8 @@ class SettingsService {
 
   Future<int> getNotificationSoundMode() async {
     final prefs = await _prefs;
-    return prefs.getInt(_keyNotificationSoundMode) ?? 0; // default: custom
+    return prefs.getInt(_keyNotificationSoundMode) ??
+        _defaultNotificationSoundMode;
   }
 
   Future<void> setNotificationSoundMode(int mode) async {
@@ -72,7 +79,8 @@ class SettingsService {
   // Prayer notification sound mode methods
   Future<int> getPrayerNotificationSoundMode() async {
     final prefs = await _prefs;
-    return prefs.getInt(_keyPrayerNotificationSoundMode) ?? 0; // default: custom
+    return prefs.getInt(_keyPrayerNotificationSoundMode) ??
+        _defaultNotificationSoundMode;
   }
 
   Future<void> setPrayerNotificationSoundMode(int mode) async {
@@ -85,13 +93,39 @@ class SettingsService {
   // Jamaat notification sound mode methods
   Future<int> getJamaatNotificationSoundMode() async {
     final prefs = await _prefs;
-    return prefs.getInt(_keyJamaatNotificationSoundMode) ?? 0; // default: custom
+    return prefs.getInt(_keyJamaatNotificationSoundMode) ??
+        _defaultNotificationSoundMode;
   }
 
   Future<void> setJamaatNotificationSoundMode(int mode) async {
     final prefs = await _prefs;
     await prefs.setInt(_keyJamaatNotificationSoundMode, mode);
     // Notify listeners that notification settings have changed
+    _controller.add(null);
+  }
+
+  /// One-time migration to switch default notification sound to Custom 2.
+  Future<void> migrateNotificationSoundDefaultsToCustom2() async {
+    final prefs = await _prefs;
+    final hasMigrated =
+        prefs.getBool(_keyNotificationSoundDefaultMigratedV2) ?? false;
+    if (hasMigrated) {
+      return;
+    }
+
+    await prefs.setInt(
+      _keyPrayerNotificationSoundMode,
+      _defaultNotificationSoundMode,
+    );
+    await prefs.setInt(
+      _keyJamaatNotificationSoundMode,
+      _defaultNotificationSoundMode,
+    );
+    await prefs.setInt(
+      _keyNotificationSoundMode,
+      _defaultNotificationSoundMode,
+    );
+    await prefs.setBool(_keyNotificationSoundDefaultMigratedV2, true);
     _controller.add(null);
   }
 
@@ -106,4 +140,4 @@ class SettingsService {
     await prefs.setInt(_keyBangladeshHijriOffsetDays, days);
     _controller.add(null);
   }
-} 
+}

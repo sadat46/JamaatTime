@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -11,6 +11,7 @@ import 'package:home_widget/home_widget.dart';
 import 'services/notification_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/widget_service.dart';
+import 'services/settings_service.dart';
 import 'core/constants.dart';
 import 'themes/green_theme.dart';
 
@@ -34,6 +35,13 @@ void main() async {
   } catch (e) {
     // Handle initialization errors gracefully
     // Continue with the app even if Firebase fails to initialize
+  }
+
+  // One-time migration for default notification sounds.
+  try {
+    await SettingsService().migrateNotificationSoundDefaultsToCustom2();
+  } catch (e) {
+    // Continue with the app even if migration fails
   }
 
   // Initialize notification service
@@ -74,10 +82,10 @@ class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
   static const List<Widget> _screens = <Widget>[
-    HomeScreen(),      // index: 0
-    EbadatScreen(),    // index: 1
-    CalendarScreen(),  // index: 2
-    ProfileScreen(),   // index: 3
+    HomeScreen(), // index: 0
+    EbadatScreen(), // index: 1
+    CalendarScreen(), // index: 2
+    ProfileScreen(), // index: 3
   ];
 
   void _onItemTapped(int index) {
@@ -89,10 +97,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -103,22 +108,13 @@ class _MainScaffoldState extends State<MainScaffold> {
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.mosque),
-            label: 'Ebadat',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.mosque), label: 'Ebadat'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_month),
             label: 'Calendar',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
