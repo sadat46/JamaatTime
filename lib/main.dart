@@ -119,6 +119,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
@@ -130,14 +131,23 @@ class _MainScaffoldState extends State<MainScaffold> {
         unselectedItemColor: Colors.black54,
         showSelectedLabels: true,
         showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.mosque), label: 'Ebadat'),
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: 'Calendar',
+            icon: const Icon(Icons.home),
+            label: strings.nav_home,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.mosque),
+            label: strings.nav_ebadat,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.calendar_month),
+            label: strings.nav_calendar,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: strings.nav_profile,
+          ),
         ],
       ),
     );
