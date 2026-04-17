@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 /// Reference model for Quran/Hadith citations
 class Reference {
   final String source; // "Quran", "Bukhari", "Muslim", etc.
@@ -33,6 +35,9 @@ class WorshipStep {
   final bool isFard; // Is this step obligatory?
   final bool isSunnah; // Is this step sunnah?
   final bool isMustahab; // Is this step recommended?
+  final String? titleEnglish;
+  final String? instructionEnglish;
+  final String? meaningEnglish;
 
   const WorshipStep({
     required this.stepNumber,
@@ -45,15 +50,42 @@ class WorshipStep {
     this.isFard = false,
     this.isSunnah = false,
     this.isMustahab = false,
+    this.titleEnglish,
+    this.instructionEnglish,
+    this.meaningEnglish,
   });
 
-  /// Get the status label
+  /// Bengali status label. Kept for pre-Phase-5 callers; new code should use
+  /// [getStatusLabel] with a [Locale].
   String get statusLabel {
     if (isFard) return 'ফরজ';
     if (isSunnah) return 'সুন্নাত';
     if (isMustahab) return 'মুস্তাহাব';
     return '';
   }
+
+  String getStatusLabel(Locale locale) {
+    final isEnglish = locale.languageCode == 'en';
+    if (isFard) return isEnglish ? 'Fard' : 'ফরজ';
+    if (isSunnah) return isEnglish ? 'Sunnah' : 'সুন্নাত';
+    if (isMustahab) return isEnglish ? 'Mustahab' : 'মুস্তাহাব';
+    return '';
+  }
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' && titleEnglish != null
+          ? titleEnglish!
+          : titleBangla;
+
+  String getInstruction(Locale locale) =>
+      locale.languageCode == 'en' && instructionEnglish != null
+          ? instructionEnglish!
+          : instruction;
+
+  String? getMeaning(Locale locale) =>
+      locale.languageCode == 'en' && meaningEnglish != null
+          ? meaningEnglish
+          : meaning;
 }
 
 /// Main worship guide model
@@ -73,6 +105,13 @@ class WorshipGuideModel {
   final List<String> specialRulings;
   final List<String> invalidators; // What breaks/invalidates this worship
   final List<Reference> references;
+  final String? introductionEnglish;
+  final List<String>? conditionsEnglish;
+  final List<String>? fardActsEnglish;
+  final List<String>? sunnahActsEnglish;
+  final List<String>? commonMistakesEnglish;
+  final List<String>? specialRulingsEnglish;
+  final List<String>? invalidatorsEnglish;
 
   const WorshipGuideModel({
     required this.id,
@@ -90,7 +129,52 @@ class WorshipGuideModel {
     this.specialRulings = const [],
     this.invalidators = const [],
     this.references = const [],
+    this.introductionEnglish,
+    this.conditionsEnglish,
+    this.fardActsEnglish,
+    this.sunnahActsEnglish,
+    this.commonMistakesEnglish,
+    this.specialRulingsEnglish,
+    this.invalidatorsEnglish,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' ? titleEnglish : titleBangla;
+
+  String getIntroduction(Locale locale) =>
+      locale.languageCode == 'en' && introductionEnglish != null
+          ? introductionEnglish!
+          : introduction;
+
+  List<String> getConditions(Locale locale) =>
+      locale.languageCode == 'en' && conditionsEnglish != null
+          ? conditionsEnglish!
+          : conditions;
+
+  List<String> getFardActs(Locale locale) =>
+      locale.languageCode == 'en' && fardActsEnglish != null
+          ? fardActsEnglish!
+          : fardActs;
+
+  List<String> getSunnahActs(Locale locale) =>
+      locale.languageCode == 'en' && sunnahActsEnglish != null
+          ? sunnahActsEnglish!
+          : sunnahActs;
+
+  List<String> getCommonMistakes(Locale locale) =>
+      locale.languageCode == 'en' && commonMistakesEnglish != null
+          ? commonMistakesEnglish!
+          : commonMistakes;
+
+  List<String> getSpecialRulings(Locale locale) =>
+      locale.languageCode == 'en' && specialRulingsEnglish != null
+          ? specialRulingsEnglish!
+          : specialRulings;
+
+  List<String> getInvalidators(Locale locale) =>
+      locale.languageCode == 'en' && invalidatorsEnglish != null
+          ? invalidatorsEnglish!
+          : invalidators;
 }
 
 /// Section model for organized content display
@@ -100,6 +184,9 @@ class WorshipSection {
   final String? description;
   final List<String> items;
   final List<Reference> references;
+  final String? titleEnglish;
+  final String? descriptionEnglish;
+  final List<String>? itemsEnglish;
 
   const WorshipSection({
     required this.titleBangla,
@@ -107,7 +194,25 @@ class WorshipSection {
     this.description,
     this.items = const [],
     this.references = const [],
+    this.titleEnglish,
+    this.descriptionEnglish,
+    this.itemsEnglish,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' && titleEnglish != null
+          ? titleEnglish!
+          : titleBangla;
+
+  String? getDescription(Locale locale) =>
+      locale.languageCode == 'en' && descriptionEnglish != null
+          ? descriptionEnglish
+          : description;
+
+  List<String> getItems(Locale locale) =>
+      locale.languageCode == 'en' && itemsEnglish != null
+          ? itemsEnglish!
+          : items;
 }
 
 /// Prayer/Dua model within worship guides
@@ -118,6 +223,9 @@ class WorshipDua {
   final String meaning;
   final String? when; // When to recite
   final List<Reference> references;
+  final String? titleEnglish;
+  final String? meaningEnglish;
+  final String? whenEnglish;
 
   const WorshipDua({
     required this.titleBangla,
@@ -126,5 +234,21 @@ class WorshipDua {
     required this.meaning,
     this.when,
     this.references = const [],
+    this.titleEnglish,
+    this.meaningEnglish,
+    this.whenEnglish,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' && titleEnglish != null
+          ? titleEnglish!
+          : titleBangla;
+
+  String getMeaning(Locale locale) =>
+      locale.languageCode == 'en' && meaningEnglish != null
+          ? meaningEnglish!
+          : meaning;
+
+  String? getWhen(Locale locale) =>
+      locale.languageCode == 'en' && whenEnglish != null ? whenEnglish : when;
 }

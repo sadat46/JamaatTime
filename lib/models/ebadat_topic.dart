@@ -15,6 +15,9 @@ class EbadatTopic {
     required this.icon,
     this.accentColor,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' ? titleEnglish : titleBangla;
 }
 
 /// List of all Ebadat topics for the dashboard grid

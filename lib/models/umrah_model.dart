@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 class UmrahDuaModel {
   final int id;
   final String titleBangla;
@@ -5,6 +7,10 @@ class UmrahDuaModel {
   final String banglaTransliteration;
   final String banglaMeaning;
   final String occasion;
+  final String? titleEnglish;
+  final String? englishTransliteration;
+  final String? englishMeaning;
+  final String? occasionEnglish;
 
   const UmrahDuaModel({
     required this.id,
@@ -13,7 +19,31 @@ class UmrahDuaModel {
     required this.banglaTransliteration,
     required this.banglaMeaning,
     required this.occasion,
+    this.titleEnglish,
+    this.englishTransliteration,
+    this.englishMeaning,
+    this.occasionEnglish,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' && titleEnglish != null
+          ? titleEnglish!
+          : titleBangla;
+
+  String getTransliteration(Locale locale) =>
+      locale.languageCode == 'en' && englishTransliteration != null
+          ? englishTransliteration!
+          : banglaTransliteration;
+
+  String getMeaning(Locale locale) =>
+      locale.languageCode == 'en' && englishMeaning != null
+          ? englishMeaning!
+          : banglaMeaning;
+
+  String getOccasion(Locale locale) =>
+      locale.languageCode == 'en' && occasionEnglish != null
+          ? occasionEnglish!
+          : occasion;
 
   factory UmrahDuaModel.fromJson(Map<String, dynamic> json) {
     return UmrahDuaModel(
@@ -23,6 +53,10 @@ class UmrahDuaModel {
       banglaTransliteration: json['banglaTransliteration'] as String,
       banglaMeaning: json['banglaMeaning'] as String,
       occasion: json['occasion'] as String,
+      titleEnglish: json['titleEnglish'] as String?,
+      englishTransliteration: json['englishTransliteration'] as String?,
+      englishMeaning: json['englishMeaning'] as String?,
+      occasionEnglish: json['occasionEnglish'] as String?,
     );
   }
 
@@ -34,6 +68,11 @@ class UmrahDuaModel {
       'banglaTransliteration': banglaTransliteration,
       'banglaMeaning': banglaMeaning,
       'occasion': occasion,
+      if (titleEnglish != null) 'titleEnglish': titleEnglish,
+      if (englishTransliteration != null)
+        'englishTransliteration': englishTransliteration,
+      if (englishMeaning != null) 'englishMeaning': englishMeaning,
+      if (occasionEnglish != null) 'occasionEnglish': occasionEnglish,
     };
   }
 
@@ -60,6 +99,9 @@ class UmrahSectionModel {
   final int stepNumber;
   final List<String> rules;
   final List<UmrahDuaModel> relatedDuas;
+  final String? titleEnglish;
+  final String? descriptionEnglish;
+  final List<String>? rulesEnglish;
 
   const UmrahSectionModel({
     required this.id,
@@ -69,7 +111,25 @@ class UmrahSectionModel {
     required this.stepNumber,
     required this.rules,
     required this.relatedDuas,
+    this.titleEnglish,
+    this.descriptionEnglish,
+    this.rulesEnglish,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' && titleEnglish != null
+          ? titleEnglish!
+          : titleBangla;
+
+  String getDescription(Locale locale) =>
+      locale.languageCode == 'en' && descriptionEnglish != null
+          ? descriptionEnglish!
+          : description;
+
+  List<String> getRules(Locale locale) =>
+      locale.languageCode == 'en' && rulesEnglish != null
+          ? rulesEnglish!
+          : rules;
 
   factory UmrahSectionModel.fromJson(Map<String, dynamic> json) {
     return UmrahSectionModel(
@@ -86,6 +146,11 @@ class UmrahSectionModel {
               ?.map((dua) => UmrahDuaModel.fromJson(dua as Map<String, dynamic>))
               .toList() ??
           [],
+      titleEnglish: json['titleEnglish'] as String?,
+      descriptionEnglish: json['descriptionEnglish'] as String?,
+      rulesEnglish: (json['rulesEnglish'] as List<dynamic>?)
+          ?.map((rule) => rule as String)
+          .toList(),
     );
   }
 
@@ -98,6 +163,9 @@ class UmrahSectionModel {
       'stepNumber': stepNumber,
       'rules': rules,
       'relatedDuas': relatedDuas.map((dua) => dua.toJson()).toList(),
+      if (titleEnglish != null) 'titleEnglish': titleEnglish,
+      if (descriptionEnglish != null) 'descriptionEnglish': descriptionEnglish,
+      if (rulesEnglish != null) 'rulesEnglish': rulesEnglish,
     };
   }
 

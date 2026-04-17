@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 /// Model class representing an Islamic Supplication (Monajat)
 ///
 /// This immutable class contains all the essential information for displaying
@@ -10,6 +12,9 @@ class MonajatModel {
   final String pronunciation;
   final String meaning;
   final String context;
+  final String? titleEnglish;
+  final String? meaningEnglish;
+  final String? contextEnglish;
 
   const MonajatModel({
     required this.id,
@@ -18,5 +23,23 @@ class MonajatModel {
     required this.pronunciation,
     required this.meaning,
     required this.context,
+    this.titleEnglish,
+    this.meaningEnglish,
+    this.contextEnglish,
   });
+
+  String getTitle(Locale locale) =>
+      locale.languageCode == 'en' && titleEnglish != null
+          ? titleEnglish!
+          : title;
+
+  String getMeaning(Locale locale) =>
+      locale.languageCode == 'en' && meaningEnglish != null
+          ? meaningEnglish!
+          : meaning;
+
+  String getContext(Locale locale) =>
+      locale.languageCode == 'en' && contextEnglish != null
+          ? contextEnglish!
+          : context;
 }
