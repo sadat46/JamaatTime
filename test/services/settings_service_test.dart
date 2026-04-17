@@ -23,6 +23,20 @@ void main() {
     expect(await settingsService.getBangladeshHijriOffsetDays(), 2);
   });
 
+  test('locale defaults to bn and persists when set to en', () async {
+    final settingsService = SettingsService();
+
+    expect(await settingsService.getLocale(), 'bn');
+
+    var fired = 0;
+    final sub = settingsService.onSettingsChanged.listen((_) => fired++);
+    addTearDown(() => sub.cancel());
+
+    await settingsService.setLocale('en');
+    expect(await settingsService.getLocale(), 'en');
+    expect(fired, 1);
+  });
+
   test('notification sound defaults to mode 3 and migrates once', () async {
     final settingsService = SettingsService();
 

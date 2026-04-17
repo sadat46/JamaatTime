@@ -1,0 +1,18 @@
+{
+  "@@locale": "bn",
+  "nav_home": "হোম",
+  "nav_ebadat": "ইবাদত",
+  "nav_calendar": "ক্যালেন্ডার",
+  "nav_profile": "প্রোফাইল",
+  "settings_languageSection": "ভাষা",
+  "settings_languageBangla": "বাংলা",
+  "settings_languageEnglish": "English",
+  "widget_jamaatNA": "জামাত নেই",
+  "widget_jamaatOver": "জামাত শেষ",
+  "widget_jamaatInSuffix": "জামাত শুরু হবে",
+  "prayer_fajr": "ফজর",
+  "prayer_dhuhr": "যোহর",
+  "prayer_asr": "আছর",
+  "prayer_maghrib": "মাগরিব",
+  "prayer_isha": "এশা"
+}

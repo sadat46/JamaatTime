@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/ebadat/ebadat_screen.dart';
 import 'screens/calendar_screen.dart';
@@ -12,6 +14,7 @@ import 'services/notification_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/widget_service.dart';
 import 'services/settings_service.dart';
+import 'core/app_locale_controller.dart';
 import 'core/constants.dart';
 import 'themes/green_theme.dart';
 
@@ -55,7 +58,19 @@ void main() async {
   // Register home widget background callback for refresh button
   HomeWidget.registerInteractivityCallback(backgroundCallback);
 
+  // Load the persisted locale before the first frame so the UI renders in
+  // the correct language with no flicker (D15).
+  await AppLocaleController.bootstrap();
+
   runApp(const MyApp());
+}
+
+ThemeData _themeFor(Locale locale) {
+  final baseTextTheme = greenTheme.textTheme;
+  final localizedTextTheme = locale.languageCode == 'bn'
+      ? GoogleFonts.hindSiliguriTextTheme(baseTextTheme)
+      : GoogleFonts.interTextTheme(baseTextTheme);
+  return greenTheme.copyWith(textTheme: localizedTextTheme);
 }
 
 class MyApp extends StatelessWidget {
@@ -63,10 +78,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Jamaat Time',
-      theme: greenTheme,
-      home: const MainScaffold(),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocaleController.instance.notifier,
+      builder: (context, locale, _) {
+        return MaterialApp(
+          title: 'Jamaat Time',
+          theme: _themeFor(locale),
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MainScaffold(),
+        );
+      },
     );
   }
 }

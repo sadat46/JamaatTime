@@ -1,11 +1,14 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
+import '../core/locale_prefs.dart';
+
 class SettingsService {
   static const int defaultBangladeshHijriOffsetDays = -1;
 
   static const String _themeKey = 'theme_mode';
   static const String _madhabKey = 'madhab';
+  static const String _localeKey = 'app_locale';
   static const String _themeIndexKey = 'theme_index';
   static const String _keyNotificationSoundMode = 'notification_sound_mode';
   static const String _keyPrayerNotificationSoundMode =
@@ -49,6 +52,18 @@ class SettingsService {
   Future<void> setMadhab(String madhab) async {
     final prefs = await _prefs;
     await prefs.setString(_madhabKey, madhab);
+    _controller.add(null);
+  }
+
+  Future<String> getLocale() async {
+    final prefs = await _prefs;
+    return prefs.getString(_localeKey) ?? LocalePrefs.defaultCode;
+  }
+
+  Future<void> setLocale(String code) async {
+    assert(_localeKey == LocalePrefs.key, 'locale key parity');
+    final prefs = await _prefs;
+    await prefs.setString(_localeKey, code);
     _controller.add(null);
   }
 
