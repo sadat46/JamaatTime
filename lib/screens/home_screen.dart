@@ -787,6 +787,7 @@ class _HomeScreenState extends State<HomeScreen> {
       date: selectedDate,
       hijriOffsetDays: hijriOffset,
       tomorrowFajr: tomorrowFajr,
+      jamaatTimes: jamaatTimes,
     );
   }
 

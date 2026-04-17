@@ -14,6 +14,16 @@ void main() {
     };
   }
 
+  Map<String, dynamic> buildJamaatTimes() {
+    return {
+      'fajr': '05:20',
+      'dhuhr': '12:25',
+      'asr': '15:55',
+      'maghrib': '18:33',
+      'isha': '20:00',
+    };
+  }
+
   group('WidgetService.computeWidgetPreviewData', () {
     test(
       'between Fajr and Sunrise: current is Fajr, next boundary is Sunrise',
@@ -55,6 +65,51 @@ void main() {
 
       // Sunrise is not a row item; row remains main-prayer-only.
       expect(data.rowLabels, ['Dhuhr', 'Asr', 'Maghrib', 'Isha']);
+    });
+
+    test('active jamaat countdown uses current main prayer label', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        now: DateTime(2026, 4, 13, 5, 10),
+        timeFormat: DateFormat('HH:mm'),
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(data.jamaatLabel, 'Fajr Jamaat in');
+      expect(data.jamaatCountdownRunning, isTrue);
+      expect(
+        data.jamaatEpochMillis,
+        DateTime(2026, 4, 13, 5, 20).millisecondsSinceEpoch,
+      );
+    });
+
+    test('sunrise period shows next jamaat countdown (Dhuhr)', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        now: DateTime(2026, 4, 13, 6, 30),
+        timeFormat: DateFormat('HH:mm'),
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(data.prayerName, 'Sunrise');
+      expect(data.jamaatLabel, 'Dhuhr Jamaat in');
+      expect(data.jamaatCountdownRunning, isTrue);
+      expect(
+        data.jamaatEpochMillis,
+        DateTime(2026, 4, 13, 12, 25).millisecondsSinceEpoch,
+      );
+    });
+
+    test('missing jamaat data shows N/A state', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        now: DateTime(2026, 4, 13, 5, 10),
+        timeFormat: DateFormat('HH:mm'),
+      );
+
+      expect(data.jamaatLabel, 'Jamaat N/A');
+      expect(data.jamaatCountdownRunning, isFalse);
+      expect(data.jamaatEpochMillis, 0);
     });
 
     test('after Isha: countdown targets tomorrow Fajr', () {

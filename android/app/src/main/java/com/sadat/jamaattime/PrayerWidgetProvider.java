@@ -11,6 +11,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
@@ -33,6 +34,9 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String remainingLabel = prefs.getString("remaining_label", "Remaining Time");
             long nextEpoch = prefs.getLong("next_prayer_epoch_millis", 0L);
             boolean running = prefs.getBoolean("countdown_running", false);
+            String jamaatLabel = prefs.getString("jamaat_label", "Jamaat N/A");
+            long jamaatEpoch = prefs.getLong("jamaat_epoch_millis", 0L);
+            boolean jamaatRunning = prefs.getBoolean("jamaat_countdown_running", false);
             // 4 dynamic prayer row slots (current prayer excluded by Flutter side)
             String rowLabel1 = prefs.getString("row_label_1", "-");
             String rowTime1 = prefs.getString("row_time_1", "-");
@@ -46,20 +50,33 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String location = prefs.getString("location", "-");
 
             Log.d(TAG, "Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
+            long nowMillis = System.currentTimeMillis();
 
             for (int appWidgetId : appWidgetIds) {
                 RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.prayer_widget);
                 views.setTextViewText(R.id.prayer_name, prayerName);
                 views.setTextViewText(R.id.prayer_time, prayerTime);
                 views.setTextViewText(R.id.remaining_label, remainingLabel);
+                views.setTextViewText(R.id.jamaat_label, jamaatLabel);
 
-                if (running && nextEpoch > System.currentTimeMillis()) {
-                    long base = SystemClock.elapsedRealtime() + (nextEpoch - System.currentTimeMillis());
+                if (running && nextEpoch > nowMillis) {
+                    long base = SystemClock.elapsedRealtime() + (nextEpoch - nowMillis);
                     views.setChronometerCountDown(R.id.remaining_time, true);
                     views.setChronometer(R.id.remaining_time, base, null, true);
                 } else {
                     views.setChronometer(R.id.remaining_time, 0, null, false);
                     views.setTextViewText(R.id.remaining_time, "-");
+                }
+
+                if (jamaatRunning && jamaatEpoch > nowMillis) {
+                    long jamaatBase = SystemClock.elapsedRealtime() + (jamaatEpoch - nowMillis);
+                    views.setViewVisibility(R.id.jamaat_time, View.VISIBLE);
+                    views.setChronometerCountDown(R.id.jamaat_time, true);
+                    views.setChronometer(R.id.jamaat_time, jamaatBase, null, true);
+                } else {
+                    views.setViewVisibility(R.id.jamaat_time, View.GONE);
+                    views.setChronometer(R.id.jamaat_time, 0, null, false);
+                    views.setTextViewText(R.id.jamaat_time, "-");
                 }
 
                 views.setTextViewText(R.id.row_label_1, rowLabel1);
@@ -96,9 +113,12 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 appWidgetManager.updateAppWidget(appWidgetId, views);
             }
 
-            if (running && nextEpoch > System.currentTimeMillis()) {
-                scheduleBoundaryAlarm(context, nextEpoch);
-            } else if (running && nextEpoch > 0L && nextEpoch <= System.currentTimeMillis()) {
+            long nextBoundaryEpoch = getNextBoundaryEpoch(
+                nowMillis, running, nextEpoch, jamaatRunning, jamaatEpoch);
+            if (nextBoundaryEpoch > 0L) {
+                scheduleBoundaryAlarm(context, nextBoundaryEpoch);
+            } else if ((running && nextEpoch > 0L && nextEpoch <= nowMillis)
+                    || (jamaatRunning && jamaatEpoch > 0L && jamaatEpoch <= nowMillis)) {
                 // Self-heal: prefs say countdown is running but next-epoch is in the past.
                 // Trigger Dart background callback to recompute fresh prayer data.
                 triggerDartRefresh(context);
@@ -154,6 +174,23 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         am.cancel(buildBoundaryPendingIntent(context));
+    }
+
+    private long getNextBoundaryEpoch(
+        long nowMillis,
+        boolean prayerRunning,
+        long prayerEpoch,
+        boolean jamaatRunning,
+        long jamaatEpoch
+    ) {
+        long nextBoundary = 0L;
+        if (prayerRunning && prayerEpoch > nowMillis) {
+            nextBoundary = prayerEpoch;
+        }
+        if (jamaatRunning && jamaatEpoch > nowMillis) {
+            nextBoundary = (nextBoundary == 0L) ? jamaatEpoch : Math.min(nextBoundary, jamaatEpoch);
+        }
+        return nextBoundary;
     }
 
     @Override

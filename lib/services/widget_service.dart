@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
@@ -7,10 +8,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import '../core/constants.dart';
 import '../models/location_config.dart';
+import '../services/jamaat_service.dart';
 import '../services/location_config_service.dart';
+import '../services/prayer_aux_calculator.dart';
 import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
+import '../firebase_options.dart';
 import 'hijri_date_converter.dart';
 
 /// Top-level background callback for home widget refresh button.
@@ -19,6 +23,15 @@ import 'hijri_date_converter.dart';
 Future<void> backgroundCallback(Uri? uri) async {
   WidgetsFlutterBinding.ensureInitialized();
   tzdata.initializeTimeZones();
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (_) {
+    // Firebase is optional for widget refresh; Jamaat data will fall back to N/A.
+  }
 
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -78,6 +91,31 @@ Future<void> backgroundCallback(Uri? uri) async {
       precision: true,
     );
     final tomorrowMap = calcService.createPrayerTimesMap(tomorrowTimes);
+    Map<String, dynamic>? widgetJamaatTimes;
+
+    if (config.jamaatSource == JamaatSource.localOffset) {
+      widgetJamaatTimes = PrayerAuxCalculator.instance.buildOffsetJamaatTimes(
+        prayerTimes: times,
+        offsets: config.jamaatOffsets,
+      );
+    } else if (config.jamaatSource == JamaatSource.server) {
+      final cityForJamaat = savedCity ?? config.cityName;
+      final serverTimes = await JamaatService().getJamaatTimes(
+        city: cityForJamaat,
+        date: now,
+      );
+      if (serverTimes != null) {
+        widgetJamaatTimes = Map<String, dynamic>.from(serverTimes);
+        final maghribJamaat = PrayerAuxCalculator.instance
+            .calculateMaghribJamaatTime(
+              maghribPrayerTime: times['Maghrib'],
+              selectedCity: cityForJamaat,
+            );
+        if (maghribJamaat != '-') {
+          widgetJamaatTimes['maghrib'] = maghribJamaat;
+        }
+      }
+    }
 
     final placeName = prefs.getString('last_location_name');
     await WidgetService.updateWidgetData(
@@ -86,6 +124,7 @@ Future<void> backgroundCallback(Uri? uri) async {
       date: now,
       hijriOffsetDays: effectiveHijriOffset,
       tomorrowFajr: tomorrowMap['Fajr'],
+      jamaatTimes: widgetJamaatTimes,
     );
   } catch (e) {
     // Background callback errors are non-fatal
@@ -102,6 +141,7 @@ class WidgetService {
     required DateTime date,
     required int hijriOffsetDays,
     DateTime? tomorrowFajr,
+    Map<String, dynamic>? jamaatTimes,
   }) async {
     try {
       final now = DateTime.now();
@@ -111,6 +151,7 @@ class WidgetService {
         now: now,
         timeFormat: timeFormat,
         tomorrowFajr: tomorrowFajr,
+        jamaatTimes: jamaatTimes,
       );
 
       final hijriDate = HijriDateConverter.formatHijriDate(
@@ -133,6 +174,15 @@ class WidgetService {
         HomeWidget.saveWidgetData<bool>(
           'countdown_running',
           widgetData.countdownRunning,
+        ),
+        HomeWidget.saveWidgetData<String>('jamaat_label', widgetData.jamaatLabel),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_millis',
+          widgetData.jamaatEpochMillis,
+        ),
+        HomeWidget.saveWidgetData<bool>(
+          'jamaat_countdown_running',
+          widgetData.jamaatCountdownRunning,
         ),
         // 4 dynamic prayer row slots
         HomeWidget.saveWidgetData<String>(
@@ -174,10 +224,15 @@ class WidgetService {
     required DateTime now,
     required DateFormat timeFormat,
     DateTime? tomorrowFajr,
+    Map<String, dynamic>? jamaatTimes,
   }) {
     final engine = PrayerTimeEngine.instance;
     final currentPeriod = engine.getCurrentPrayerPeriod(times: times, now: now);
     final nextPeriod = engine.getNextPrayerForWidget(times: times, now: now);
+    final currentMainPrayer = engine.getCurrentPrayerForWidget(
+      times: times,
+      now: now,
+    );
     final currentPeriodTime = times[currentPeriod];
     final todayNextTime = times[nextPeriod];
 
@@ -194,10 +249,6 @@ class WidgetService {
         : 0;
 
     // Row 2 remains main-prayer focused and excludes the current main prayer.
-    final currentMainPrayer = engine.getCurrentPrayerForWidget(
-      times: times,
-      now: now,
-    );
     final rowPrayers = PrayerTimeEngine.mainPrayerOrder
         .where((p) => p != currentMainPrayer)
         .take(4)
@@ -212,6 +263,14 @@ class WidgetService {
     final remainingLabel = currentPeriod == 'Sunrise'
         ? 'Coming Dhuhr'
         : '$currentPeriod Time Remaining';
+    final jamaatPrayerName = currentPeriod == 'Sunrise'
+        ? 'Dhuhr'
+        : currentMainPrayer;
+    final jamaatStatus = _computeJamaatWidgetState(
+      now: now,
+      jamaatPrayerName: jamaatPrayerName,
+      jamaatTimes: jamaatTimes,
+    );
 
     return WidgetPreviewData(
       prayerName: currentPeriod,
@@ -219,6 +278,9 @@ class WidgetService {
       remainingLabel: remainingLabel,
       nextPrayerEpochMillis: nextEpochMillis,
       countdownRunning: countdownRunning,
+      jamaatLabel: jamaatStatus.label,
+      jamaatEpochMillis: jamaatStatus.epochMillis,
+      jamaatCountdownRunning: jamaatStatus.countdownRunning,
       rowLabels: rowPrayers,
       rowTimes: rowTimes,
     );
@@ -227,6 +289,51 @@ class WidgetService {
   static String _formatPrayerTime(DateTime? time, DateFormat fmt) {
     if (time == null) return '-';
     return fmt.format(time.toLocal());
+  }
+
+  static _JamaatWidgetState _computeJamaatWidgetState({
+    required DateTime now,
+    required String jamaatPrayerName,
+    required Map<String, dynamic>? jamaatTimes,
+  }) {
+    if (jamaatTimes == null || jamaatTimes.isEmpty) {
+      return const _JamaatWidgetState.na();
+    }
+
+    final jamaatKey = PrayerAuxCalculator.instance.getJamaatTimeKey(
+      jamaatPrayerName,
+    );
+    final raw = jamaatTimes[jamaatKey];
+    if (raw == null || raw.toString().trim().isEmpty) {
+      return const _JamaatWidgetState.na();
+    }
+
+    final normalized = PrayerAuxCalculator.instance.formatJamaatTime(
+      raw.toString(),
+    );
+    final jamaatTime = _parseTodayJamaatTime(now, normalized);
+    if (jamaatTime == null) {
+      return const _JamaatWidgetState.na();
+    }
+
+    if (now.isBefore(jamaatTime)) {
+      return _JamaatWidgetState(
+        label: '$jamaatPrayerName Jamaat in',
+        epochMillis: jamaatTime.millisecondsSinceEpoch,
+        countdownRunning: true,
+      );
+    }
+    return const _JamaatWidgetState.over();
+  }
+
+  static DateTime? _parseTodayJamaatTime(DateTime now, String hhmm) {
+    final parts = hhmm.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return DateTime(now.year, now.month, now.day, hour, minute);
   }
 }
 
@@ -237,6 +344,9 @@ class WidgetPreviewData {
   final String remainingLabel;
   final int nextPrayerEpochMillis;
   final bool countdownRunning;
+  final String jamaatLabel;
+  final int jamaatEpochMillis;
+  final bool jamaatCountdownRunning;
   final List<String> rowLabels;
   final List<String> rowTimes;
 
@@ -246,7 +356,33 @@ class WidgetPreviewData {
     required this.remainingLabel,
     required this.nextPrayerEpochMillis,
     required this.countdownRunning,
+    required this.jamaatLabel,
+    required this.jamaatEpochMillis,
+    required this.jamaatCountdownRunning,
     required this.rowLabels,
     required this.rowTimes,
   });
+}
+
+@immutable
+class _JamaatWidgetState {
+  final String label;
+  final int epochMillis;
+  final bool countdownRunning;
+
+  const _JamaatWidgetState({
+    required this.label,
+    required this.epochMillis,
+    required this.countdownRunning,
+  });
+
+  const _JamaatWidgetState.na()
+      : label = 'Jamaat N/A',
+        epochMillis = 0,
+        countdownRunning = false;
+
+  const _JamaatWidgetState.over()
+      : label = 'Jamaat is Over',
+        epochMillis = 0,
+        countdownRunning = false;
 }
