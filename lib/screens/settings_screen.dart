@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../core/app_locale_controller.dart';
+import '../core/feature_flags.dart';
+import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
 import '../services/settings_service.dart';
 import 'focus_guard_screen.dart';
@@ -18,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final NotificationService _notificationService = NotificationService();
 
   String _madhab = 'hanafi';
+  String _locale = 'bn';
   int _bangladeshHijriOffsetDays =
       SettingsService.defaultBangladeshHijriOffsetDays;
   int _prayerNotificationSoundMode = 0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
@@ -32,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final madhab = await _settingsService.getMadhab();
+    final locale = await _settingsService.getLocale();
     final bangladeshHijriOffset = await _settingsService
         .getBangladeshHijriOffsetDays();
     final prayerSoundMode = await _settingsService
@@ -42,11 +47,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     setState(() {
       _madhab = madhab;
+      _locale = locale;
       _bangladeshHijriOffsetDays = bangladeshHijriOffset;
       _prayerNotificationSoundMode = prayerSoundMode;
       _jamaatNotificationSoundMode = jamaatSoundMode;
       _loading = false;
     });
+  }
+
+  Future<void> _updateLocale(String code) async {
+    await _settingsService.setLocale(code);
+    await AppLocaleController.instance.set(code);
+    if (!mounted) return;
+    setState(() => _locale = code);
   }
 
   String _soundModeLabel(int value) {
@@ -300,6 +313,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (kLanguageSwitchEnabled) ...[
+                  _buildSectionCard(
+                    icon: Icons.language,
+                    color: const Color(0xFF6A1B9A),
+                    title: AppLocalizations.of(
+                      context,
+                    ).settings_languageSection,
+                    subtitle: AppLocalizations.of(
+                      context,
+                    ).settings_languageSubtitle,
+                    children: [
+                      _buildDropdownField<String>(
+                        label: AppLocalizations.of(
+                          context,
+                        ).settings_languageLabel,
+                        initialValue: _locale,
+                        items: [
+                          DropdownMenuItem(
+                            value: 'bn',
+                            child: Text(
+                              AppLocalizations.of(
+                                context,
+                              ).settings_languageBangla,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'en',
+                            child: Text(
+                              AppLocalizations.of(
+                                context,
+                              ).settings_languageEnglish,
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) async {
+                          if (val == null) return;
+                          await _updateLocale(val);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 _buildSectionCard(
                   icon: Icons.notifications_active,
                   color: const Color(0xFF1565C0),

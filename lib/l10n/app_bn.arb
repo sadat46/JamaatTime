@@ -5,6 +5,8 @@
   "nav_calendar": "ক্যালেন্ডার",
   "nav_profile": "প্রোফাইল",
   "settings_languageSection": "ভাষা",
+  "settings_languageSubtitle": "অ্যাপের প্রদর্শন ভাষা বেছে নিন।",
+  "settings_languageLabel": "অ্যাপের ভাষা",
   "settings_languageBangla": "বাংলা",
   "settings_languageEnglish": "English",
   "widget_jamaatNA": "জামাত নেই",

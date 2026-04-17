@@ -24,6 +24,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_languageSection => 'Language';
 
   @override
+  String get settings_languageSubtitle => 'Choose the app display language.';
+
+  @override
+  String get settings_languageLabel => 'App language';
+
+  @override
   String get settings_languageBangla => 'বাংলা';
 
   @override

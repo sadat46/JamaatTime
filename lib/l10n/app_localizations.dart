@@ -128,6 +128,18 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get settings_languageSection;
 
+  /// Subtitle under the Language section header
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the app display language.'**
+  String get settings_languageSubtitle;
+
+  /// Label above the language dropdown field
+  ///
+  /// In en, this message translates to:
+  /// **'App language'**
+  String get settings_languageLabel;
+
   /// Dropdown item label for Bengali
   ///
   /// In en, this message translates to:

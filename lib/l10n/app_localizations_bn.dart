@@ -24,6 +24,12 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settings_languageSection => 'ভাষা';
 
   @override
+  String get settings_languageSubtitle => 'অ্যাপের প্রদর্শন ভাষা বেছে নিন।';
+
+  @override
+  String get settings_languageLabel => 'অ্যাপের ভাষা';
+
+  @override
   String get settings_languageBangla => 'বাংলা';
 
   @override
