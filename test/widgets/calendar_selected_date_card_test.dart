@@ -28,45 +28,44 @@ CalendarSelectedDateCard _buildCard() {
   );
 }
 
+Finder _richTextContaining(String text) {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is RichText && widget.text.toPlainText().contains(text),
+  );
+}
+
 void main() {
-  testWidgets('shows Gregorian header and only Bangla/Hijri chips', (
+  testWidgets('shows Gregorian header and normalized date chips', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_testHost(child: _buildCard()));
 
-    expect(find.text('14 Apr 2026'), findsOneWidget);
-    expect(find.text('Tuesday'), findsOneWidget);
-    expect(find.text('Bangla'), findsOneWidget);
-    expect(find.text('Hijri'), findsOneWidget);
-    expect(find.text('1 Boishakh'), findsOneWidget);
-    expect(find.text('1433 Bongabdo'), findsOneWidget);
-    expect(find.text('25 Shawwal'), findsOneWidget);
-    expect(find.text('1447 AH'), findsOneWidget);
+    expect(_richTextContaining('14 Apr 2026'), findsOneWidget);
+    expect(_richTextContaining('Tuesday'), findsOneWidget);
+    expect(find.text('1 Boishakh 1433'), findsOneWidget);
+    expect(find.text('25 Shawwal 1447'), findsOneWidget);
+    expect(find.text('Bangla'), findsNothing);
+    expect(find.text('Hijri'), findsNothing);
     expect(find.text('English'), findsNothing);
   });
 
   testWidgets('adds semantic labels for selected, Bangla, and Hijri dates', (
     WidgetTester tester,
   ) async {
-    final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
-
     await tester.pumpWidget(_testHost(child: _buildCard()));
 
+    final cardSemantics = tester.getSemantics(
+      find.byType(CalendarSelectedDateCard),
+    );
     expect(
-      find.bySemanticsLabel(
-        'Selected date 14 Apr 2026, Tuesday. Bangla 1 Boishakh 1433 Bongabdo. Hijri 25 Shawwal 1447 AH.',
+      cardSemantics.label,
+      contains(
+        'Selected date 14 Apr 2026, Tuesday. Bangla 1 Boishakh 1433. Hijri 25 Shawwal 1447.',
       ),
-      findsOneWidget,
     );
-    expect(
-      find.bySemanticsLabel('Bangla date 1 Boishakh 1433 Bongabdo'),
-      findsOneWidget,
-    );
-    expect(
-      find.bySemanticsLabel('Hijri date 25 Shawwal 1447 AH'),
-      findsOneWidget,
-    );
+    expect(cardSemantics.label, contains('Bangla date 1 Boishakh 1433'));
+    expect(cardSemantics.label, contains('Hijri date 25 Shawwal 1447'));
   });
 
   testWidgets('stays stable on narrow widths without overflow', (
@@ -83,9 +82,9 @@ void main() {
       _testHost(theme: ThemeData.dark(), child: _buildCard()),
     );
 
-    expect(find.text('14 Apr 2026'), findsOneWidget);
-    expect(find.text('Bangla'), findsOneWidget);
-    expect(find.text('Hijri'), findsOneWidget);
+    expect(_richTextContaining('14 Apr 2026'), findsOneWidget);
+    expect(find.text('1 Boishakh 1433'), findsOneWidget);
+    expect(find.text('25 Shawwal 1447'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
