@@ -39,6 +39,7 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   static const List<String> _prayerOrder = [
     'Fajr',
+    'Sunrise',
     'Dhuhr',
     'Asr',
     'Maghrib',
@@ -324,7 +325,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '$monthName ${hijriDate.year} AH';
   }
 
-  String _englishDateLine(DateTime day) {
+  String _gregorianDateLine(DateTime day) {
     return DateFormat('d MMM yyyy').format(day);
   }
 
@@ -345,7 +346,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   _SelectedDateCardData _selectedDateCardData(DateTime day) {
     return _SelectedDateCardData(
-      gregorianDate: _englishDateLine(day),
+      gregorianDate: _gregorianDateLine(day),
       weekday: _weekdayLine(day),
       banglaDate: _banglaDateLine(day),
       hijriDate: _hijriDateLine(day),
@@ -359,7 +360,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (_jamaatTimes == null || _jamaatTimes!.isEmpty) {
       return 'Jamaat unavailable for this date';
     }
-    return 'Prayer + jamaat times for selected date';
+    return 'Prayer + Jamaat Time for Selected Date';
   }
 
   String _prayerDisplayName(String prayerName) {
@@ -404,6 +405,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _displayJamaatTimeForPrayer(String prayerName) {
+    if (prayerName == 'Sunrise') {
+      return '-';
+    }
+
     if (_jamaatTimes == null) {
       return '-';
     }
@@ -514,6 +519,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     switch (prayerName) {
       case 'Fajr':
         return Icons.wb_twilight_outlined;
+      case 'Sunrise':
+        return Icons.wb_sunny_outlined;
       case 'Dhuhr':
         return Icons.wb_sunny_outlined;
       case 'Asr':
@@ -690,26 +697,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
         border: Border.all(color: borderColor),
       ),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      child: Column(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Prayer & Jamaat Times (${DateFormat('d MMM yyyy').format(_selectedDay)})',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.white : AppConstants.brandGreenDark,
+          SizedBox(
+            height: 24,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _timesSourceCaption(),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDarkMode
+                        ? Colors.white
+                        : AppConstants.brandGreenDark,
+                  ),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            _timesSourceCaption(),
-            style: TextStyle(
-              fontSize: 12,
-              color: isDarkMode ? Colors.white70 : Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             children: [
               Icon(

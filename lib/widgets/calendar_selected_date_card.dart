@@ -20,27 +20,20 @@ class CalendarSelectedDateCard extends StatelessWidget {
   final Color cardBackground;
   final Color borderColor;
 
-  ({String dayAndMonth, String year}) _splitDateValue(String value) {
-    final parts = value.split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
-    final tokens = parts.toList();
-
-    if (tokens.length < 3) {
-      return (dayAndMonth: value, year: '');
-    }
-
-    return (
-      dayAndMonth: '${tokens[0]} ${tokens[1]}',
-      year: tokens.sublist(2).join(' '),
-    );
+  String _normalizedChipValue(String value) {
+    return value
+        .replaceAll(RegExp(r'\b(Bongabdo|Bangabdo)\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\bAH\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   Widget _buildDateChip(
     BuildContext context, {
-    required String label,
     required String value,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final valueParts = _splitDateValue(value);
+    final displayValue = _normalizedChipValue(value);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -59,16 +52,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.white70 : AppConstants.brandGreenDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            valueParts.dayAndMonth,
+            displayValue,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -78,20 +62,6 @@ class CalendarSelectedDateCard extends StatelessWidget {
               color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
-          if (valueParts.year.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              valueParts.year,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-                color: isDarkMode ? Colors.white70 : Colors.black54,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -103,7 +73,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
 
     return Semantics(
       label:
-          'Selected date $gregorianDate, $weekday. Bangla $banglaDate. Hijri $hijriDate.',
+          'Selected date $gregorianDate, $weekday. Bangla ${_normalizedChipValue(banglaDate)}. Hijri ${_normalizedChipValue(hijriDate)}.',
       child: Container(
         decoration: BoxDecoration(
           color: cardBackground,
@@ -135,29 +105,53 @@ class CalendarSelectedDateCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        gregorianDate,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: isDarkMode
-                              ? Colors.white
-                              : AppConstants.brandGreenDark,
+                  child: SizedBox(
+                    height: 24,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: RichText(
+                          maxLines: 1,
+                          softWrap: false,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: gregorianDate,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : AppConstants.brandGreenDark,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '  ',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : AppConstants.brandGreenDark,
+                                ),
+                              ),
+                              TextSpan(
+                                text: weekday,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkMode
+                                      ? Colors.white70
+                                      : AppConstants.brandGreenDark
+                                            .withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        weekday,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isDarkMode ? Colors.white70 : Colors.black54,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -177,10 +171,9 @@ class CalendarSelectedDateCard extends StatelessWidget {
                     SizedBox(
                       width: chipWidth,
                       child: Semantics(
-                        label: 'Bangla date $banglaDate',
+                        label: 'Bangla date ${_normalizedChipValue(banglaDate)}',
                         child: _buildDateChip(
                           context,
-                          label: 'Bangla',
                           value: banglaDate,
                         ),
                       ),
@@ -188,10 +181,9 @@ class CalendarSelectedDateCard extends StatelessWidget {
                     SizedBox(
                       width: chipWidth,
                       child: Semantics(
-                        label: 'Hijri date $hijriDate',
+                        label: 'Hijri date ${_normalizedChipValue(hijriDate)}',
                         child: _buildDateChip(
                           context,
-                          label: 'Hijri',
                           value: hijriDate,
                         ),
                       ),
