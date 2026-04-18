@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../core/locale_text.dart';
 import '../../../models/ebadat_topic.dart';
 
-/// A placeholder screen for topics that are not yet implemented
 class TopicPlaceholderScreen extends StatelessWidget {
   final EbadatTopic topic;
 
@@ -15,11 +15,12 @@ class TopicPlaceholderScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final primaryColor = topic.accentColor ?? colorScheme.primary;
+    final locale = Localizations.localeOf(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          topic.titleBangla,
+          topic.getTitle(locale),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryColor,
@@ -47,7 +48,7 @@ class TopicPlaceholderScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               Text(
-                topic.titleBangla,
+                topic.getTitle(locale),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -57,7 +58,7 @@ class TopicPlaceholderScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'শীঘ্রই আসছে...',
+                context.tr(bn: 'শীঘ্রই আসছে...', en: 'Coming soon...'),
                 style: TextStyle(
                   fontSize: 18,
                   color: theme.textTheme.bodyMedium?.color,
@@ -65,7 +66,10 @@ class TopicPlaceholderScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'এই বিভাগের বিষয়বস্তু প্রস্তুত হচ্ছে।',
+                context.tr(
+                  bn: 'এই বিভাগের বিষয়বস্তু প্রস্তুত হচ্ছে।',
+                  en: 'Content for this section is being prepared.',
+                ),
                 style: TextStyle(
                   fontSize: 14,
                   color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
