@@ -64,6 +64,30 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     });
   }
 
+  bool get _isEnglish => Localizations.localeOf(context).languageCode == 'en';
+
+  String _localizedPrayerName(String canonical) {
+    if (_isEnglish) {
+      return canonical;
+    }
+    switch (canonical) {
+      case 'Fajr':
+        return 'ফজর';
+      case 'Sunrise':
+        return 'সূর্যোদয়';
+      case 'Dhuhr':
+        return 'যোহর';
+      case 'Asr':
+        return 'আসর';
+      case 'Maghrib':
+        return 'মাগরিব';
+      case 'Isha':
+        return 'এশা';
+      default:
+        return canonical;
+    }
+  }
+
   void _calculateCountdown() {
     final now = DateTime.now();
     final selectedDateOnly = DateTime(
@@ -80,12 +104,16 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
 
     if (selectedDateOnly.isBefore(todayOnly)) {
       // Past date
-      periodName = 'Viewing past date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
+      periodName = _isEnglish
+          ? 'Viewing past date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}'
+          : 'পূর্বের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
       isSpecial = true;
       progress = 0.0;
     } else if (selectedDateOnly.isAfter(todayOnly)) {
       // Future date
-      periodName = 'Viewing future date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
+      periodName = _isEnglish
+          ? 'Viewing future date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}'
+          : 'ভবিষ্যতের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
       isSpecial = true;
       progress = 0.0;
     } else {
@@ -111,9 +139,12 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
           ? '--:--:--'
           : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
+      final localizedPeriod = _localizedPrayerName(currentPeriod);
       periodName = currentPeriod == 'Sunrise'
-          ? 'Coming Dhuhr'
-          : '$currentPeriod time remaining';
+          ? (_isEnglish ? 'Coming Dhuhr' : 'আসছে যোহর')
+          : (_isEnglish
+              ? '$localizedPeriod time remaining'
+              : '$localizedPeriod বাকি');
       isSpecial = false;
     }
 
