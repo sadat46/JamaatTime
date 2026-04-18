@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../data/zakat_data.dart';
-import '../../../widgets/ebadat/worship_step_card.dart';
-import '../../../widgets/ebadat/reference_chip.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Zakat Calculator Screen with interactive calculator and guide
+import '../../../core/locale_text.dart';
+import '../../../data/zakat_data.dart';
+import '../../../widgets/ebadat/reference_chip.dart';
+import '../../../widgets/ebadat/worship_step_card.dart';
+
+/// Zakat Calculator Screen with interactive calculator and guide.
 class ZakatCalculatorScreen extends StatefulWidget {
   const ZakatCalculatorScreen({super.key});
 
@@ -25,9 +27,9 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
   final _otherAssetsController = TextEditingController();
   final _debtsController = TextEditingController();
 
-  // Current gold/silver prices (BDT per gram) - these can be updated
-  double _goldPricePerGram = 9500; // Approximate
-  double _silverPricePerGram = 120; // Approximate
+  // Current gold/silver prices (BDT per gram)
+  double _goldPricePerGram = 9500;
+  double _silverPricePerGram = 120;
 
   // Calculated values
   double _totalAssets = 0;
@@ -56,7 +58,7 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
   }
 
   void _calculateNisab() {
-    // Using silver nisab as it's lower (benefits the poor more)
+    // Using silver nisab as it's lower (benefits the poor more).
     _nisabValue = ZakatNisab.silverGrams * _silverPricePerGram;
   }
 
@@ -94,11 +96,39 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
     });
   }
 
-  String _formatCurrency(double amount) {
-    return '৳ ${amount.toStringAsFixed(2).replaceAllMapped(
+  String _formatCurrency(BuildContext context, double amount) {
+    final prefix = context.isEnglish ? 'BDT ' : '৳ ';
+    return '$prefix${amount.toStringAsFixed(2).replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         )}';
+  }
+
+  List<String> _localizedIneligibleRecipients(BuildContext context) {
+    if (!context.isEnglish) {
+      return zakatIneligibleRecipients;
+    }
+    return const [
+      'Descendants of the Prophet (SAW) (Banu Hashim) - Muslim 1072',
+      'A wealthy person with nisab-level assets',
+      'Own spouse, children, parents, grandparents (whose support is obligatory)',
+      'Non-Muslims (for Zakat specifically; general charity is allowed)',
+      'Directly to mosque construction/institutions (except eligible poor students)',
+    ];
+  }
+
+  List<String> _localizedExemptAssets(BuildContext context) {
+    if (!context.isEnglish) {
+      return zakatExemptAssets;
+    }
+    return const [
+      'Primary residence/home',
+      'Personal-use vehicle',
+      'Personal clothing',
+      'Household furniture',
+      'Professional tools/equipment',
+      'Precious stones (if not held for business)',
+    ];
   }
 
   @override
@@ -107,9 +137,9 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'যাকাত',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.tr(bn: 'যাকাত', en: 'Zakat'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.appBarTheme.backgroundColor,
         foregroundColor: theme.appBarTheme.foregroundColor,
@@ -120,9 +150,15 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
           labelColor: theme.appBarTheme.foregroundColor,
           unselectedLabelColor:
               theme.appBarTheme.foregroundColor?.withValues(alpha: 0.6),
-          tabs: const [
-            Tab(text: 'ক্যালকুলেটর', icon: Icon(Icons.calculate)),
-            Tab(text: 'নিয়মাবলী', icon: Icon(Icons.menu_book)),
+          tabs: [
+            Tab(
+              text: context.tr(bn: 'ক্যালকুলেটর', en: 'Calculator'),
+              icon: const Icon(Icons.calculate),
+            ),
+            Tab(
+              text: context.tr(bn: 'নিয়মাবলী', en: 'Guidelines'),
+              icon: const Icon(Icons.menu_book),
+            ),
           ],
         ),
       ),
@@ -142,27 +178,22 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nisab info card
           _buildNisabInfoCard(theme),
           const SizedBox(height: 20),
-
-          // Price settings
           _buildPriceSettingsCard(theme),
           const SizedBox(height: 20),
-
-          // Input form
           _buildInputForm(theme),
           const SizedBox(height: 24),
 
-          // Calculate button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _calculateZakat,
               icon: const Icon(Icons.calculate),
-              label: const Text(
-                'যাকাত হিসাব করুন',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              label: Text(
+                context.tr(bn: 'যাকাত হিসাব করুন', en: 'Calculate Zakat'),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
@@ -176,16 +207,16 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
           ),
           const SizedBox(height: 24),
 
-          // Results card
           _buildResultsCard(theme),
           const SizedBox(height: 16),
 
-          // Clear button
           Center(
             child: TextButton.icon(
               onPressed: _clearForm,
               icon: const Icon(Icons.refresh),
-              label: const Text('পুনরায় হিসাব করুন'),
+              label: Text(
+                context.tr(bn: 'পুনরায় হিসাব করুন', en: 'Reset Calculation'),
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -225,7 +256,10 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
               ),
               const SizedBox(width: 8),
               Text(
-                'নিসাব (ন্যূনতম সম্পদ)',
+                context.tr(
+                  bn: 'নিসাব (ন্যূনতম সম্পদ)',
+                  en: 'Nisab (Minimum Wealth)',
+                ),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -237,13 +271,24 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
             ],
           ),
           const SizedBox(height: 12),
-          _buildNisabRow('স্বর্ণ:', '${ZakatNisab.goldGrams} গ্রাম (৭.৫ ভরি)'),
           _buildNisabRow(
-              'রূপা:', '${ZakatNisab.silverGrams} গ্রাম (৫২.৫ ভরি)'),
-          _buildNisabRow('বর্তমান নিসাব মূল্য:', _formatCurrency(_nisabValue)),
+            context.tr(bn: 'স্বর্ণ:', en: 'Gold:'),
+            '${ZakatNisab.goldGrams} ${context.tr(bn: 'গ্রাম', en: 'grams')}',
+          ),
+          _buildNisabRow(
+            context.tr(bn: 'রূপা:', en: 'Silver:'),
+            '${ZakatNisab.silverGrams} ${context.tr(bn: 'গ্রাম', en: 'grams')}',
+          ),
+          _buildNisabRow(
+            context.tr(bn: 'বর্তমান নিসাব মূল্য:', en: 'Current Nisab Value:'),
+            _formatCurrency(context, _nisabValue),
+          ),
           const SizedBox(height: 8),
           Text(
-            '* রূপার নিসাব অনুসরণ করা হয় কারণ এতে গরীবদের বেশি উপকার হয়',
+            context.tr(
+              bn: '* রূপার নিসাব অনুসরণ করা হয় কারণ এতে গরীবদের বেশি উপকার হয়',
+              en: '* Silver nisab is often used as it generally benefits more people in need',
+            ),
             style: TextStyle(
               fontSize: 11,
               fontStyle: FontStyle.italic,
@@ -263,10 +308,7 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 13),
-          ),
+          Text(label, style: const TextStyle(fontSize: 13)),
           Text(
             value,
             style: const TextStyle(
@@ -290,9 +332,12 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
               children: [
                 const Icon(Icons.settings, size: 20),
                 const SizedBox(width: 8),
-                const Text(
-                  'বর্তমান বাজার মূল্য (প্রতি গ্রাম)',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text(
+                  context.tr(
+                    bn: 'বর্তমান বাজার মূল্য (প্রতি গ্রাম)',
+                    en: 'Current Market Price (per gram)',
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -302,11 +347,13 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
                 Expanded(
                   child: TextFormField(
                     initialValue: _goldPricePerGram.toStringAsFixed(0),
-                    decoration: const InputDecoration(
-                      labelText: 'স্বর্ণ (৳)',
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: InputDecoration(
+                      labelText: context.tr(bn: 'স্বর্ণ (৳)', en: 'Gold (BDT)'),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -320,11 +367,13 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
                 Expanded(
                   child: TextFormField(
                     initialValue: _silverPricePerGram.toStringAsFixed(0),
-                    decoration: const InputDecoration(
-                      labelText: 'রূপা (৳)',
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: InputDecoration(
+                      labelText: context.tr(bn: 'রূপা (৳)', en: 'Silver (BDT)'),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -350,50 +399,56 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'আপনার সম্পদ লিখুন',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Text(
+              context.tr(bn: 'আপনার সম্পদ লিখুন', en: 'Enter Your Assets'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildInputField(
               controller: _goldGramsController,
-              label: 'স্বর্ণ (গ্রামে)',
+              label: context.tr(bn: 'স্বর্ণ (গ্রামে)', en: 'Gold (grams)'),
               icon: Icons.diamond,
-              hint: 'যেমন: ২০',
+              hint: context.tr(bn: 'যেমন: ২০', en: 'e.g. 20'),
             ),
             _buildInputField(
               controller: _silverGramsController,
-              label: 'রূপা (গ্রামে)',
+              label: context.tr(bn: 'রূপা (গ্রামে)', en: 'Silver (grams)'),
               icon: Icons.circle,
-              hint: 'যেমন: ১০০',
+              hint: context.tr(bn: 'যেমন: ১০০', en: 'e.g. 100'),
             ),
             _buildInputField(
               controller: _cashController,
-              label: 'নগদ টাকা ও ব্যাংক ব্যালেন্স (৳)',
+              label: context.tr(
+                bn: 'নগদ টাকা ও ব্যাংক ব্যালেন্স (৳)',
+                en: 'Cash & Bank Balance (BDT)',
+              ),
               icon: Icons.account_balance_wallet,
-              hint: 'যেমন: ৫০০০০০',
+              hint: context.tr(bn: 'যেমন: ৫০০০০০', en: 'e.g. 500000'),
             ),
             _buildInputField(
               controller: _businessController,
-              label: 'ব্যবসায়িক পণ্যের মূল্য (৳)',
+              label: context.tr(
+                bn: 'ব্যবসায়িক পণ্যের মূল্য (৳)',
+                en: 'Business Inventory Value (BDT)',
+              ),
               icon: Icons.store,
-              hint: 'যেমন: ১০০০০০০',
+              hint: context.tr(bn: 'যেমন: ১০০০০০০', en: 'e.g. 1000000'),
             ),
             _buildInputField(
               controller: _otherAssetsController,
-              label: 'অন্যান্য সম্পদ (শেয়ার, বন্ড ইত্যাদি) (৳)',
+              label: context.tr(
+                bn: 'অন্যান্য সম্পদ (শেয়ার, বন্ড ইত্যাদি) (৳)',
+                en: 'Other Assets (shares, bonds, etc.) (BDT)',
+              ),
               icon: Icons.trending_up,
-              hint: 'যেমন: ২০০০০০',
+              hint: context.tr(bn: 'যেমন: ২০০০০০', en: 'e.g. 200000'),
             ),
             const Divider(height: 32),
             _buildInputField(
               controller: _debtsController,
-              label: 'ঋণ/দেনা বাদ দিন (৳)',
+              label: context.tr(bn: 'ঋণ/দেনা বাদ দিন (৳)', en: 'Deduct Debts (BDT)'),
               icon: Icons.remove_circle_outline,
-              hint: 'যেমন: ১০০০০০',
+              hint: context.tr(bn: 'যেমন: ১০০০০০', en: 'e.g. 100000'),
               isDeduction: true,
             ),
           ],
@@ -416,10 +471,7 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          prefixIcon: Icon(
-            icon,
-            color: isDeduction ? Colors.red.shade400 : null,
-          ),
+          prefixIcon: Icon(icon, color: isDeduction ? Colors.red.shade400 : null),
           border: const OutlineInputBorder(),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -473,7 +525,9 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            _isNisabMet ? 'আপনার উপর যাকাত ফরজ' : 'যাকাত ফরজ নয়',
+            _isNisabMet
+                ? context.tr(bn: 'আপনার উপর যাকাত ফরজ', en: 'Zakat is Due on You')
+                : context.tr(bn: 'যাকাত ফরজ নয়', en: 'Zakat is Not Due'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -485,9 +539,18 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
             ),
           ),
           const SizedBox(height: 20),
-          _buildResultRow('মোট সম্পদ:', _formatCurrency(_totalAssets)),
-          _buildResultRow('যাকাতযোগ্য সম্পদ:', _formatCurrency(_zakatableAmount)),
-          _buildResultRow('নিসাব মূল্য:', _formatCurrency(_nisabValue)),
+          _buildResultRow(
+            context.tr(bn: 'মোট সম্পদ:', en: 'Total Assets:'),
+            _formatCurrency(context, _totalAssets),
+          ),
+          _buildResultRow(
+            context.tr(bn: 'যাকাতযোগ্য সম্পদ:', en: 'Zakatable Assets:'),
+            _formatCurrency(context, _zakatableAmount),
+          ),
+          _buildResultRow(
+            context.tr(bn: 'নিসাব মূল্য:', en: 'Nisab Value:'),
+            _formatCurrency(context, _nisabValue),
+          ),
           const Divider(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
@@ -501,16 +564,13 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
             ),
             child: Column(
               children: [
-                const Text(
-                  'প্রদেয় যাকাত (২.৫%)',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                Text(
+                  context.tr(bn: 'প্রদেয় যাকাত (২.৫%)', en: 'Zakat Due (2.5%)'),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _formatCurrency(_zakatDue),
+                  _formatCurrency(context, _zakatDue),
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -535,16 +595,10 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(label, style: const TextStyle(fontSize: 14)),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -552,12 +606,13 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
   }
 
   Widget _buildGuideTab(ThemeData theme) {
+    final locale = Localizations.localeOf(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Center(
             child: Column(
               children: [
@@ -574,7 +629,10 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Zakat (Obligatory Charity)',
+                  context.tr(
+                    bn: 'যাকাত (ফরজ দান)',
+                    en: 'Zakat (Obligatory Charity)',
+                  ),
                   style: TextStyle(
                     fontSize: 14,
                     color: theme.textTheme.bodySmall?.color,
@@ -586,7 +644,6 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
           ),
           const SizedBox(height: 20),
 
-          // Key verse
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -632,7 +689,6 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
           ),
           const SizedBox(height: 20),
 
-          // Introduction
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -640,7 +696,7 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              zakatGuide.introduction,
+              zakatGuide.getIntroduction(locale),
               style: TextStyle(
                 fontSize: 15,
                 height: 1.7,
@@ -650,29 +706,23 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
           ),
           const SizedBox(height: 24),
 
-          // 8 Recipients section
           _buildRecipientsSection(theme),
           const SizedBox(height: 16),
 
-          // Conditions
           CollapsibleSection(
-            title: 'শর্তসমূহ',
+            title: context.tr(bn: 'শর্তসমূহ', en: 'Conditions'),
             icon: Icons.checklist,
             color: Colors.blue.shade700,
-            children: zakatGuide.conditions.asMap().entries.map((entry) {
-              return WorshipListItem(
-                text: entry.value,
-                number: entry.key + 1,
-              );
+            children: zakatGuide.getConditions(locale).asMap().entries.map((entry) {
+              return WorshipListItem(text: entry.value, number: entry.key + 1);
             }).toList(),
           ),
 
-          // Who cannot receive
           CollapsibleSection(
-            title: 'যারা যাকাত পাবে না',
+            title: context.tr(bn: 'যারা যাকাত পাবে না', en: 'Who Cannot Receive Zakat'),
             icon: Icons.block,
             color: Colors.red.shade700,
-            children: zakatIneligibleRecipients.map((item) {
+            children: _localizedIneligibleRecipients(context).map((item) {
               return WorshipListItem(
                 text: item,
                 icon: Icons.cancel_outlined,
@@ -681,12 +731,11 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
             }).toList(),
           ),
 
-          // Exempt assets
           CollapsibleSection(
-            title: 'যে সম্পদে যাকাত নেই',
+            title: context.tr(bn: 'যে সম্পদে যাকাত নেই', en: 'Exempt Assets'),
             icon: Icons.check_circle,
             color: Colors.green.shade700,
-            children: zakatExemptAssets.map((item) {
+            children: _localizedExemptAssets(context).map((item) {
               return WorshipListItem(
                 text: item,
                 icon: Icons.check_circle_outline,
@@ -695,12 +744,11 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
             }).toList(),
           ),
 
-          // Special rulings
           CollapsibleSection(
-            title: 'বিশেষ মাসআলা',
+            title: context.tr(bn: 'বিশেষ মাসআলা', en: 'Special Rulings'),
             icon: Icons.lightbulb,
             color: Colors.purple.shade700,
-            children: zakatGuide.specialRulings.map((item) {
+            children: zakatGuide.getSpecialRulings(locale).map((item) {
               return WorshipListItem(
                 text: item,
                 icon: Icons.info_outline,
@@ -709,11 +757,10 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
             }).toList(),
           ),
 
-          // References
           const Divider(height: 32),
           ReferenceSection(
             references: zakatGuide.references,
-            title: 'সকল সূত্র',
+            title: context.tr(bn: 'সকল সূত্র', en: 'All References'),
           ),
 
           const SizedBox(height: 32),
@@ -724,14 +771,62 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
 
   Widget _buildRecipientsSection(ThemeData theme) {
     final recipients = [
-      {'arabic': 'الفقراء', 'bangla': 'ফকির', 'desc': 'যাদের কিছুই নেই'},
-      {'arabic': 'المساكين', 'bangla': 'মিসকিন', 'desc': 'যাদের আয় প্রয়োজনের তুলনায় কম'},
-      {'arabic': 'العاملين عليها', 'bangla': 'আমিল', 'desc': 'যাকাত সংগ্রহকারী'},
-      {'arabic': 'المؤلفة قلوبهم', 'bangla': 'মুআল্লাফাতুল কুলূব', 'desc': 'নওমুসলিম/ইসলামের প্রতি আকৃষ্ট'},
-      {'arabic': 'في الرقاب', 'bangla': 'রিকাব', 'desc': 'দাসমুক্তির জন্য'},
-      {'arabic': 'الغارمين', 'bangla': 'গারিমীন', 'desc': 'ঋণগ্রস্ত'},
-      {'arabic': 'في سبيل الله', 'bangla': 'ফী সাবীলিল্লাহ', 'desc': 'আল্লাহর পথে'},
-      {'arabic': 'ابن السبيل', 'bangla': 'ইবনুস সাবীল', 'desc': 'বিপদগ্রস্ত মুসাফির'},
+      {
+        'arabic': 'الفقراء',
+        'bn': 'ফকির',
+        'en': 'Fuqara',
+        'descBn': 'যাদের কিছুই নেই',
+        'descEn': 'Those with almost nothing',
+      },
+      {
+        'arabic': 'المساكين',
+        'bn': 'মিসকিন',
+        'en': 'Masakin',
+        'descBn': 'যাদের আয় প্রয়োজনের তুলনায় কম',
+        'descEn': 'Those whose income is insufficient',
+      },
+      {
+        'arabic': 'العاملين عليها',
+        'bn': 'আমিল',
+        'en': 'Amil',
+        'descBn': 'যাকাত সংগ্রহকারী',
+        'descEn': 'Zakat collectors/administrators',
+      },
+      {
+        'arabic': 'المؤلفة قلوبهم',
+        'bn': 'মুয়াল্লাফাতুল কুলুব',
+        'en': 'Muallafat al-Qulub',
+        'descBn': 'ইসলামের প্রতি আকৃষ্ট ব্যক্তি',
+        'descEn': 'Those whose hearts are to be reconciled',
+      },
+      {
+        'arabic': 'في الرقاب',
+        'bn': 'রিকাব',
+        'en': 'Fi al-Riqab',
+        'descBn': 'দাসমুক্তির জন্য',
+        'descEn': 'For freeing captives/slaves',
+      },
+      {
+        'arabic': 'الغارمين',
+        'bn': 'গারিমীন',
+        'en': 'Gharimin',
+        'descBn': 'ঋণগ্রস্ত',
+        'descEn': 'Those burdened by debt',
+      },
+      {
+        'arabic': 'في سبيل الله',
+        'bn': 'ফি সাবীলিল্লাহ',
+        'en': 'Fi Sabilillah',
+        'descBn': 'আল্লাহর পথে',
+        'descEn': 'In the cause of Allah',
+      },
+      {
+        'arabic': 'ابن السبيل',
+        'bn': 'ইবনুস সাবীল',
+        'en': 'Ibn al-Sabil',
+        'descBn': 'বিপদগ্রস্ত মুসাফির',
+        'descEn': 'A stranded traveler',
+      },
     ];
 
     return Card(
@@ -744,12 +839,17 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
               children: [
                 Icon(Icons.people, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'যাকাত প্রাপ্য ৮ শ্রেণি (সূরা তাওবাহ ৯:৬০)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                Expanded(
+                  child: Text(
+                    context.tr(
+                      bn: 'যাকাত প্রাপ্য ৮ শ্রেণি (সূরা তাওবাহ ৯:৬০)',
+                      en: '8 Eligible Zakat Categories (Surah Tawbah 9:60)',
+                    ),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
               ],
@@ -789,26 +889,31 @@ class _ZakatCalculatorScreenState extends State<ZakatCalculatorScreen>
                           Row(
                             children: [
                               Text(
-                                recipient['bangla']!,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                context.isEnglish
+                                    ? recipient['en']!
+                                    : recipient['bn']!,
+                                style:
+                                    const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                '(${recipient['arabic']})',
-                                style: GoogleFonts.amiri(
-                                  fontSize: 14,
-                                  color: theme.brightness == Brightness.dark
-                                      ? Colors.amber.shade200
-                                      : Colors.brown,
+                              Expanded(
+                                child: Text(
+                                  '(${recipient['arabic']})',
+                                  style: GoogleFonts.amiri(
+                                    fontSize: 14,
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.amber.shade200
+                                        : Colors.brown,
+                                  ),
+                                  textDirection: TextDirection.rtl,
                                 ),
-                                textDirection: TextDirection.rtl,
                               ),
                             ],
                           ),
                           Text(
-                            recipient['desc']!,
+                            context.isEnglish
+                                ? recipient['descEn']!
+                                : recipient['descBn']!,
                             style: TextStyle(
                               fontSize: 13,
                               color: theme.textTheme.bodySmall?.color,
