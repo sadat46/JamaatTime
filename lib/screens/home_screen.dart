@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import 'dart:async';
+import '../core/app_locale_controller.dart';
 import '../services/settings_service.dart';
+import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/jamaat_service.dart';
@@ -105,6 +107,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Stream subscription for settings changes (must be cancelled in dispose)
   StreamSubscription<void>? _settingsSubscription;
+
+  bool get _isEnglishCurrent =>
+      AppLocaleController.instance.current.languageCode == 'en';
+
+  String _trCurrent(String bn, String en) => _isEnglishCurrent ? en : bn;
+
+  String _tr(BuildContext context, String bn, String en) {
+    return Localizations.localeOf(context).languageCode == 'en' ? en : bn;
+  }
 
   @override
   void initState() {
@@ -214,6 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadMadhab();
       await _loadBangladeshHijriOffset();
       await _handleNotificationSettingsChange();
+      _updateHomeWidget();
     });
   }
 
@@ -269,7 +281,10 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       jamaatTimes = null;
       isLoadingJamaat = false;
-      jamaatError = 'Error loading Jamaat times: $e';
+      jamaatError = _trCurrent(
+        'জামাত সময় লোড করতে সমস্যা হয়েছে',
+        'Failed to load jamaat times',
+      );
       _computePrayerTableData();
       setState(() {});
     }
@@ -572,7 +587,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Location: ${position.latitude}, ${position.longitude}${place != null ? ' ($place)' : ''}',
+            _tr(
+              context,
+              'লোকেশন: ${position.latitude}, ${position.longitude}${place != null ? ' ($place)' : ''}',
+              'Location: ${position.latitude}, ${position.longitude}${place != null ? ' ($place)' : ''}',
+            ),
           ),
         ),
       );
@@ -783,12 +802,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
     WidgetService.updateWidgetData(
       times: times,
+      locale: AppLocaleController.instance.current,
       locationName: currentPlaceName ?? _locationConfig!.cityName,
       date: selectedDate,
       hijriOffsetDays: hijriOffset,
       tomorrowFajr: tomorrowFajr,
       jamaatTimes: jamaatTimes,
     );
+  }
+
+  String _localizedPrayerName(BuildContext context, String prayerName) {
+    final strings = AppLocalizations.of(context);
+    switch (prayerName) {
+      case 'Fajr':
+        return strings.prayer_fajr;
+      case 'Sunrise':
+        return strings.prayer_sunrise;
+      case 'Dhuhr':
+        return strings.prayer_dhuhr;
+      case 'Asr':
+        return strings.prayer_asr;
+      case 'Maghrib':
+        return strings.prayer_maghrib;
+      case 'Isha':
+        return strings.prayer_isha;
+      default:
+        return prayerName;
+    }
   }
 
   IconData _prayerIconForName(String prayerName) {
@@ -902,7 +942,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       flex: 3,
                       child: Text(
-                        row.name,
+                        _localizedPrayerName(context, row.name),
                         style: TextStyle(
                           fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                           fontStyle: isInfo ? FontStyle.italic : FontStyle.normal,
@@ -1058,7 +1098,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final horizontalPadding = constraints.maxWidth < 400 ? 8.0 : 16.0;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Jamaat Time'),
+            title: Text(_tr(context, 'জামাত টাইম', 'Jamaat Time')),
             centerTitle: true,
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
@@ -1205,7 +1245,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           if (_locationConfig != null &&
                                               _locationConfig!.jamaatSource == JamaatSource.none)
                                             Text(
-                                              currentPlaceName ?? 'Detecting...',
+                                              currentPlaceName ??
+                                                  _tr(context, 'সনাক্ত করা হচ্ছে...', 'Detecting...'),
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.white,
@@ -1293,15 +1334,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Padding(
                                               padding: const EdgeInsets.only(top: 4),
                                               child: Row(
-                                                children: const [
-                                                  SizedBox(
+                                                children: [
+                                                  const SizedBox(
                                                     width: 14,
                                                     height: 14,
                                                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
                                                   ),
-                                                  SizedBox(width: 6),
+                                                  const SizedBox(width: 6),
                                                   Flexible(
-                                                    child: Text('Loading jamaat times...', style: TextStyle(fontSize: 11, color: Colors.white60)),
+                                                    child: Text(
+                                                      _tr(context, 'জামাত সময় লোড হচ্ছে...', 'Loading jamaat times...'),
+                                                      style: const TextStyle(fontSize: 11, color: Colors.white60),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -1329,13 +1373,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Padding(
                                               padding: const EdgeInsets.only(top: 4),
                                               child: Row(
-                                                children: const [
-                                                  Icon(Icons.info_outline, size: 14, color: Colors.white70),
-                                                  SizedBox(width: 6),
+                                                children: [
+                                                  const Icon(Icons.info_outline, size: 14, color: Colors.white70),
+                                                  const SizedBox(width: 6),
                                                   Flexible(
                                                     child: Text(
-                                                      'GPS Mode: No jamaat times',
-                                                      style: TextStyle(fontSize: 11, color: Colors.white70),
+                                                      _tr(
+                                                        context,
+                                                        'GPS মোড: জামাত সময় নেই',
+                                                        'GPS Mode: No jamaat times',
+                                                      ),
+                                                      style: const TextStyle(fontSize: 11, color: Colors.white70),
                                                     ),
                                                   ),
                                                 ],
@@ -1368,10 +1416,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const SectionHeader(title: 'Prayer Times'),
+                              SectionHeader(
+                                title: _tr(context, 'নামাজের সময়', 'Prayer Times'),
+                              ),
                               if (_lastJamaatUpdate != null && !isLoadingJamaat)
                                 Text(
-                                  'Last updated: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
+                                  '${_tr(context, 'সর্বশেষ আপডেট', 'Last updated')}: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,
@@ -1411,7 +1461,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SectionHeader(title: 'Sahri & Iftar Times'),
+                          SectionHeader(
+                            title: _tr(context, 'সাহরি ও ইফতার সময়', 'Sahri & Iftar Times'),
+                          ),
                           SahriIftarWidget(
                             fajrTime: times['Fajr'],
                             maghribTime: times['Maghrib'],
