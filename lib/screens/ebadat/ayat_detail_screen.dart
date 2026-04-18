@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/locale_text.dart';
 import '../../models/ayat_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -24,13 +25,15 @@ class _AyatDetailScreenState extends State<AyatDetailScreen> {
     if (!_bookmarkService.canBookmark) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('বুকমার্ক করতে লগইন করুন'),
+          content: Text(
+            context.tr(
+              bn: 'বুকমার্ক করতে লগইন করুন',
+              en: 'Sign in to bookmark',
+            ),
+          ),
           action: SnackBarAction(
-            label: 'লগইন',
-            onPressed: () {
-              // Navigate to profile tab (index 2)
-              // This will be implemented when integrating with main navigation
-            },
+            label: context.tr(bn: 'লগইন', en: 'Sign In'),
+            onPressed: () {},
           ),
         ),
       );
@@ -49,8 +52,11 @@ class _AyatDetailScreenState extends State<AyatDetailScreen> {
         SnackBar(
           content: Text(
             isNowBookmarked
-                ? 'বুকমার্কে যুক্ত হয়েছে'
-                : 'বুকমার্ক থেকে সরানো হয়েছে',
+                ? context.tr(bn: 'বুকমার্কে যুক্ত হয়েছে', en: 'Added to bookmarks')
+                : context.tr(
+                    bn: 'বুকমার্ক থেকে সরানো হয়েছে',
+                    en: 'Removed from bookmarks',
+                  ),
           ),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
@@ -60,30 +66,36 @@ class _AyatDetailScreenState extends State<AyatDetailScreen> {
   }
 
   void _shareAyat() async {
+    final locale = Localizations.localeOf(context);
     try {
       final shareText = '''
-${widget.ayat.titleBangla}
+${widget.ayat.getTitle(locale)}
 
 ${widget.ayat.arabicText}
 
-উচ্চারণ: ${widget.ayat.banglaTransliteration}
+${context.tr(bn: 'উচ্চারণ', en: 'Transliteration')}: ${widget.ayat.getTransliteration(locale)}
 
-অর্থ: ${widget.ayat.banglaMeaning}
+${context.tr(bn: 'অর্থ', en: 'Meaning')}: ${widget.ayat.getMeaning(locale)}
 
-সূত্র: ${widget.ayat.reference}
+${context.tr(bn: 'সূত্র', en: 'Reference')}: ${widget.ayat.reference}
 ''';
 
       await Share.share(
         shareText,
-        subject: widget.ayat.titleBangla,
+        subject: widget.ayat.getTitle(locale),
       );
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('শেয়ার করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'শেয়ার করতে সমস্যা হয়েছে',
+                en: 'Failed to share',
+              ),
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -91,31 +103,42 @@ ${widget.ayat.arabicText}
   }
 
   void _copyToClipboard() async {
+    final locale = Localizations.localeOf(context);
     try {
       final copyText = '''
 ${widget.ayat.arabicText}
 
-${widget.ayat.banglaMeaning}
+${widget.ayat.getMeaning(locale)}
 ''';
 
       await Clipboard.setData(ClipboardData(text: copyText));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ক্লিপবোর্ডে কপি হয়েছে'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'ক্লিপবোর্ডে কপি হয়েছে',
+                en: 'Copied to clipboard',
+              ),
+            ),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('কপি করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'কপি করতে সমস্যা হয়েছে',
+                en: 'Failed to copy',
+              ),
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -124,10 +147,17 @@ ${widget.ayat.banglaMeaning}
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final title = widget.ayat.getTitle(locale);
+    final category = widget.ayat.getCategory(locale);
+    final transliteration = widget.ayat.getTransliteration(locale);
+    final meaning = widget.ayat.getMeaning(locale);
+    final surahName = widget.ayat.getSurahName(locale);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.ayat.titleBangla,
+          title,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -145,12 +175,12 @@ ${widget.ayat.banglaMeaning}
                   : Icons.bookmark_border,
             ),
             onPressed: _toggleBookmark,
-            tooltip: 'বুকমার্ক',
+            tooltip: context.tr(bn: 'বুকমার্ক', en: 'Bookmark'),
           ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareAyat,
-            tooltip: 'শেয়ার',
+            tooltip: context.tr(bn: 'শেয়ার', en: 'Share'),
           ),
           const SizedBox(width: 8),
         ],
@@ -165,7 +195,6 @@ ${widget.ayat.banglaMeaning}
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Category Badge
                   Align(
                     alignment: Alignment.center,
                     child: Container(
@@ -175,17 +204,17 @@ ${widget.ayat.banglaMeaning}
                       ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF1565C0).withValues(alpha:0.2)
-                            : const Color(0xFF1565C0).withValues(alpha:0.1),
+                            ? const Color(0xFF1565C0).withValues(alpha: 0.2)
+                            : const Color(0xFF1565C0).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF64B5F6).withValues(alpha:0.5)
-                              : const Color(0xFF1565C0).withValues(alpha:0.3),
+                              ? const Color(0xFF64B5F6).withValues(alpha: 0.5)
+                              : const Color(0xFF1565C0).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
-                        widget.ayat.category,
+                        category,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -197,8 +226,6 @@ ${widget.ayat.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Arabic Text
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -208,8 +235,8 @@ ${widget.ayat.banglaMeaning}
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF81C784).withValues(alpha:0.3)
-                            : const Color(0xFF1B5E20).withValues(alpha:0.2),
+                            ? const Color(0xFF81C784).withValues(alpha: 0.3)
+                            : const Color(0xFF1B5E20).withValues(alpha: 0.2),
                         width: 2,
                       ),
                     ),
@@ -228,8 +255,6 @@ ${widget.ayat.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Surah Info
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -242,7 +267,7 @@ ${widget.ayat.banglaMeaning}
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${widget.ayat.surahName}, আয়াত ${widget.ayat.ayatNumber}',
+                        '$surahName, ${context.tr(bn: 'আয়াত', en: 'Ayat')} ${widget.ayat.ayatNumber}',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -254,24 +279,23 @@ ${widget.ayat.banglaMeaning}
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Transliteration Section
-                  _buildSectionHeader('বাংলা উচ্চারণ', Icons.record_voice_over),
+                  _buildSectionHeader(
+                    context.tr(bn: 'উচ্চারণ', en: 'Transliteration'),
+                    Icons.record_voice_over,
+                  ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF1565C0).withValues(alpha:0.15)
+                          ? const Color(0xFF1565C0).withValues(alpha: 0.15)
                           : Colors.blue[50],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      widget.ayat.banglaTransliteration,
+                      transliteration,
                       style: TextStyle(
                         fontSize: 19,
                         fontStyle: FontStyle.italic,
@@ -283,29 +307,25 @@ ${widget.ayat.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Meaning Section
-                  _buildSectionHeader('বাংলা অর্থ', Icons.translate),
+                  _buildSectionHeader(context.tr(bn: 'অর্থ', en: 'Meaning'), Icons.translate),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF1565C0).withValues(alpha:0.2)
-                          : const Color(0xFF1565C0).withValues(alpha:0.05),
+                          ? const Color(0xFF1565C0).withValues(alpha: 0.2)
+                          : const Color(0xFF1565C0).withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF64B5F6).withValues(alpha:0.4)
-                            : const Color(0xFF1565C0).withValues(alpha:0.2),
+                            ? const Color(0xFF64B5F6).withValues(alpha: 0.4)
+                            : const Color(0xFF1565C0).withValues(alpha: 0.2),
                       ),
                     ),
                     child: Text(
-                      widget.ayat.banglaMeaning,
+                      meaning,
                       style: TextStyle(
                         fontSize: 19,
                         height: 1.8,
@@ -314,12 +334,8 @@ ${widget.ayat.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Reference Section
                   Row(
                     children: [
                       Icon(
@@ -341,15 +357,13 @@ ${widget.ayat.banglaMeaning}
                     ],
                   ),
                   const SizedBox(height: 32),
-
-                  // Action Buttons
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _copyToClipboard,
                           icon: const Icon(Icons.copy),
-                          label: const Text('কপি'),
+                          label: Text(context.tr(bn: 'কপি', en: 'Copy')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF90CAF9)
@@ -372,7 +386,7 @@ ${widget.ayat.banglaMeaning}
                         child: ElevatedButton.icon(
                           onPressed: _shareAyat,
                           icon: const Icon(Icons.share),
-                          label: const Text('শেয়ার'),
+                          label: Text(context.tr(bn: 'শেয়ার', en: 'Share')),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF0D47A1)
