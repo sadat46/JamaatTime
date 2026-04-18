@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants.dart';
+import '../core/locale_text.dart';
 import '../services/screen_awake_service.dart';
 import 'shared_ui_widgets.dart';
 
@@ -310,7 +311,10 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8.0),
             child: Text(
-              'Sahri & Iftar Times',
+              context.tr(
+                bn: 'সাহরি ও ইফতার সময়',
+                en: 'Sahri & Iftar Times',
+              ),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: AppConstants.brandGreenDark,
                 fontWeight: FontWeight.bold,
@@ -322,7 +326,10 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           child: _SahriIftarCard(
             key: const Key('sahri-card'),
             type: SahriIftarType.sahri,
-            title: 'Sahri Ends',
+            title: context.tr(
+              bn: 'সাহরি শেষ',
+              en: 'Sahri Ends',
+            ),
             timeText: fajrTimeStr,
             countdownText: _sahriCountdown,
             onTap: () => _openFullscreen(SahriIftarType.sahri),
@@ -335,7 +342,10 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           child: _SahriIftarCard(
             key: const Key('iftar-card'),
             type: SahriIftarType.iftar,
-            title: 'Iftar Begins',
+            title: context.tr(
+              bn: 'ইফতার শুরু',
+              en: 'Iftar Begins',
+            ),
             timeText: maghribTimeStr,
             countdownText: _iftarCountdown,
             onTap: () => _openFullscreen(SahriIftarType.iftar),
@@ -474,7 +484,9 @@ class _SahriIftarCard extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: isSahri ? 'Sahri focus card' : 'Iftar focus card',
+      label: isSahri
+          ? context.tr(bn: 'সাহরি ফোকাস কার্ড', en: 'Sahri focus card')
+          : context.tr(bn: 'ইফতার ফোকাস কার্ড', en: 'Iftar focus card'),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -593,7 +605,7 @@ class _SahriIftarCard extends StatelessWidget {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          '${isSahri ? 'Ends at' : 'Begins at'} $timeText',
+                                          '${isSahri ? context.tr(bn: 'শেষ', en: 'Ends at') : context.tr(bn: 'শুরু', en: 'Begins at')} $timeText',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.right,
@@ -646,9 +658,9 @@ class _SahriIftarCard extends StatelessWidget {
                                 child: Text(
                                   inGrace
                                       ? (isSahri
-                                            ? 'Sehri time finished'
-                                            : 'Iftar time started')
-                                      : 'Remaining Time',
+                                            ? context.tr(bn: 'সাহরির সময় শেষ', en: 'Sehri time finished')
+                                            : context.tr(bn: 'ইফতারের সময় শুরু', en: 'Iftar time started'))
+                                      : context.tr(bn: 'বাকি সময়', en: 'Remaining Time'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodySmall
@@ -661,7 +673,10 @@ class _SahriIftarCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Tap card for focus',
+                                context.tr(
+                                  bn: 'ফোকাসের জন্য কার্ডে চাপ দিন',
+                                  en: 'Tap card for focus',
+                                ),
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
                                       color: spec.secondaryText,
@@ -715,9 +730,13 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
 
   bool get _isSahri => widget.type == SahriIftarType.sahri;
 
-  String get _title => _isSahri ? 'Sahri Ends' : 'Iftar Begins';
+  String _title(BuildContext context) => _isSahri
+      ? context.tr(bn: 'সাহরি শেষ', en: 'Sahri Ends')
+      : context.tr(bn: 'ইফতার শুরু', en: 'Iftar Begins');
 
-  String get _header => _isSahri ? 'Sahri Focus' : 'Iftar Focus';
+  String _header(BuildContext context) => _isSahri
+      ? context.tr(bn: 'সাহরি ফোকাস', en: 'Sahri Focus')
+      : context.tr(bn: 'ইফতার ফোকাস', en: 'Iftar Focus');
 
   IconData get _icon => _isSahri ? Icons.nightlight_round : Icons.wb_sunny;
 
@@ -847,10 +866,10 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: spec.primaryText,
-        title: Text(_header),
+        title: Text(_header(context)),
         actions: [
           IconButton(
-            tooltip: 'Close',
+            tooltip: context.tr(bn: 'বন্ধ করুন', en: 'Close'),
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close),
           ),
@@ -936,7 +955,7 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                       ),
                                       const SizedBox(height: 20),
                                       Text(
-                                        _title,
+                                        _title(context),
                                         style: Theme.of(context)
                                             .textTheme
                                             .headlineSmall
@@ -1009,9 +1028,9 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                     Text(
                                                       _inGrace
                                                           ? (_isSahri
-                                                                ? 'Sehri time finished'
-                                                                : 'Iftar time started')
-                                                          : 'Remaining Time',
+                                                                ? context.tr(bn: 'সাহরির সময় শেষ', en: 'Sehri time finished')
+                                                                : context.tr(bn: 'ইফতারের সময় শুরু', en: 'Iftar time started'))
+                                                          : context.tr(bn: 'বাকি সময়', en: 'Remaining Time'),
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodySmall
@@ -1063,14 +1082,17 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                       InfoChip(
                                         icon: Icons.schedule_rounded,
                                         label:
-                                            '${_isSahri ? 'Ends at' : 'Begins at'} $timeText',
+                                            '${_isSahri ? context.tr(bn: 'শেষ', en: 'Ends at') : context.tr(bn: 'শুরু', en: 'Begins at')} $timeText',
                                         accent: spec.accent,
                                         textColor: spec.primaryText,
                                         fill: spec.glassTint,
                                       ),
                                       const SizedBox(height: 14),
                                       Text(
-                                        'Screen remains awake while focus mode is open.',
+                                        context.tr(
+                                          bn: 'ফোকাস মোড খোলা থাকলে স্ক্রিন জেগে থাকবে।',
+                                          en: 'Screen remains awake while focus mode is open.',
+                                        ),
                                         textAlign: TextAlign.center,
                                         style: Theme.of(context)
                                             .textTheme
