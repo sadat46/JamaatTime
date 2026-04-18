@@ -4,7 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../core/app_locale_controller.dart';
 import '../core/constants.dart';
+import '../core/locale_text.dart';
+import '../l10n/app_localizations.dart';
 import '../models/location_config.dart';
 import '../services/hijri_date_converter.dart';
 import '../services/jamaat_service.dart';
@@ -59,6 +62,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     "Dhu al-Qi'dah",
     'Dhu al-Hijjah',
   ];
+  static const List<String> _hijriMonthsBangla = [
+    'মুহাররম',
+    'সফর',
+    'রবিউল আউয়াল',
+    'রবিউস সানি',
+    'জুমাদাল উলা',
+    'জুমাদাস সানি',
+    'রজব',
+    'শাবান',
+    'রমজান',
+    'শাওয়াল',
+    'জিলকদ',
+    'জিলহজ',
+  ];
 
   final PrayerTimeEngine _prayerCalculationService = PrayerTimeEngine.instance;
   final JamaatService _jamaatService = JamaatService();
@@ -81,6 +98,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Map<String, DateTime?> _prayerTimes = <String, DateTime?>{};
   Map<String, dynamic>? _jamaatTimes;
+
+  bool get _isEnglishCurrent =>
+      AppLocaleController.instance.current.languageCode == 'en';
+
+  String _trCurrent(String bn, String en) => _isEnglishCurrent ? en : bn;
 
   @override
   void initState() {
@@ -158,8 +180,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               }
             }
           } catch (_) {
-            errorMessage =
-                'Jamaat times could not be loaded. Showing prayer times.';
+            errorMessage = _trCurrent(
+              'জামাতের সময় লোড করা যায়নি। নামাজের সময় দেখানো হচ্ছে।',
+              'Jamaat times could not be loaded. Showing prayer times.',
+            );
             jamaatMap = null;
           }
           break;
@@ -184,7 +208,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Unable to load calendar data right now.';
+        _errorMessage = _trCurrent(
+          'এই মুহূর্তে ক্যালেন্ডারের তথ্য লোড করা যাচ্ছে না।',
+          'Unable to load calendar data right now.',
+        );
       });
     }
   }
@@ -233,7 +260,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     SharedPreferences prefs,
   ) {
     if (activeConfig.country == Country.other) {
-      return prefs.getString('last_location_name') ?? 'GPS Location';
+      return prefs.getString('last_location_name') ??
+          _trCurrent('GPS লোকেশন', 'GPS Location');
     }
     return activeConfig.cityName;
   }
@@ -318,10 +346,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       monthStart,
       dayOffset: _effectiveHijriOffset,
     );
-    if (hijriDate.month < 1 || hijriDate.month > _hijriMonthsEnglish.length) {
+    final monthList = _isEnglishCurrent
+        ? _hijriMonthsEnglish
+        : _hijriMonthsBangla;
+    if (hijriDate.month < 1 || hijriDate.month > monthList.length) {
       return '${hijriDate.month} ${hijriDate.year} AH';
     }
-    final monthName = _hijriMonthsEnglish[hijriDate.month - 1];
+    final monthName = monthList[hijriDate.month - 1];
     return '$monthName ${hijriDate.year} AH';
   }
 
@@ -353,21 +384,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  String _timesSourceCaption() {
+  String _timesSourceCaption(BuildContext context) {
     if (_locationConfig?.jamaatSource == JamaatSource.none) {
-      return 'Jamaat unavailable in GPS mode';
+      return context.tr(
+        bn: 'GPS মোডে জামাত পাওয়া যায় না',
+        en: 'Jamaat unavailable in GPS mode',
+      );
     }
     if (_jamaatTimes == null || _jamaatTimes!.isEmpty) {
-      return 'Jamaat unavailable for this date';
+      return context.tr(
+        bn: 'এই তারিখে জামাতের সময় পাওয়া যায় না',
+        en: 'Jamaat unavailable for this date',
+      );
     }
-    return 'Prayer + Jamaat Time for Selected Date';
+    return context.tr(
+      bn: 'নির্বাচিত তারিখের নামাজ ও জামাতের সময়',
+      en: 'Prayer + Jamaat Time for Selected Date',
+    );
   }
 
-  String _prayerDisplayName(String prayerName) {
-    if (prayerName == 'Dhuhr') {
-      return 'Zuhr';
+  String _prayerDisplayName(BuildContext context, String prayerName) {
+    final strings = AppLocalizations.of(context);
+    switch (prayerName) {
+      case 'Fajr':
+        return strings.prayer_fajr;
+      case 'Sunrise':
+        return strings.prayer_sunrise;
+      case 'Dhuhr':
+        return context.isEnglish ? 'Zuhr' : strings.prayer_dhuhr;
+      case 'Asr':
+        return strings.prayer_asr;
+      case 'Maghrib':
+        return strings.prayer_maghrib;
+      case 'Isha':
+        return strings.prayer_isha;
+      default:
+        return prayerName;
     }
-    return prayerName;
   }
 
   String _jamaatKeyForPrayer(String prayerName) {
@@ -550,7 +603,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 3,
             child: Text(
-              'Prayer',
+              context.tr(bn: 'নামাজ', en: 'Prayer'),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -561,7 +614,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              'Prayer Time',
+              context.tr(bn: 'নামাজের সময়', en: 'Prayer Time'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -573,7 +626,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              'Jamaat Time',
+              context.tr(bn: 'জামাতের সময়', en: 'Jamaat Time'),
               textAlign: TextAlign.end,
               style: TextStyle(
                 fontSize: 12,
@@ -617,7 +670,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    _prayerDisplayName(prayerName),
+                    _prayerDisplayName(context, prayerName),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -708,7 +761,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _timesSourceCaption(),
+                  _timesSourceCaption(context),
                   maxLines: 1,
                   softWrap: false,
                   style: TextStyle(
@@ -767,13 +820,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendar'),
+        title: Text(context.tr(bn: 'ক্যালেন্ডার', en: 'Calendar')),
         centerTitle: true,
         actions: [
           IconButton(
             onPressed: _isLoading ? null : _refreshCalendarData,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: context.tr(bn: 'রিফ্রেশ', en: 'Refresh'),
           ),
         ],
       ),
@@ -856,8 +909,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           currentDay: DateTime.now(),
                           selectedDayPredicate: (day) =>
                               isSameDay(day, _selectedDay),
-                          availableCalendarFormats: const {
-                            CalendarFormat.month: 'Month',
+                          availableCalendarFormats: {
+                            CalendarFormat.month: context.tr(
+                              bn: 'মাস',
+                              en: 'Month',
+                            ),
                           },
                           calendarFormat: CalendarFormat.month,
                           startingDayOfWeek: StartingDayOfWeek.sunday,
