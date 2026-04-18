@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/locale_text.dart';
 import '../../../models/umrah_model.dart';
 import '../../../services/ebadat_data_service.dart';
 import '../umrah_detail_screen.dart';
@@ -16,11 +17,22 @@ class _UmrahTabState extends State<UmrahTab> {
   List<UmrahSectionModel> _sections = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String? _lastLocaleCode;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final localeCode = Localizations.localeOf(context).languageCode;
+    if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
+      setState(() {});
+    }
+    _lastLocaleCode = localeCode;
   }
 
   Future<void> _loadData() async {
@@ -31,13 +43,15 @@ class _UmrahTabState extends State<UmrahTab> {
 
     try {
       final sections = await _ebadatService.loadUmrahSections();
+      if (!mounted) return;
       setState(() {
         _sections = sections;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।';
+        _errorMessage = 'failed';
         _isLoading = false;
       });
     }
@@ -45,19 +59,21 @@ class _UmrahTabState extends State<UmrahTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Loading State
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
               color: Color(0xFFE65100),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'ওমরাহ গাইড লোড হচ্ছে...',
-              style: TextStyle(
+              context.tr(
+                bn: 'ওমরাহ গাইড লোড হচ্ছে...',
+                en: 'Loading Umrah guide...',
+              ),
+              style: const TextStyle(
                 fontSize: 16,
                 color: Colors.grey,
               ),
@@ -67,7 +83,6 @@ class _UmrahTabState extends State<UmrahTab> {
       );
     }
 
-    // Error State
     if (_errorMessage != null) {
       return Center(
         child: Column(
@@ -80,7 +95,10 @@ class _UmrahTabState extends State<UmrahTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              _errorMessage!,
+              context.tr(
+                bn: 'ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।',
+                en: 'Failed to load data. Please try again.',
+              ),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -91,7 +109,7 @@ class _UmrahTabState extends State<UmrahTab> {
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: const Text('পুনরায় চেষ্টা করুন'),
+              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE65100),
                 foregroundColor: Colors.white,
@@ -103,7 +121,6 @@ class _UmrahTabState extends State<UmrahTab> {
       );
     }
 
-    // Empty State
     if (_sections.isEmpty) {
       return Center(
         child: Column(
@@ -116,7 +133,10 @@ class _UmrahTabState extends State<UmrahTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              'কোনো ওমরাহ গাইড পাওয়া যায়নি',
+              context.tr(
+                bn: 'কোনো ওমরাহ গাইড পাওয়া যায়নি',
+                en: 'No Umrah guide found',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -128,7 +148,6 @@ class _UmrahTabState extends State<UmrahTab> {
       );
     }
 
-    // Main Content
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       itemCount: _sections.length,
@@ -162,6 +181,8 @@ class _UmrahSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final rules = section.getRules(locale);
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -175,7 +196,6 @@ class _UmrahSectionCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Step Number
               Container(
                 width: 56,
                 height: 56,
@@ -199,14 +219,12 @@ class _UmrahSectionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Title and Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      section.titleBangla,
+                      section.getTitle(locale),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -226,7 +244,7 @@ class _UmrahSectionCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        if (section.rules.isNotEmpty) ...[
+                        if (rules.isNotEmpty) ...[
                           Icon(
                             Icons.checklist,
                             size: 16,
@@ -234,14 +252,16 @@ class _UmrahSectionCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${section.rules.length} নিয়ম',
+                            context.isEnglish
+                                ? '${rules.length} Rules'
+                                : '${rules.length} নিয়ম',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],
                             ),
                           ),
                         ],
-                        if (section.rules.isNotEmpty &&
+                        if (rules.isNotEmpty &&
                             section.relatedDuas.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -258,7 +278,9 @@ class _UmrahSectionCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${section.relatedDuas.length} দোয়া',
+                            context.isEnglish
+                                ? '${section.relatedDuas.length} Dua'
+                                : '${section.relatedDuas.length} দোয়া',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],
@@ -270,8 +292,6 @@ class _UmrahSectionCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Arrow Icon
               Icon(
                 Icons.arrow_forward_ios,
                 size: 20,
