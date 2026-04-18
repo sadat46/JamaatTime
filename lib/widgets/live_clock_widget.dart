@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../utils/locale_digits.dart';
 
 /// A self-contained clock widget that updates every 60 seconds.
 /// This widget owns its own timer and does not depend on parent state.
@@ -61,7 +62,11 @@ class _LiveClockWidgetState extends State<LiveClockWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final timeStr = DateFormat(widget.format).format(_currentTime);
+    final locale = Localizations.localeOf(context);
+    final timeStr = LocaleDigits.localize(
+      DateFormat(widget.format).format(_currentTime),
+      locale,
+    );
 
     return Text(
       timeStr,

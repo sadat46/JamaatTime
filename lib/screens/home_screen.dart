@@ -19,6 +19,7 @@ import '../widgets/sahri_iftar_widget.dart';
 import '../widgets/forbidden_times_widget.dart';
 import '../widgets/shared_ui_widgets.dart';
 import '../utils/bangla_calendar.dart';
+import '../utils/locale_digits.dart';
 import '../services/widget_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -115,6 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _tr(BuildContext context, String bn, String en) {
     return Localizations.localeOf(context).languageCode == 'en' ? en : bn;
+  }
+
+  String _localizedDigitsForContext(BuildContext context, String value) {
+    if (value == '-') return value;
+    return LocaleDigits.localize(value, Localizations.localeOf(context));
   }
 
   @override
@@ -873,6 +879,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildPrayerCard(PrayerRowData row, BuildContext context) {
     final isInfo = row.type == PrayerRowType.info;
     final isActive = row.isCurrent;
+    final localizedTimeStr = _localizedDigitsForContext(context, row.timeStr);
+    final localizedJamaatStr =
+        _localizedDigitsForContext(context, row.jamaatStr);
+    final hasJamaat = row.jamaatStr != '-';
     final prayerIcon = _prayerIconForName(row.name);
     final iconAccent = _prayerIconAccent(row.name);
 
@@ -959,7 +969,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        row.timeStr,
+                        localizedTimeStr,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
@@ -979,8 +989,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Text(
-                              row.jamaatStr,
-                              style: row.jamaatStr == '-'
+                              localizedJamaatStr,
+                              style: !hasJamaat
                                   ? const TextStyle(color: Colors.grey, fontSize: 13)
                                   : TextStyle(
                                       fontWeight: FontWeight.bold,
@@ -988,7 +998,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontSize: 13,
                                     ),
                             ),
-                            if (row.jamaatStr != '-') ...[
+                            if (hasJamaat) ...[
                               const SizedBox(width: 4),
                               Icon(Icons.mosque, size: 12, color: AppConstants.brandGreen),
                             ],
@@ -1421,7 +1431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               if (_lastJamaatUpdate != null && !isLoadingJamaat)
                                 Text(
-                                  '${_tr(context, 'সর্বশেষ আপডেট', 'Last updated')}: ${DateFormat('HH:mm').format(_lastJamaatUpdate!)}',
+                                  '${_tr(context, 'সর্বশেষ আপডেট', 'Last updated')}: ${_localizedDigitsForContext(context, DateFormat('HH:mm').format(_lastJamaatUpdate!))}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,
