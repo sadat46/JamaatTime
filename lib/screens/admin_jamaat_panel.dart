@@ -7,8 +7,36 @@ import '../services/prayer_time_engine.dart';
 import '../services/prayer_aux_calculator.dart';
 import '../models/location_config.dart';
 import '../core/constants.dart';
+import '../core/locale_text.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
+
+List<String> adminBulkInstructionLines(Locale locale) {
+  final isEnglish = locale.languageCode == 'en';
+  if (isEnglish) {
+    return const [
+      '• Import CSV: Upload CSV file with jamaat times',
+      '• CSV Format: Date, Fajr, Dhuhr, Asr, Sunset/Maghrib, Isha',
+      '• Date formats: YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY',
+      '• Empty cells are automatically skipped',
+      '• Sunset times are converted to Maghrib (+3 minutes)',
+      '• Export CSV: Download current data as CSV',
+      '• Generate Year: Create default times for entire year',
+      '• Generate Savar Cantt Times: Create specific times for Savar Cantt',
+    ];
+  }
+
+  return const [
+    '• Import CSV: জামাতের সময়সহ CSV ফাইল আপলোড করুন',
+    '• CSV Format: Date, Fajr, Dhuhr, Asr, Sunset/Maghrib, Isha',
+    '• Date formats: YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY',
+    '• ফাঁকা সেল স্বয়ংক্রিয়ভাবে বাদ দেওয়া হয়',
+    '• Sunset সময় স্বয়ংক্রিয়ভাবে Maghrib এ রূপান্তর হয় (+3 minutes)',
+    '• Export CSV: বর্তমান ডেটা CSV হিসেবে ডাউনলোড করুন',
+    '• Generate Year: পুরো বছরের ডিফল্ট সময় তৈরি করুন',
+    '• Generate Savar Cantt Times: সাভার ক্যান্টনমেন্টের নির্দিষ্ট সময় তৈরি করুন',
+  ];
+}
 
 class AdminJamaatPanel extends StatefulWidget {
   const AdminJamaatPanel({super.key});
@@ -106,7 +134,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
     } catch (e) {
       setState(() {
         _adminLoading = false;
-        _adminMsg = 'Error loading jamaat times: $e';
+        _adminMsg = context.tr(
+          bn: 'জামাতের সময় লোড করতে সমস্যা: $e',
+          en: 'Error loading jamaat times: $e',
+        );
       });
     }
   }
@@ -130,7 +161,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
         if (csvData.length < 2) {
           setState(() {
-            _message = 'CSV file must have at least a header and one data row';
+            _message = context.tr(
+              bn: 'CSV ফাইলে কমপক্ষে একটি হেডার এবং একটি ডেটা সারি থাকতে হবে',
+              en: 'CSV file must have at least a header and one data row',
+            );
             _isSuccess = false;
           });
           return;
@@ -169,7 +203,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
         if (dateIndex == -1) {
           setState(() {
-            _message = 'CSV must contain a Date column';
+            _message = context.tr(
+              bn: 'CSV ফাইলে Date কলাম থাকতে হবে',
+              en: 'CSV must contain a Date column',
+            );
             _isSuccess = false;
           });
           return;
@@ -253,14 +290,18 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
         setState(() {
           _message =
-              'Successfully imported $importedCount records from CSV. '
-              'Columns found: ${header.join(', ')}';
+              '${context.tr(bn: 'CSV থেকে সফলভাবে ইমপোর্ট হয়েছে', en: 'Successfully imported from CSV')} '
+              '$importedCount ${context.tr(bn: 'টি রেকর্ড। পাওয়া কলাম:', en: 'records. Columns found:')} '
+              '${header.join(', ')}';
           _isSuccess = true;
         });
       }
     } catch (e) {
       setState(() {
-        _message = 'Error importing CSV: $e';
+        _message = context.tr(
+          bn: 'CSV ইমপোর্ট করতে সমস্যা: $e',
+          en: 'Error importing CSV: $e',
+        );
         _isSuccess = false;
       });
     } finally {
@@ -307,12 +348,16 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
       // For now, just show success message
       setState(() {
         _message =
-            'CSV data prepared for $_selectedCity ($_selectedYear). Data: ${csvData.length - 1} days';
+            '${context.tr(bn: 'CSV ডেটা প্রস্তুত', en: 'CSV data prepared')} $_selectedCity ($_selectedYear). '
+            '${context.tr(bn: 'মোট ডেটা:', en: 'Data:')} ${csvData.length - 1} ${context.tr(bn: 'দিন', en: 'days')}';
         _isSuccess = true;
       });
     } catch (e) {
       setState(() {
-        _message = 'Error exporting CSV: $e';
+        _message = context.tr(
+          bn: 'CSV এক্সপোর্ট করতে সমস্যা: $e',
+          en: 'Error exporting CSV: $e',
+        );
         _isSuccess = false;
       });
     } finally {
@@ -365,12 +410,16 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
       setState(() {
         _message =
-            'Generated $generatedCount days of jamaat times for $_selectedCity ($_selectedYear)';
+            '${context.tr(bn: 'জামাতের সময় তৈরি হয়েছে', en: 'Generated')} $generatedCount '
+            '${context.tr(bn: 'দিনের জন্য', en: 'days of jamaat times for')} $_selectedCity ($_selectedYear)';
         _isSuccess = true;
       });
     } catch (e) {
       setState(() {
-        _message = 'Error generating yearly times: $e';
+        _message = context.tr(
+          bn: 'বার্ষিক সময় তৈরি করতে সমস্যা: $e',
+          en: 'Error generating yearly times: $e',
+        );
         _isSuccess = false;
       });
     } finally {
@@ -417,12 +466,16 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
       setState(() {
         _message =
-            'Generated $generatedCount days of Savar Cantt jamaat times for $_selectedYear';
+            '${context.tr(bn: 'সাভার ক্যান্টনমেন্টের জামাতের সময় তৈরি হয়েছে', en: 'Generated Savar Cantt jamaat times')} '
+            '$generatedCount ${context.tr(bn: 'দিনের জন্য', en: 'days for')} $_selectedYear';
         _isSuccess = true;
       });
     } catch (e) {
       setState(() {
-        _message = 'Error generating Savar Cantt times: $e';
+        _message = context.tr(
+          bn: 'সাভার ক্যান্টনমেন্ট সময় তৈরি করতে সমস্যা: $e',
+          en: 'Error generating Savar Cantt times: $e',
+        );
         _isSuccess = false;
       });
     } finally {
@@ -659,7 +712,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Admin Jamaat Panel'),
+        title: Text(context.tr(bn: 'অ্যাডমিন জামাত প্যানেল', en: 'Admin Jamaat Panel')),
         centerTitle: true,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         foregroundColor:
@@ -671,9 +724,15 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                 indicatorColor: Colors.white,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
-                tabs: const [
-                  Tab(icon: Icon(Icons.edit), text: 'Manual Data Entry'),
-                  Tab(icon: Icon(Icons.upload_file), text: 'Bulk Data Entry'),
+                tabs: [
+                  Tab(
+                    icon: const Icon(Icons.edit),
+                    text: context.tr(bn: 'ম্যানুয়াল এন্ট্রি', en: 'Manual Data Entry'),
+                  ),
+                  Tab(
+                    icon: const Icon(Icons.upload_file),
+                    text: context.tr(bn: 'বাল্ক এন্ট্রি', en: 'Bulk Data Entry'),
+                  ),
                 ],
               )
             : null,
@@ -724,9 +783,9 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
       // ignore: deprecated_member_use
       value: _selectedCity,
       isExpanded: true,
-      decoration: const InputDecoration(
-        labelText: 'Cantt Name',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: context.tr(bn: 'ক্যান্টনমেন্ট', en: 'Cantt Name'),
+        border: const OutlineInputBorder(),
       ),
       selectedItemBuilder: (context) {
         return AppConstants.canttNames.map((city) {
@@ -766,9 +825,9 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
         }
       },
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Date',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          labelText: context.tr(bn: 'তারিখ', en: 'Date'),
+          border: const OutlineInputBorder(),
         ),
         child: Text(
           _formatDate(_selectedDate),
@@ -783,7 +842,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
     final input = _jamaatControllers[prayer]?.text.trim() ?? '';
     if (input.isEmpty) {
       setState(() {
-        _adminMsg = 'Please enter a time for $prayer';
+        _adminMsg = context.tr(
+          bn: '$prayer এর জন্য সময় দিন',
+          en: 'Please enter a time for $prayer',
+        );
       });
       return;
     }
@@ -799,8 +861,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
     if (parsed == null) {
       setState(() {
-        _adminMsg =
-            'Invalid time format for $prayer. Use HH:mm or hh:mm AM/PM.';
+        _adminMsg = context.tr(
+          bn: '$prayer এর সময় ফরম্যাট ভুল। HH:mm বা hh:mm AM/PM ব্যবহার করুন।',
+          en: 'Invalid time format for $prayer. Use HH:mm or hh:mm AM/PM.',
+        );
       });
       return;
     }
@@ -819,12 +883,18 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
         time: formatted,
       );
       setState(() {
-        _adminMsg = '$prayer time saved successfully!';
+        _adminMsg = context.tr(
+          bn: '$prayer এর সময় সফলভাবে সংরক্ষণ করা হয়েছে!',
+          en: '$prayer time saved successfully!',
+        );
         _editingPrayer = null;
       });
     } catch (e) {
       setState(() {
-        _adminMsg = 'Error saving $prayer time: $e';
+        _adminMsg = context.tr(
+          bn: '$prayer এর সময় সংরক্ষণে সমস্যা: $e',
+          en: 'Error saving $prayer time: $e',
+        );
       });
     } finally {
       setState(() {
@@ -855,8 +925,8 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
           Expanded(
             child: TextField(
               controller: _jamaatControllers[prayer],
-              decoration: const InputDecoration(
-                labelText: 'Time',
+              decoration: InputDecoration(
+                labelText: context.tr(bn: 'সময়', en: 'Time'),
                 isDense: true,
               ),
               enabled: isEditingPrayer,
@@ -991,7 +1061,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                             _buildSectionHeader(
                               icon: Icons.location_city,
                               color: Colors.blue,
-                              title: 'Select Cantt Name and Date',
+                              title: context.tr(
+                                bn: 'ক্যান্টনমেন্ট ও তারিখ নির্বাচন',
+                                en: 'Select Cantt Name and Date',
+                              ),
                               isCompact: isCompact,
                             ),
                             const SizedBox(height: 16),
@@ -1024,14 +1097,14 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                             _buildSectionHeader(
                               icon: Icons.schedule,
                               color: Colors.green,
-                              title: 'Jamaat Times',
+                              title: context.tr(bn: 'জামাতের সময়', en: 'Jamaat Times'),
                               isCompact: isCompact,
                             ),
                             const SizedBox(height: 16),
                             const Divider(height: 40),
-                            const Text(
-                              'Jamaat Times:',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                            Text(
+                              context.tr(bn: 'জামাতের সময়:', en: 'Jamaat Times:'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 12),
                             for (final p in _prayers)
@@ -1111,9 +1184,9 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
           // ignore: deprecated_member_use
           value: _selectedYear,
           isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Year',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: context.tr(bn: 'বছর', en: 'Year'),
+            border: const OutlineInputBorder(),
           ),
           items: List.generate(10, (index) {
             final year = DateTime.now().year + index;
@@ -1145,7 +1218,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                             _buildSectionHeader(
                               icon: Icons.upload_file,
                               color: Colors.orange,
-                              title: 'Bulk Data Entry',
+                              title: context.tr(bn: 'বাল্ক ডেটা এন্ট্রি', en: 'Bulk Data Entry'),
                               isCompact: isCompact,
                             ),
                             const SizedBox(height: 16),
@@ -1169,7 +1242,9 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                             // Overwrite Option
                             CheckboxListTile(
                               contentPadding: EdgeInsets.zero,
-                              title: const Text('Overwrite Existing'),
+                              title: Text(
+                                context.tr(bn: 'আগের ডেটা ওভাররাইট করুন', en: 'Overwrite Existing'),
+                              ),
                               value: _overwriteExisting,
                               onChanged: (value) {
                                 setState(
@@ -1201,7 +1276,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                                             ? null
                                             : _importFromCSV,
                                         icon: Icons.upload_file,
-                                        label: 'Import CSV',
+                                        label: context.tr(bn: 'CSV ইমপোর্ট', en: 'Import CSV'),
                                         backgroundColor: Colors.blue,
                                       ),
                                     ),
@@ -1212,7 +1287,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                                             ? null
                                             : _exportToCSV,
                                         icon: Icons.download,
-                                        label: 'Export CSV',
+                                        label: context.tr(bn: 'CSV এক্সপোর্ট', en: 'Export CSV'),
                                         backgroundColor: Colors.purple,
                                       ),
                                     ),
@@ -1223,7 +1298,7 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                                             ? null
                                             : _generateYearlyTimes,
                                         icon: Icons.auto_fix_high,
-                                        label: 'Generate Year',
+                                        label: context.tr(bn: 'বছরের ডেটা তৈরি', en: 'Generate Year'),
                                         backgroundColor: Colors.orange,
                                       ),
                                     ),
@@ -1241,7 +1316,10 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                                     ? null
                                     : _generateSavarCanttTimes,
                                 icon: Icons.mosque,
-                                label: 'Generate Savar Cantt Times',
+                                label: context.tr(
+                                  bn: 'সাভার ক্যান্টনমেন্ট সময় তৈরি',
+                                  en: 'Generate Savar Cantt Times',
+                                ),
                                 backgroundColor: Colors.green,
                                 verticalPadding: isCompact ? 12 : 16,
                               ),
@@ -1259,38 +1337,20 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Bulk Operations Instructions:',
-                                    style: TextStyle(
+                                  Text(
+                                    context.tr(
+                                      bn: 'বাল্ক অপারেশন নির্দেশনা:',
+                                      en: 'Bulk Operations Instructions:',
+                                    ),
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.blue,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    '• Import CSV: Upload CSV file with jamaat times',
-                                  ),
-                                  const Text(
-                                    '• CSV Format: Date, Fajr, Dhuhr, Asr, Sunset/Maghrib, Isha',
-                                  ),
-                                  const Text(
-                                    '• Date formats: YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY',
-                                  ),
-                                  const Text(
-                                    '• Empty cells are automatically skipped',
-                                  ),
-                                  const Text(
-                                    '• Sunset times are converted to Maghrib (+3 minutes)',
-                                  ),
-                                  const Text(
-                                    '• Export CSV: Download current data as CSV',
-                                  ),
-                                  const Text(
-                                    '• Generate Year: Create default times for entire year',
-                                  ),
-                                  const Text(
-                                    '• Generate Savar Cantt Times: Create specific times for Savar Cantt',
-                                  ),
+                                  ...adminBulkInstructionLines(
+                                    Localizations.localeOf(context),
+                                  ).map(Text.new),
                                 ],
                               ),
                             ),
