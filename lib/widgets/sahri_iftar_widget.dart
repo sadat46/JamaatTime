@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../core/locale_text.dart';
 import '../services/screen_awake_service.dart';
+import '../utils/locale_digits.dart';
 import 'shared_ui_widgets.dart';
 
 enum SahriIftarType { sahri, iftar }
@@ -294,10 +295,17 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final fajrTimeStr = _SahriIftarCountdownLogic.formatTime(widget.fajrTime);
-    final maghribTimeStr = _SahriIftarCountdownLogic.formatTime(
-      widget.maghribTime,
+    final locale = Localizations.localeOf(context);
+    final fajrTimeStr = LocaleDigits.localize(
+      _SahriIftarCountdownLogic.formatTime(widget.fajrTime),
+      locale,
     );
+    final maghribTimeStr = LocaleDigits.localize(
+      _SahriIftarCountdownLogic.formatTime(widget.maghribTime),
+      locale,
+    );
+    final sahriCountdownText = LocaleDigits.localize(_sahriCountdown, locale);
+    final iftarCountdownText = LocaleDigits.localize(_iftarCountdown, locale);
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final Duration entryDuration = reduceMotion
@@ -331,7 +339,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
               en: 'Sahri Ends',
             ),
             timeText: fajrTimeStr,
-            countdownText: _sahriCountdown,
+            countdownText: sahriCountdownText,
             onTap: () => _openFullscreen(SahriIftarType.sahri),
             inGrace: _sehriInGrace,
           ),
@@ -347,7 +355,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
               en: 'Iftar Begins',
             ),
             timeText: maghribTimeStr,
-            countdownText: _iftarCountdown,
+            countdownText: iftarCountdownText,
             onTap: () => _openFullscreen(SahriIftarType.iftar),
             inGrace: _iftarInGrace,
           ),
@@ -844,9 +852,14 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
   Widget build(BuildContext context) {
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final locale = Localizations.localeOf(context);
     final now = DateTime.now();
     final progress = _countdownProgress(now);
-    final timeText = _SahriIftarCountdownLogic.formatTime(_activeTime);
+    final timeText = LocaleDigits.localize(
+      _SahriIftarCountdownLogic.formatTime(_activeTime),
+      locale,
+    );
+    final countdownText = LocaleDigits.localize(_countdown, locale);
     final spec = _SahriIftarVisualSpec.from(
       type: widget.type,
       brightness: Theme.of(context).brightness,
@@ -1064,9 +1077,9 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                             );
                                                           },
                                                       child: Text(
-                                                        _countdown,
+                                                        countdownText,
                                                         key: ValueKey(
-                                                          _countdown,
+                                                          countdownText,
                                                         ),
                                                         style: countdownStyle,
                                                       ),
