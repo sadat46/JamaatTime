@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
+import '../core/app_locale_controller.dart';
+import '../core/app_text.dart';
 import '../core/constants.dart';
+import '../core/locale_prefs.dart';
 import '../models/location_config.dart';
 import '../services/jamaat_service.dart';
 import '../services/location_config_service.dart';
@@ -35,6 +38,7 @@ Future<void> backgroundCallback(Uri? uri) async {
 
   try {
     final prefs = await SharedPreferences.getInstance();
+    final locale = LocalePrefs.toLocale(LocalePrefs.readFromPrefs(prefs));
     final isGpsMode = prefs.getBool('is_gps_mode') ?? false;
     final savedCity = prefs.getString('selected_city');
     final lastLat = prefs.getDouble('last_latitude');
@@ -120,6 +124,7 @@ Future<void> backgroundCallback(Uri? uri) async {
     final placeName = prefs.getString('last_location_name');
     await WidgetService.updateWidgetData(
       times: times,
+      locale: locale,
       locationName: placeName ?? config.cityName,
       date: now,
       hijriOffsetDays: effectiveHijriOffset,
@@ -137,6 +142,7 @@ class WidgetService {
 
   static Future<void> updateWidgetData({
     required Map<String, DateTime?> times,
+    required Locale locale,
     required String locationName,
     required DateTime date,
     required int hijriOffsetDays,
@@ -148,6 +154,7 @@ class WidgetService {
       final timeFormat = DateFormat(_fmt);
       final widgetData = computeWidgetPreviewData(
         times: times,
+        locale: locale,
         now: now,
         timeFormat: timeFormat,
         tomorrowFajr: tomorrowFajr,
@@ -218,14 +225,43 @@ class WidgetService {
     }
   }
 
+  static Future<void> forceRefresh({
+    required Map<String, DateTime?> times,
+    required String locationName,
+    required DateTime date,
+    required int hijriOffsetDays,
+    DateTime? tomorrowFajr,
+    Map<String, dynamic>? jamaatTimes,
+  }) async {
+    Locale locale;
+    try {
+      locale = AppLocaleController.instance.current;
+    } catch (_) {
+      final code = await LocalePrefs.read();
+      locale = LocalePrefs.toLocale(code);
+    }
+
+    await updateWidgetData(
+      times: times,
+      locale: locale,
+      locationName: locationName,
+      date: date,
+      hijriOffsetDays: hijriOffsetDays,
+      tomorrowFajr: tomorrowFajr,
+      jamaatTimes: jamaatTimes,
+    );
+  }
+
   @visibleForTesting
   static WidgetPreviewData computeWidgetPreviewData({
     required Map<String, DateTime?> times,
+    required Locale locale,
     required DateTime now,
     required DateFormat timeFormat,
     DateTime? tomorrowFajr,
     Map<String, dynamic>? jamaatTimes,
   }) {
+    final strings = AppText.of(locale);
     final engine = PrayerTimeEngine.instance;
     final currentPeriod = engine.getCurrentPrayerPeriod(times: times, now: now);
     final nextPeriod = engine.getNextPrayerForWidget(times: times, now: now);
@@ -256,24 +292,28 @@ class WidgetService {
     while (rowPrayers.length < 4) {
       rowPrayers.add('-');
     }
+    final rowLabels = rowPrayers
+        .map((name) => name == '-' ? '-' : _localizedPrayerName(locale, name))
+        .toList(growable: false);
     final rowTimes = rowPrayers
         .map((name) => _formatPrayerTime(times[name], timeFormat))
         .toList(growable: false);
 
     final remainingLabel = currentPeriod == 'Sunrise'
-        ? 'Coming Dhuhr'
-        : '$currentPeriod Time Remaining';
+        ? strings.widget_comingDhuhr
+        : strings.widget_timeRemaining(_localizedPrayerName(locale, currentPeriod));
     final jamaatPrayerName = currentPeriod == 'Sunrise'
         ? 'Dhuhr'
         : currentMainPrayer;
     final jamaatStatus = _computeJamaatWidgetState(
       now: now,
+      locale: locale,
       jamaatPrayerName: jamaatPrayerName,
       jamaatTimes: jamaatTimes,
     );
 
     return WidgetPreviewData(
-      prayerName: currentPeriod,
+      prayerName: _localizedPrayerName(locale, currentPeriod),
       prayerTime: _formatPrayerTime(currentPeriodTime, timeFormat),
       remainingLabel: remainingLabel,
       nextPrayerEpochMillis: nextEpochMillis,
@@ -281,9 +321,29 @@ class WidgetService {
       jamaatLabel: jamaatStatus.label,
       jamaatEpochMillis: jamaatStatus.epochMillis,
       jamaatCountdownRunning: jamaatStatus.countdownRunning,
-      rowLabels: rowPrayers,
+      rowLabels: rowLabels,
       rowTimes: rowTimes,
     );
+  }
+
+  static String _localizedPrayerName(Locale locale, String prayerKey) {
+    final strings = AppText.of(locale);
+    switch (prayerKey) {
+      case 'Fajr':
+        return strings.prayer_fajr;
+      case 'Sunrise':
+        return strings.prayer_sunrise;
+      case 'Dhuhr':
+        return strings.prayer_dhuhr;
+      case 'Asr':
+        return strings.prayer_asr;
+      case 'Maghrib':
+        return strings.prayer_maghrib;
+      case 'Isha':
+        return strings.prayer_isha;
+      default:
+        return prayerKey;
+    }
   }
 
   static String _formatPrayerTime(DateTime? time, DateFormat fmt) {
@@ -293,11 +353,12 @@ class WidgetService {
 
   static _JamaatWidgetState _computeJamaatWidgetState({
     required DateTime now,
+    required Locale locale,
     required String jamaatPrayerName,
     required Map<String, dynamic>? jamaatTimes,
   }) {
     if (jamaatTimes == null || jamaatTimes.isEmpty) {
-      return const _JamaatWidgetState.na();
+      return _JamaatWidgetState.na(locale);
     }
 
     final jamaatKey = PrayerAuxCalculator.instance.getJamaatTimeKey(
@@ -305,7 +366,7 @@ class WidgetService {
     );
     final raw = jamaatTimes[jamaatKey];
     if (raw == null || raw.toString().trim().isEmpty) {
-      return const _JamaatWidgetState.na();
+      return _JamaatWidgetState.na(locale);
     }
 
     final normalized = PrayerAuxCalculator.instance.formatJamaatTime(
@@ -313,17 +374,19 @@ class WidgetService {
     );
     final jamaatTime = _parseTodayJamaatTime(now, normalized);
     if (jamaatTime == null) {
-      return const _JamaatWidgetState.na();
+      return _JamaatWidgetState.na(locale);
     }
 
     if (now.isBefore(jamaatTime)) {
+      final strings = AppText.of(locale);
+      final prayerLabel = _localizedPrayerName(locale, jamaatPrayerName);
       return _JamaatWidgetState(
-        label: '$jamaatPrayerName Jamaat in',
+        label: '$prayerLabel ${strings.widget_jamaatInSuffix}',
         epochMillis: jamaatTime.millisecondsSinceEpoch,
         countdownRunning: true,
       );
     }
-    return const _JamaatWidgetState.over();
+    return _JamaatWidgetState.over(locale);
   }
 
   static DateTime? _parseTodayJamaatTime(DateTime now, String hhmm) {
@@ -376,13 +439,21 @@ class _JamaatWidgetState {
     required this.countdownRunning,
   });
 
-  const _JamaatWidgetState.na()
-      : label = 'Jamaat N/A',
-        epochMillis = 0,
-        countdownRunning = false;
+  factory _JamaatWidgetState.na(Locale locale) {
+    final strings = AppText.of(locale);
+    return _JamaatWidgetState(
+      label: strings.widget_jamaatNA,
+      epochMillis: 0,
+      countdownRunning: false,
+    );
+  }
 
-  const _JamaatWidgetState.over()
-      : label = 'Jamaat is Over',
-        epochMillis = 0,
-        countdownRunning = false;
+  factory _JamaatWidgetState.over(Locale locale) {
+    final strings = AppText.of(locale);
+    return _JamaatWidgetState(
+      label: strings.widget_jamaatOver,
+      epochMillis: 0,
+      countdownRunning: false,
+    );
+  }
 }

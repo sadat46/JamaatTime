@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'dart:io';
+import '../core/app_locale_controller.dart';
+import '../core/app_text.dart';
+import '../core/locale_prefs.dart';
 import '../services/settings_service.dart';
 import '../models/location_config.dart';
 
@@ -19,6 +22,60 @@ class NotificationService {
 
   // Location configuration for timezone handling
   LocationConfig? _currentLocationConfig;
+
+  Future<Locale> _resolveLocale() async {
+    try {
+      return AppLocaleController.instance.current;
+    } catch (_) {
+      // AppLocaleController might not be bootstrapped in some early paths.
+    }
+
+    try {
+      final code = await LocalePrefs.read();
+      return LocalePrefs.toLocale(code);
+    } catch (_) {
+      return const Locale('bn');
+    }
+  }
+
+  String _localizedPrayerName(Locale locale, String prayerKey) {
+    final strings = AppText.of(locale);
+    switch (prayerKey) {
+      case 'Fajr':
+        return strings.prayer_fajr;
+      case 'Sunrise':
+        return strings.prayer_sunrise;
+      case 'Dhuhr':
+        return strings.prayer_dhuhr;
+      case 'Asr':
+        return strings.prayer_asr;
+      case 'Maghrib':
+        return strings.prayer_maghrib;
+      case 'Isha':
+        return strings.prayer_isha;
+      default:
+        return prayerKey;
+    }
+  }
+
+  String _canonicalPrayerNameFromJamaatKey(String key) {
+    switch (key.toLowerCase()) {
+      case 'fajr':
+        return 'Fajr';
+      case 'dhuhr':
+      case 'zuhr':
+        return 'Dhuhr';
+      case 'asr':
+        return 'Asr';
+      case 'maghrib':
+      case 'magrib':
+        return 'Maghrib';
+      case 'isha':
+        return 'Isha';
+      default:
+        return key;
+    }
+  }
 
   /// Set the current location configuration
   void setLocationConfig(LocationConfig config) {
@@ -597,6 +654,9 @@ class NotificationService {
     Map<String, DateTime?> prayerTimes,
   ) async {
     try {
+      final locale = await _resolveLocale();
+      final strings = AppText.of(locale);
+
       // Use the configured location's timezone for all comparisons
       final location = _getLocation();
       final now = tz.TZDateTime.now(location);
@@ -620,10 +680,11 @@ class NotificationService {
 
         // Compare TZDateTime objects directly in the same timezone
         if (notifyTime.isAfter(now)) {
+          final prayerLabel = _localizedPrayerName(locale, 'Fajr');
           await scheduleNotification(
             id: 'Fajr'.hashCode,
-            title: 'Fajr Prayer',
-            body: 'Fajr time remaining 20 minutes.',
+            title: strings.notification_prayerTitle(prayerLabel),
+            body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
             notificationType: 'prayer',
           );
@@ -637,10 +698,11 @@ class NotificationService {
         final notifyTime = asrTime.subtract(const Duration(minutes: 20));
 
         if (notifyTime.isAfter(now)) {
+          final prayerLabel = _localizedPrayerName(locale, 'Dhuhr');
           await scheduleNotification(
             id: 'Dhuhr'.hashCode,
-            title: 'Dhuhr Prayer',
-            body: 'Dhuhr time remaining 20 minutes.',
+            title: strings.notification_prayerTitle(prayerLabel),
+            body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
             notificationType: 'prayer',
           );
@@ -654,10 +716,11 @@ class NotificationService {
         final notifyTime = maghribTime.subtract(const Duration(minutes: 20));
 
         if (notifyTime.isAfter(now)) {
+          final prayerLabel = _localizedPrayerName(locale, 'Asr');
           await scheduleNotification(
             id: 'Asr'.hashCode,
-            title: 'Asr Prayer',
-            body: 'Asr time remaining 20 minutes.',
+            title: strings.notification_prayerTitle(prayerLabel),
+            body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
             notificationType: 'prayer',
           );
@@ -671,10 +734,11 @@ class NotificationService {
         final notifyTime = ishaTime.subtract(const Duration(minutes: 20));
 
         if (notifyTime.isAfter(now)) {
+          final prayerLabel = _localizedPrayerName(locale, 'Maghrib');
           await scheduleNotification(
             id: 'Maghrib'.hashCode,
-            title: 'Maghrib Prayer',
-            body: 'Maghrib time remaining 20 minutes.',
+            title: strings.notification_prayerTitle(prayerLabel),
+            body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
             notificationType: 'prayer',
           );
@@ -690,10 +754,11 @@ class NotificationService {
         final notifyTime = nextDayFajr.subtract(const Duration(minutes: 20));
 
         if (notifyTime.isAfter(now)) {
+          final prayerLabel = _localizedPrayerName(locale, 'Isha');
           await scheduleNotification(
             id: 'Isha'.hashCode,
-            title: 'Isha Prayer',
-            body: 'Isha time remaining 20 minutes.',
+            title: strings.notification_prayerTitle(prayerLabel),
+            body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
             notificationType: 'prayer',
           );
@@ -713,6 +778,9 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
+      final locale = await _resolveLocale();
+      final strings = AppText.of(locale);
+
       if (jamaatTimes != null) {
         // Use the configured location's timezone for all time comparisons
         final location = _getLocation();
@@ -773,14 +841,17 @@ class NotificationService {
               // Compare TZDateTime objects directly in the same timezone
               // This fixes the midnight comparison issue
               if (notifyTime.isAfter(now)) {
-                // Capitalize the prayer name for display
-                final displayName = name.isNotEmpty
-                    ? name[0].toUpperCase() + name.substring(1)
-                    : name;
+                final canonicalPrayerName = _canonicalPrayerNameFromJamaatKey(
+                  name,
+                );
+                final displayName = _localizedPrayerName(
+                  locale,
+                  canonicalPrayerName,
+                );
                 await scheduleNotification(
                   id: name.hashCode + 1000,
-                  title: '$displayName Jamaat',
-                  body: '$displayName Jamaat is in 10 minutes.',
+                  title: strings.notification_jamaatTitle(displayName),
+                  body: strings.notification_jamaatBody(displayName),
                   scheduledTime: notifyTime,
                   notificationType: 'jamaat',
                 );

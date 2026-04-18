@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:jamaat_time/services/widget_service.dart';
+import 'package:flutter/widgets.dart';
 
 void main() {
   Map<String, DateTime?> buildTimes() {
@@ -30,6 +31,7 @@ void main() {
       () {
         final data = WidgetService.computeWidgetPreviewData(
           times: buildTimes(),
+          locale: const Locale('en'),
           now: DateTime(2026, 4, 13, 5, 30),
           timeFormat: DateFormat('HH:mm'),
         );
@@ -50,6 +52,7 @@ void main() {
     test('between Sunrise and Dhuhr: shows Sunrise and Coming Dhuhr', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
+        locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 6, 30),
         timeFormat: DateFormat('HH:mm'),
       );
@@ -70,6 +73,7 @@ void main() {
     test('active jamaat countdown uses current main prayer label', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
+        locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 5, 10),
         timeFormat: DateFormat('HH:mm'),
         jamaatTimes: buildJamaatTimes(),
@@ -86,6 +90,7 @@ void main() {
     test('sunrise period shows next jamaat countdown (Dhuhr)', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
+        locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 6, 30),
         timeFormat: DateFormat('HH:mm'),
         jamaatTimes: buildJamaatTimes(),
@@ -103,6 +108,7 @@ void main() {
     test('missing jamaat data shows N/A state', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
+        locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 5, 10),
         timeFormat: DateFormat('HH:mm'),
       );
@@ -116,6 +122,7 @@ void main() {
       final tomorrowFajr = DateTime(2026, 4, 14, 5, 1);
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
+        locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 23, 0),
         timeFormat: DateFormat('HH:mm'),
         tomorrowFajr: tomorrowFajr,
@@ -132,6 +139,7 @@ void main() {
     test('after Isha with missing tomorrow Fajr: countdown stops safely', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
+        locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 23, 0),
         timeFormat: DateFormat('HH:mm'),
       );
