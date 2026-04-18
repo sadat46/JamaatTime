@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/locale_text.dart';
 import '../../models/ayat_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -22,6 +23,13 @@ class _AyatCardState extends State<AyatCard> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final title = widget.ayat.getTitle(locale);
+    final category = widget.ayat.getCategory(locale);
+    final surah = widget.ayat.getSurahName(locale);
+    final transliteration = widget.ayat.getTransliteration(locale);
+    final meaning = widget.ayat.getMeaning(locale);
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -36,15 +44,13 @@ class _AyatCardState extends State<AyatCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Title and Category
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
                   Expanded(
                     child: Text(
-                      widget.ayat.titleBangla,
+                      title,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -53,7 +59,6 @@ class _AyatCardState extends State<AyatCard> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Bookmark Button
                   IconButton(
                     icon: Icon(
                       _bookmarkService.isBookmarked('ayat', widget.ayat.id)
@@ -67,13 +72,15 @@ class _AyatCardState extends State<AyatCard> {
                       if (!_bookmarkService.canBookmark) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('বুকমার্ক করতে লগইন করুন'),
+                            content: Text(
+                              context.tr(
+                                bn: 'বুকমার্ক করতে লগইন করুন',
+                                en: 'Sign in to bookmark',
+                              ),
+                            ),
                             action: SnackBarAction(
-                              label: 'লগইন',
-                              onPressed: () {
-                                // Navigate to profile tab (index 2)
-                                // This will be implemented when integrating with main navigation
-                              },
+                              label: context.tr(bn: 'লগইন', en: 'Sign In'),
+                              onPressed: () {},
                             ),
                           ),
                         );
@@ -88,13 +95,18 @@ class _AyatCardState extends State<AyatCard> {
                       setState(() {});
 
                       if (mounted) {
-                        // ignore: use_build_context_synchronously
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
                               isNowBookmarked
-                                  ? 'বুকমার্কে যোগ করা হয়েছে'
-                                  : 'বুকমার্ক থেকে সরানো হয়েছে',
+                                  ? context.tr(
+                                      bn: 'বুকমার্কে যোগ করা হয়েছে',
+                                      en: 'Added to bookmarks',
+                                    )
+                                  : context.tr(
+                                      bn: 'বুকমার্ক থেকে সরানো হয়েছে',
+                                      en: 'Removed from bookmarks',
+                                    ),
                             ),
                             duration: const Duration(seconds: 1),
                           ),
@@ -105,7 +117,6 @@ class _AyatCardState extends State<AyatCard> {
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 8),
-                  // Category Badge
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -119,7 +130,7 @@ class _AyatCardState extends State<AyatCard> {
                       ),
                     ),
                     child: Text(
-                      widget.ayat.category,
+                      category,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -130,11 +141,8 @@ class _AyatCardState extends State<AyatCard> {
                 ],
               ),
               const SizedBox(height: 8),
-
-              // Surah Info
               Row(
                 children: [
-                  // Surah Name (Arabic)
                   Text(
                     widget.ayat.surahNameArabic,
                     style: GoogleFonts.amiri(
@@ -149,9 +157,8 @@ class _AyatCardState extends State<AyatCard> {
                     style: TextStyle(color: Colors.grey[500]),
                   ),
                   const SizedBox(width: 4),
-                  // Surah Name (Bangla)
                   Text(
-                    widget.ayat.surahName,
+                    surah,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -159,7 +166,6 @@ class _AyatCardState extends State<AyatCard> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // Ayat Number
                   Text(
                     '(${widget.ayat.ayatNumber})',
                     style: TextStyle(
@@ -170,12 +176,8 @@ class _AyatCardState extends State<AyatCard> {
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Divider
               Divider(color: Colors.grey[300], thickness: 1),
               const SizedBox(height: 12),
-
-              // Arabic Text
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -197,13 +199,11 @@ class _AyatCardState extends State<AyatCard> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Transliteration
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Text(
-                  widget.ayat.banglaTransliteration,
+                  transliteration,
                   style: TextStyle(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
@@ -215,8 +215,6 @@ class _AyatCardState extends State<AyatCard> {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Bangla Meaning
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -227,7 +225,7 @@ class _AyatCardState extends State<AyatCard> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  widget.ayat.banglaMeaning,
+                  meaning,
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.6,
@@ -236,8 +234,6 @@ class _AyatCardState extends State<AyatCard> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Reference
               Row(
                 children: [
                   Icon(

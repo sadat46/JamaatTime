@@ -17,6 +17,7 @@ class EbadatTopicCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final primaryColor = topic.accentColor ?? colorScheme.primary;
+    final locale = Localizations.localeOf(context);
 
     return Card(
       elevation: 4,
@@ -51,7 +52,7 @@ class EbadatTopicCard extends StatelessWidget {
               const SizedBox(height: 16),
               // Title
               Text(
-                topic.titleBangla,
+                topic.getTitle(locale),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

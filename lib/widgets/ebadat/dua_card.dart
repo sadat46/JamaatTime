@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/locale_text.dart';
 import '../../models/dua_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -22,6 +23,12 @@ class _DuaCardState extends State<DuaCard> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final title = widget.dua.getTitle(locale);
+    final category = widget.dua.getCategory(locale);
+    final transliteration = widget.dua.getTransliteration(locale);
+    final meaning = widget.dua.getMeaning(locale);
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -36,12 +43,10 @@ class _DuaCardState extends State<DuaCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Title and Category
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
                   Expanded(
                     child: Row(
                       children: [
@@ -53,7 +58,7 @@ class _DuaCardState extends State<DuaCard> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            widget.dua.titleBangla,
+                            title,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -65,7 +70,6 @@ class _DuaCardState extends State<DuaCard> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Bookmark Button
                   IconButton(
                     icon: Icon(
                       _bookmarkService.isBookmarked('dua', widget.dua.id)
@@ -79,13 +83,15 @@ class _DuaCardState extends State<DuaCard> {
                       if (!_bookmarkService.canBookmark) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('বুকমার্ক করতে লগইন করুন'),
+                            content: Text(
+                              context.tr(
+                                bn: 'বুকমার্ক করতে লগইন করুন',
+                                en: 'Sign in to bookmark',
+                              ),
+                            ),
                             action: SnackBarAction(
-                              label: 'লগইন',
-                              onPressed: () {
-                                // Navigate to profile tab (index 2)
-                                // This will be implemented when integrating with main navigation
-                              },
+                              label: context.tr(bn: 'লগইন', en: 'Sign In'),
+                              onPressed: () {},
                             ),
                           ),
                         );
@@ -100,13 +106,18 @@ class _DuaCardState extends State<DuaCard> {
                       setState(() {});
 
                       if (mounted) {
-                        // ignore: use_build_context_synchronously
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
                               isNowBookmarked
-                                  ? 'বুকমার্কে যোগ করা হয়েছে'
-                                  : 'বুকমার্ক থেকে সরানো হয়েছে',
+                                  ? context.tr(
+                                      bn: 'বুকমার্কে যোগ করা হয়েছে',
+                                      en: 'Added to bookmarks',
+                                    )
+                                  : context.tr(
+                                      bn: 'বুকমার্ক থেকে সরানো হয়েছে',
+                                      en: 'Removed from bookmarks',
+                                    ),
                             ),
                             duration: const Duration(seconds: 1),
                           ),
@@ -117,7 +128,6 @@ class _DuaCardState extends State<DuaCard> {
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 8),
-                  // Category Badge
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -131,7 +141,7 @@ class _DuaCardState extends State<DuaCard> {
                       ),
                     ),
                     child: Text(
-                      widget.dua.category,
+                      category,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -142,12 +152,8 @@ class _DuaCardState extends State<DuaCard> {
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Divider
               Divider(color: Colors.grey[300], thickness: 1),
               const SizedBox(height: 12),
-
-              // Arabic Text
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -169,13 +175,11 @@ class _DuaCardState extends State<DuaCard> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Transliteration
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Text(
-                  widget.dua.banglaTransliteration,
+                  transliteration,
                   style: TextStyle(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
@@ -187,8 +191,6 @@ class _DuaCardState extends State<DuaCard> {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Bangla Meaning
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -199,7 +201,7 @@ class _DuaCardState extends State<DuaCard> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  widget.dua.banglaMeaning,
+                  meaning,
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.6,
@@ -208,8 +210,6 @@ class _DuaCardState extends State<DuaCard> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Reference (Hadith Source)
               Row(
                 children: [
                   Icon(
