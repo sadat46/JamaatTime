@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../core/locale_text.dart';
 import '../tabs/dua_tab.dart';
 
-/// Screen that wraps DuaTab for navigation from the grid dashboard
 class DuaListScreen extends StatelessWidget {
   const DuaListScreen({super.key});
 
@@ -9,9 +9,9 @@ class DuaListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'দোয়া',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.tr(bn: 'দোয়া', en: 'Dua'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
