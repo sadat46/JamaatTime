@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/locale_text.dart';
 
 const profileSectionAccountKey = ValueKey<String>(
   'profile-section-account-label',
@@ -138,7 +139,10 @@ class ProfileLoggedInContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildSectionLabel('Account', profileSectionAccountKey),
+          _buildSectionLabel(
+            context.tr(bn: 'অ্যাকাউন্ট', en: 'Account'),
+            profileSectionAccountKey,
+          ),
           Card(
             key: profileAccountCardKey,
             elevation: 1.5,
@@ -202,7 +206,7 @@ class ProfileLoggedInContent extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onLogout,
                       icon: const Icon(Icons.logout),
-                      label: const Text('Logout'),
+                      label: Text(context.tr(bn: 'লগআউট', en: 'Logout')),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -216,15 +220,21 @@ class ProfileLoggedInContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildSectionLabel('Main Options', profileSectionMainOptionsKey),
+          _buildSectionLabel(
+            context.tr(bn: 'প্রধান অপশন', en: 'Main Options'),
+            profileSectionMainOptionsKey,
+          ),
           _buildSingleActionCard(
             cardKey: profileBookmarksCardKey,
             child: _buildActionTile(
               tileKey: profileActionBookmarksKey,
               icon: Icons.bookmark,
               iconColor: brandGreen,
-              title: 'My Bookmarks',
-              subtitle: 'Saved ayat and dua for quick reading',
+              title: context.tr(bn: 'আমার বুকমার্ক', en: 'My Bookmarks'),
+              subtitle: context.tr(
+                bn: 'দ্রুত পড়ার জন্য সংরক্ষিত আয়াত ও দোয়া',
+                en: 'Saved ayat and dua for quick reading',
+              ),
               onTap: onBookmarksTap,
             ),
           ),
@@ -235,14 +245,20 @@ class ProfileLoggedInContent extends StatelessWidget {
               tileKey: profileActionSettingsKey,
               icon: Icons.settings,
               iconColor: brandGreen,
-              title: 'Settings',
-              subtitle: 'Prayer calculation, Hijri date, and reminder sound',
+              title: context.tr(bn: 'সেটিংস', en: 'Settings'),
+              subtitle: context.tr(
+                bn: 'নামাজ গণনা, হিজরি তারিখ এবং রিমাইন্ডার সাউন্ড',
+                en: 'Prayer calculation, Hijri date, and reminder sound',
+              ),
               onTap: onSettingsTap,
             ),
           ),
           if (showAdminTools) ...[
             const SizedBox(height: 16),
-            _buildSectionLabel('Admin Tools', profileSectionAdminToolsKey),
+            _buildSectionLabel(
+              context.tr(bn: 'অ্যাডমিন টুলস', en: 'Admin Tools'),
+              profileSectionAdminToolsKey,
+            ),
             Card(
               key: profileAdminToolsCardKey,
               elevation: 1.5,
@@ -256,8 +272,11 @@ class ProfileLoggedInContent extends StatelessWidget {
                       tileKey: profileActionManageUsersKey,
                       icon: Icons.admin_panel_settings,
                       iconColor: Colors.red,
-                      title: 'Manage Users',
-                      subtitle: 'Roles, permissions, and account access',
+                      title: context.tr(bn: 'ব্যবহারকারী ব্যবস্থাপনা', en: 'Manage Users'),
+                      subtitle: context.tr(
+                        bn: 'রোল, অনুমতি এবং অ্যাকাউন্ট অ্যাক্সেস',
+                        en: 'Roles, permissions, and account access',
+                      ),
                       onTap: onManageUsersTap,
                     ),
                   if (isAdmin)
@@ -265,9 +284,11 @@ class ProfileLoggedInContent extends StatelessWidget {
                       tileKey: profileActionEditImportKey,
                       icon: Icons.file_upload,
                       iconColor: Colors.orange,
-                      title: 'Edit/Import Data',
-                      subtitle:
-                          'Import schedules and manage yearly jamaat data',
+                      title: context.tr(bn: 'ডেটা সম্পাদনা/ইমপোর্ট', en: 'Edit/Import Data'),
+                      subtitle: context.tr(
+                        bn: 'সময়সূচি ইমপোর্ট ও বার্ষিক জামাত ডেটা ব্যবস্থাপনা',
+                        en: 'Import schedules and manage yearly jamaat data',
+                      ),
                       onTap: onEditImportTap,
                     ),
                 ]),
@@ -275,7 +296,7 @@ class ProfileLoggedInContent extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          _buildSectionLabel('App', profileSectionAppKey),
+          _buildSectionLabel(context.tr(bn: 'অ্যাপ', en: 'App'), profileSectionAppKey),
           appInfoCard,
         ],
       ),
