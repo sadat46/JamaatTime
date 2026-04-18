@@ -289,6 +289,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to copy'**
   String get ebadat_monajatCopyFailed;
+
+  /// Label for transliteration section in ebadat cards
+  ///
+  /// In en, this message translates to:
+  /// **'Transliteration'**
+  String get ebadat_transliterationLabel;
+
+  /// Label for meaning section in ebadat cards
+  ///
+  /// In en, this message translates to:
+  /// **'Meaning'**
+  String get ebadat_meaningLabel;
+
+  /// Default expandable references section title
+  ///
+  /// In en, this message translates to:
+  /// **'References'**
+  String get ebadat_referencesTitle;
 }
 
 class _AppLocalizationsDelegate

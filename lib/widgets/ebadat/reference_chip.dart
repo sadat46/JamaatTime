@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:jamaat_time/l10n/app_localizations.dart';
+
 import '../../models/worship_guide_model.dart';
 
 /// A chip widget that displays a reference (Quran or Hadith)
@@ -141,12 +143,12 @@ class ReferenceChipRow extends StatelessWidget {
 /// An expandable reference section
 class ReferenceSection extends StatefulWidget {
   final List<Reference> references;
-  final String title;
+  final String? title;
 
   const ReferenceSection({
     super.key,
     required this.references,
-    this.title = 'সূত্রসমূহ',
+    this.title,
   });
 
   @override
@@ -160,7 +162,9 @@ class _ReferenceSectionState extends State<ReferenceSection> {
   Widget build(BuildContext context) {
     if (widget.references.isEmpty) return const SizedBox.shrink();
 
+    final strings = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final title = widget.title ?? strings.ebadat_referencesTitle;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +183,7 @@ class _ReferenceSectionState extends State<ReferenceSection> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  widget.title,
+                  title,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

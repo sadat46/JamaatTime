@@ -94,5 +94,17 @@
   "ebadat_monajatCopyFailed": "Failed to copy",
   "@ebadat_monajatCopyFailed": {
     "description": "Snackbar text when monajat copy fails"
+  },
+  "ebadat_transliterationLabel": "Transliteration",
+  "@ebadat_transliterationLabel": {
+    "description": "Label for transliteration section in ebadat cards"
+  },
+  "ebadat_meaningLabel": "Meaning",
+  "@ebadat_meaningLabel": {
+    "description": "Label for meaning section in ebadat cards"
+  },
+  "ebadat_referencesTitle": "References",
+  "@ebadat_referencesTitle": {
+    "description": "Default expandable references section title"
   }
 }

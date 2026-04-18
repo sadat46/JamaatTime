@@ -113,4 +113,13 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get ebadat_monajatCopyFailed => 'কপি করতে সমস্যা হয়েছে';
+
+  @override
+  String get ebadat_transliterationLabel => 'উচ্চারণ';
+
+  @override
+  String get ebadat_meaningLabel => 'অর্থ';
+
+  @override
+  String get ebadat_referencesTitle => 'সূত্রসমূহ';
 }

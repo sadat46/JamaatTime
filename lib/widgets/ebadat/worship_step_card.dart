@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:jamaat_time/l10n/app_localizations.dart';
+
 import '../../models/worship_guide_model.dart';
 import 'reference_chip.dart';
 
@@ -19,10 +21,12 @@ class WorshipStepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context);
+    final strings = AppLocalizations.of(context);
 
     // Status colors
     Color statusColor;
-    String statusText = step.statusLabel;
+    final String statusText = step.getStatusLabel(locale);
     if (step.isFard) {
       statusColor = Colors.red.shade600;
     } else if (step.isSunnah) {
@@ -77,7 +81,7 @@ class WorshipStepCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          step.titleBangla,
+                          step.getTitle(locale),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -88,7 +92,9 @@ class WorshipStepCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: statusColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -172,7 +178,7 @@ class WorshipStepCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'উচ্চারণ',
+                            strings.ebadat_transliterationLabel,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -226,7 +232,7 @@ class WorshipStepCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'অর্থ',
+                            strings.ebadat_meaningLabel,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -239,7 +245,7 @@ class WorshipStepCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        step.meaning!,
+                        step.getMeaning(locale) ?? step.meaning!,
                         style: TextStyle(
                           fontSize: 14,
                           height: 1.5,
@@ -254,7 +260,7 @@ class WorshipStepCard extends StatelessWidget {
               // Instruction
               const SizedBox(height: 12),
               Text(
-                step.instruction,
+                step.getInstruction(locale),
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.6,

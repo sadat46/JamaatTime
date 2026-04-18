@@ -113,4 +113,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebadat_monajatCopyFailed => 'Failed to copy';
+
+  @override
+  String get ebadat_transliterationLabel => 'Transliteration';
+
+  @override
+  String get ebadat_meaningLabel => 'Meaning';
+
+  @override
+  String get ebadat_referencesTitle => 'References';
 }

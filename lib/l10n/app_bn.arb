@@ -46,5 +46,8 @@
   "ebadat_monajatContextShortLabel": "প্রসঙ্গ",
   "ebadat_monajatCopyButton": "সম্পূর্ণ দোয়া কপি করুন",
   "ebadat_monajatCopySuccess": "ক্লিপবোর্ডে কপি হয়েছে",
-  "ebadat_monajatCopyFailed": "কপি করতে সমস্যা হয়েছে"
+  "ebadat_monajatCopyFailed": "কপি করতে সমস্যা হয়েছে",
+  "ebadat_transliterationLabel": "উচ্চারণ",
+  "ebadat_meaningLabel": "অর্থ",
+  "ebadat_referencesTitle": "সূত্রসমূহ"
 }
