@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "en",
   "nav_home": "Home",
   "@nav_home": {"description": "Bottom navigation label for the Home tab"},
@@ -24,8 +24,17 @@
   "@widget_jamaatOver": {"description": "Home-screen widget label after the jamaat time has passed"},
   "widget_jamaatInSuffix": "Jamaat in",
   "@widget_jamaatInSuffix": {"description": "Home-screen widget label prefix, e.g. 'Fajr Jamaat in 12m'"},
+  "widget_comingDhuhr": "Coming Dhuhr",
+  "@widget_comingDhuhr": {"description": "Widget countdown label during Sunrise period"},
+  "widget_timeRemaining": "{prayer} Time Remaining",
+  "@widget_timeRemaining": {
+    "description": "Widget countdown label for active prayer period",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
   "prayer_fajr": "Fajr",
   "@prayer_fajr": {"description": "Name of the Fajr prayer"},
+  "prayer_sunrise": "Sunrise",
+  "@prayer_sunrise": {"description": "Name of the Sunrise period"},
   "prayer_dhuhr": "Dhuhr",
   "@prayer_dhuhr": {"description": "Name of the Dhuhr prayer"},
   "prayer_asr": "Asr",
@@ -33,5 +42,57 @@
   "prayer_maghrib": "Maghrib",
   "@prayer_maghrib": {"description": "Name of the Maghrib prayer"},
   "prayer_isha": "Isha",
-  "@prayer_isha": {"description": "Name of the Isha prayer"}
+  "@prayer_isha": {"description": "Name of the Isha prayer"},
+  "notification_prayerTitle": "{prayer} Prayer",
+  "@notification_prayerTitle": {
+    "description": "Prayer notification title",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "notification_prayerBody": "{prayer} time remaining 20 minutes.",
+  "@notification_prayerBody": {
+    "description": "Prayer notification body",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "notification_jamaatTitle": "{prayer} Jamaat",
+  "@notification_jamaatTitle": {
+    "description": "Jamaat notification title",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "notification_jamaatBody": "{prayer} Jamaat is in 10 minutes.",
+  "@notification_jamaatBody": {
+    "description": "Jamaat notification body",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "ebadat_monajatCopyTooltip": "Copy",
+  "@ebadat_monajatCopyTooltip": {
+    "description": "Tooltip on monajat detail copy icon button"
+  },
+  "ebadat_monajatPronunciationLabel": "Pronunciation",
+  "@ebadat_monajatPronunciationLabel": {
+    "description": "Section label for pronunciation in monajat detail"
+  },
+  "ebadat_monajatMeaningLabel": "Meaning",
+  "@ebadat_monajatMeaningLabel": {
+    "description": "Section label for meaning in monajat detail"
+  },
+  "ebadat_monajatContextLabel": "Context & Benefit",
+  "@ebadat_monajatContextLabel": {
+    "description": "Section label for context/fadilat in monajat detail"
+  },
+  "ebadat_monajatContextShortLabel": "Context",
+  "@ebadat_monajatContextShortLabel": {
+    "description": "Short label for context line in copied monajat text"
+  },
+  "ebadat_monajatCopyButton": "Copy Full Dua",
+  "@ebadat_monajatCopyButton": {
+    "description": "Primary button label in monajat detail for copy"
+  },
+  "ebadat_monajatCopySuccess": "Copied to clipboard",
+  "@ebadat_monajatCopySuccess": {
+    "description": "Snackbar text when monajat copy succeeds"
+  },
+  "ebadat_monajatCopyFailed": "Failed to copy",
+  "@ebadat_monajatCopyFailed": {
+    "description": "Snackbar text when monajat copy fails"
+  }
 }

@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "bn",
   "nav_home": "হোম",
   "nav_ebadat": "ইবাদত",
@@ -12,9 +12,39 @@
   "widget_jamaatNA": "জামাত নেই",
   "widget_jamaatOver": "জামাত শেষ",
   "widget_jamaatInSuffix": "জামাত শুরু হবে",
+  "widget_comingDhuhr": "আসছে যোহর",
+  "widget_timeRemaining": "{prayer} বাকি",
+  "@widget_timeRemaining": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
   "prayer_fajr": "ফজর",
+  "prayer_sunrise": "সূর্যোদয়",
   "prayer_dhuhr": "যোহর",
-  "prayer_asr": "আছর",
+  "prayer_asr": "আসর",
   "prayer_maghrib": "মাগরিব",
-  "prayer_isha": "এশা"
+  "prayer_isha": "এশা",
+  "notification_prayerTitle": "{prayer} নামাজ",
+  "@notification_prayerTitle": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "notification_prayerBody": "{prayer} নামাজের সময় আর ২০ মিনিট বাকি।",
+  "@notification_prayerBody": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "notification_jamaatTitle": "{prayer} জামাত",
+  "@notification_jamaatTitle": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "notification_jamaatBody": "{prayer} জামাত শুরু হবে ১০ মিনিট পরে।",
+  "@notification_jamaatBody": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "ebadat_monajatCopyTooltip": "কপি করুন",
+  "ebadat_monajatPronunciationLabel": "উচ্চারণ",
+  "ebadat_monajatMeaningLabel": "অর্থ",
+  "ebadat_monajatContextLabel": "প্রসঙ্গ ও ফযিলত",
+  "ebadat_monajatContextShortLabel": "প্রসঙ্গ",
+  "ebadat_monajatCopyButton": "সম্পূর্ণ দোয়া কপি করুন",
+  "ebadat_monajatCopySuccess": "ক্লিপবোর্ডে কপি হয়েছে",
+  "ebadat_monajatCopyFailed": "কপি করতে সমস্যা হয়েছে"
 }

@@ -45,17 +45,72 @@ class AppLocalizationsBn extends AppLocalizations {
   String get widget_jamaatInSuffix => 'জামাত শুরু হবে';
 
   @override
+  String get widget_comingDhuhr => 'আসছে যোহর';
+
+  @override
+  String widget_timeRemaining(String prayer) {
+    return '$prayer বাকি';
+  }
+
+  @override
   String get prayer_fajr => 'ফজর';
+
+  @override
+  String get prayer_sunrise => 'সূর্যোদয়';
 
   @override
   String get prayer_dhuhr => 'যোহর';
 
   @override
-  String get prayer_asr => 'আছর';
+  String get prayer_asr => 'আসর';
 
   @override
   String get prayer_maghrib => 'মাগরিব';
 
   @override
   String get prayer_isha => 'এশা';
+
+  @override
+  String notification_prayerTitle(String prayer) {
+    return '$prayer নামাজ';
+  }
+
+  @override
+  String notification_prayerBody(String prayer) {
+    return '$prayer নামাজের সময় আর ২০ মিনিট বাকি।';
+  }
+
+  @override
+  String notification_jamaatTitle(String prayer) {
+    return '$prayer জামাত';
+  }
+
+  @override
+  String notification_jamaatBody(String prayer) {
+    return '$prayer জামাত শুরু হবে ১০ মিনিট পরে।';
+  }
+
+  @override
+  String get ebadat_monajatCopyTooltip => 'কপি করুন';
+
+  @override
+  String get ebadat_monajatPronunciationLabel => 'উচ্চারণ';
+
+  @override
+  String get ebadat_monajatMeaningLabel => 'অর্থ';
+
+  @override
+  String get ebadat_monajatContextLabel => 'প্রসঙ্গ ও ফযিলত';
+
+  @override
+  String get ebadat_monajatContextShortLabel => 'প্রসঙ্গ';
+
+  @override
+  String get ebadat_monajatCopyButton => 'সম্পূর্ণ দোয়া কপি করুন';
+
+  @override
+  String get ebadat_monajatCopySuccess => 'ক্লিপবোর্ডে কপি হয়েছে';
+
+  @override
+  String get ebadat_monajatCopyFailed => 'কপি করতে সমস্যা হয়েছে';
 }

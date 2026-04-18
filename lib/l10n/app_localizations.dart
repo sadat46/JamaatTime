@@ -170,11 +170,29 @@ abstract class AppLocalizations {
   /// **'Jamaat in'**
   String get widget_jamaatInSuffix;
 
+  /// Widget countdown label during Sunrise period
+  ///
+  /// In en, this message translates to:
+  /// **'Coming Dhuhr'**
+  String get widget_comingDhuhr;
+
+  /// Widget countdown label for active prayer period
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} Time Remaining'**
+  String widget_timeRemaining(String prayer);
+
   /// Name of the Fajr prayer
   ///
   /// In en, this message translates to:
   /// **'Fajr'**
   String get prayer_fajr;
+
+  /// Name of the Sunrise period
+  ///
+  /// In en, this message translates to:
+  /// **'Sunrise'**
+  String get prayer_sunrise;
 
   /// Name of the Dhuhr prayer
   ///
@@ -199,6 +217,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Isha'**
   String get prayer_isha;
+
+  /// Prayer notification title
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} Prayer'**
+  String notification_prayerTitle(String prayer);
+
+  /// Prayer notification body
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} time remaining 20 minutes.'**
+  String notification_prayerBody(String prayer);
+
+  /// Jamaat notification title
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} Jamaat'**
+  String notification_jamaatTitle(String prayer);
+
+  /// Jamaat notification body
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} Jamaat is in 10 minutes.'**
+  String notification_jamaatBody(String prayer);
+
+  /// Tooltip on monajat detail copy icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get ebadat_monajatCopyTooltip;
+
+  /// Section label for pronunciation in monajat detail
+  ///
+  /// In en, this message translates to:
+  /// **'Pronunciation'**
+  String get ebadat_monajatPronunciationLabel;
+
+  /// Section label for meaning in monajat detail
+  ///
+  /// In en, this message translates to:
+  /// **'Meaning'**
+  String get ebadat_monajatMeaningLabel;
+
+  /// Section label for context/fadilat in monajat detail
+  ///
+  /// In en, this message translates to:
+  /// **'Context & Benefit'**
+  String get ebadat_monajatContextLabel;
+
+  /// Short label for context line in copied monajat text
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get ebadat_monajatContextShortLabel;
+
+  /// Primary button label in monajat detail for copy
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Full Dua'**
+  String get ebadat_monajatCopyButton;
+
+  /// Snackbar text when monajat copy succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get ebadat_monajatCopySuccess;
+
+  /// Snackbar text when monajat copy fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to copy'**
+  String get ebadat_monajatCopyFailed;
 }
 
 class _AppLocalizationsDelegate

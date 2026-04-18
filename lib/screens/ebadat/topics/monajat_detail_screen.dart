@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:jamaat_time/l10n/app_localizations.dart';
+
 import '../../../models/monajat_model.dart';
 
 /// Detail screen displaying a single Monajat with exceptional visual comfort
@@ -20,12 +22,14 @@ class MonajatDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final strings = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          monajat.title,
+          monajat.getTitle(locale),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -38,7 +42,7 @@ class MonajatDetailScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.copy_all),
             onPressed: () => _copyToClipboard(context),
-            tooltip: 'কপি করুন',
+            tooltip: strings.ebadat_monajatCopyTooltip,
           ),
           const SizedBox(width: 8),
         ],
@@ -64,7 +68,7 @@ class MonajatDetailScreen extends StatelessWidget {
                   // Pronunciation Section
                   _buildSectionHeader(
                     context,
-                    'উচ্চারণ',
+                    strings.ebadat_monajatPronunciationLabel,
                     Icons.record_voice_over,
                   ),
                   const SizedBox(height: 12),
@@ -74,7 +78,7 @@ class MonajatDetailScreen extends StatelessWidget {
                   // Meaning Section
                   _buildSectionHeader(
                     context,
-                    'অর্থ',
+                    strings.ebadat_monajatMeaningLabel,
                     Icons.translate,
                   ),
                   const SizedBox(height: 12),
@@ -99,6 +103,7 @@ class MonajatDetailScreen extends StatelessWidget {
 
   /// Builds the title badge at the top
   Widget _buildTitleBadge(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -116,7 +121,7 @@ class MonajatDetailScreen extends StatelessWidget {
         ),
       ),
       child: Text(
-        monajat.title,
+        monajat.getTitle(locale),
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 17,
@@ -211,6 +216,7 @@ class MonajatDetailScreen extends StatelessWidget {
 
   /// Builds the meaning section
   Widget _buildMeaningSection(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -228,7 +234,7 @@ class MonajatDetailScreen extends StatelessWidget {
         ),
       ),
       child: Text(
-        monajat.meaning,
+        monajat.getMeaning(locale),
         style: TextStyle(
           fontSize: 18,
           height: 1.9,
@@ -242,6 +248,8 @@ class MonajatDetailScreen extends StatelessWidget {
 
   /// Builds the context/fadilat section with distinct styling
   Widget _buildContextSection(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final strings = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -267,7 +275,7 @@ class MonajatDetailScreen extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                'প্রসঙ্গ ও ফযিলত',
+                strings.ebadat_monajatContextLabel,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -278,7 +286,7 @@ class MonajatDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            monajat.context,
+            monajat.getContext(locale),
             style: TextStyle(
               fontSize: 16,
               height: 1.8,
@@ -322,14 +330,15 @@ class MonajatDetailScreen extends StatelessWidget {
 
   /// Builds the copy button
   Widget _buildCopyButton(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ElevatedButton.icon(
       onPressed: () => _copyToClipboard(context),
       icon: const Icon(Icons.copy_all, size: 20),
-      label: const Text(
-        'সম্পূর্ণ দোয়া কপি করুন',
-        style: TextStyle(
+      label: Text(
+        strings.ebadat_monajatCopyButton,
+        style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
@@ -348,36 +357,39 @@ class MonajatDetailScreen extends StatelessWidget {
 
   /// Copies the complete Monajat text to clipboard
   void _copyToClipboard(BuildContext context) async {
+    final locale = Localizations.localeOf(context);
+    final strings = AppLocalizations.of(context);
+
     try {
       final copyText = '''
-${monajat.title}
+${monajat.getTitle(locale)}
 
 ${monajat.arabic}
 
-উচ্চারণ: ${monajat.pronunciation}
+${strings.ebadat_monajatPronunciationLabel}: ${monajat.pronunciation}
 
-অর্থ: ${monajat.meaning}
+${strings.ebadat_monajatMeaningLabel}: ${monajat.getMeaning(locale)}
 
-প্রসঙ্গ: ${monajat.context}
+${strings.ebadat_monajatContextShortLabel}: ${monajat.getContext(locale)}
 ''';
 
       await Clipboard.setData(ClipboardData(text: copyText));
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
                 Text(
-                  'ক্লিপবোর্ডে কপি হয়েছে',
-                  style: TextStyle(fontSize: 15),
+                  strings.ebadat_monajatCopySuccess,
+                  style: const TextStyle(fontSize: 15),
                 ),
               ],
             ),
             backgroundColor: Colors.teal,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -385,10 +397,10 @@ ${monajat.arabic}
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('কপি করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(strings.ebadat_monajatCopyFailed),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }

@@ -45,7 +45,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widget_jamaatInSuffix => 'Jamaat in';
 
   @override
+  String get widget_comingDhuhr => 'Coming Dhuhr';
+
+  @override
+  String widget_timeRemaining(String prayer) {
+    return '$prayer Time Remaining';
+  }
+
+  @override
   String get prayer_fajr => 'Fajr';
+
+  @override
+  String get prayer_sunrise => 'Sunrise';
 
   @override
   String get prayer_dhuhr => 'Dhuhr';
@@ -58,4 +69,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prayer_isha => 'Isha';
+
+  @override
+  String notification_prayerTitle(String prayer) {
+    return '$prayer Prayer';
+  }
+
+  @override
+  String notification_prayerBody(String prayer) {
+    return '$prayer time remaining 20 minutes.';
+  }
+
+  @override
+  String notification_jamaatTitle(String prayer) {
+    return '$prayer Jamaat';
+  }
+
+  @override
+  String notification_jamaatBody(String prayer) {
+    return '$prayer Jamaat is in 10 minutes.';
+  }
+
+  @override
+  String get ebadat_monajatCopyTooltip => 'Copy';
+
+  @override
+  String get ebadat_monajatPronunciationLabel => 'Pronunciation';
+
+  @override
+  String get ebadat_monajatMeaningLabel => 'Meaning';
+
+  @override
+  String get ebadat_monajatContextLabel => 'Context & Benefit';
+
+  @override
+  String get ebadat_monajatContextShortLabel => 'Context';
+
+  @override
+  String get ebadat_monajatCopyButton => 'Copy Full Dua';
+
+  @override
+  String get ebadat_monajatCopySuccess => 'Copied to clipboard';
+
+  @override
+  String get ebadat_monajatCopyFailed => 'Failed to copy';
 }
