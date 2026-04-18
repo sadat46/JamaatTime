@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
+import '../core/locale_text.dart';
 
 class CalendarSelectedDateCard extends StatelessWidget {
   const CalendarSelectedDateCard({
@@ -30,6 +31,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
 
   Widget _buildDateChip(
     BuildContext context, {
+    required String label,
     required String value,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -52,6 +54,18 @@ class CalendarSelectedDateCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+              color: isDarkMode ? Colors.white70 : Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
             displayValue,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -73,7 +87,10 @@ class CalendarSelectedDateCard extends StatelessWidget {
 
     return Semantics(
       label:
-          'Selected date $gregorianDate, $weekday. Bangla ${_normalizedChipValue(banglaDate)}. Hijri ${_normalizedChipValue(hijriDate)}.',
+          context.tr(
+            bn: 'নির্বাচিত তারিখ $gregorianDate, $weekday। বাংলা ${_normalizedChipValue(banglaDate)}। হিজরি ${_normalizedChipValue(hijriDate)}।',
+            en: 'Selected date $gregorianDate, $weekday. Bangla ${_normalizedChipValue(banglaDate)}. Hijri ${_normalizedChipValue(hijriDate)}.',
+          ),
       child: Container(
         decoration: BoxDecoration(
           color: cardBackground,
@@ -160,8 +177,8 @@ class CalendarSelectedDateCard extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 8.0;
-                final chipWidth = constraints.maxWidth > spacing
-                    ? (constraints.maxWidth - spacing) / 2
+                final chipWidth = constraints.maxWidth > (spacing * 2)
+                    ? (constraints.maxWidth - (spacing * 2)) / 3
                     : constraints.maxWidth;
 
                 return Wrap(
@@ -171,9 +188,27 @@ class CalendarSelectedDateCard extends StatelessWidget {
                     SizedBox(
                       width: chipWidth,
                       child: Semantics(
-                        label: 'Bangla date ${_normalizedChipValue(banglaDate)}',
+                        label: context.tr(
+                          bn: 'ইংরেজি তারিখ ${_normalizedChipValue(gregorianDate)}',
+                          en: 'English date ${_normalizedChipValue(gregorianDate)}',
+                        ),
                         child: _buildDateChip(
                           context,
+                          label: context.tr(bn: 'ইংরেজি', en: 'English'),
+                          value: gregorianDate,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: chipWidth,
+                      child: Semantics(
+                        label: context.tr(
+                          bn: 'বাংলা তারিখ ${_normalizedChipValue(banglaDate)}',
+                          en: 'Bangla date ${_normalizedChipValue(banglaDate)}',
+                        ),
+                        child: _buildDateChip(
+                          context,
+                          label: context.tr(bn: 'বাংলা', en: 'Bangla'),
                           value: banglaDate,
                         ),
                       ),
@@ -181,9 +216,13 @@ class CalendarSelectedDateCard extends StatelessWidget {
                     SizedBox(
                       width: chipWidth,
                       child: Semantics(
-                        label: 'Hijri date ${_normalizedChipValue(hijriDate)}',
+                        label: context.tr(
+                          bn: 'হিজরি তারিখ ${_normalizedChipValue(hijriDate)}',
+                          en: 'Hijri date ${_normalizedChipValue(hijriDate)}',
+                        ),
                         child: _buildDateChip(
                           context,
+                          label: context.tr(bn: 'হিজরি', en: 'Hijri'),
                           value: hijriDate,
                         ),
                       ),
