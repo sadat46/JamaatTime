@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/locale_text.dart';
 import '../../models/dua_model.dart';
 import '../../services/bookmark_service.dart';
 
@@ -24,13 +25,15 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
     if (!_bookmarkService.canBookmark) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('বুকমার্ক করতে লগইন করুন'),
+          content: Text(
+            context.tr(
+              bn: 'বুকমার্ক করতে লগইন করুন',
+              en: 'Sign in to bookmark',
+            ),
+          ),
           action: SnackBarAction(
-            label: 'লগইন',
-            onPressed: () {
-              // Navigate to profile tab (index 2)
-              // This will be implemented when integrating with main navigation
-            },
+            label: context.tr(bn: 'লগইন', en: 'Sign In'),
+            onPressed: () {},
           ),
         ),
       );
@@ -49,8 +52,11 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
         SnackBar(
           content: Text(
             isNowBookmarked
-                ? 'বুকমার্কে যুক্ত হয়েছে'
-                : 'বুকমার্ক থেকে সরানো হয়েছে',
+                ? context.tr(bn: 'বুকমার্কে যুক্ত হয়েছে', en: 'Added to bookmarks')
+                : context.tr(
+                    bn: 'বুকমার্ক থেকে সরানো হয়েছে',
+                    en: 'Removed from bookmarks',
+                  ),
           ),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
@@ -60,30 +66,36 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
   }
 
   void _shareDua() async {
+    final locale = Localizations.localeOf(context);
     try {
       final shareText = '''
-${widget.dua.titleBangla}
+${widget.dua.getTitle(locale)}
 
 ${widget.dua.arabicText}
 
-উচ্চারণ: ${widget.dua.banglaTransliteration}
+${context.tr(bn: 'উচ্চারণ', en: 'Transliteration')}: ${widget.dua.getTransliteration(locale)}
 
-অর্থ: ${widget.dua.banglaMeaning}
+${context.tr(bn: 'অর্থ', en: 'Meaning')}: ${widget.dua.getMeaning(locale)}
 
-সূত্র: ${widget.dua.reference}
+${context.tr(bn: 'সূত্র', en: 'Reference')}: ${widget.dua.reference}
 ''';
 
       await Share.share(
         shareText,
-        subject: widget.dua.titleBangla,
+        subject: widget.dua.getTitle(locale),
       );
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('শেয়ার করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'শেয়ার করতে সমস্যা হয়েছে',
+                en: 'Failed to share',
+              ),
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -91,31 +103,42 @@ ${widget.dua.arabicText}
   }
 
   void _copyToClipboard() async {
+    final locale = Localizations.localeOf(context);
     try {
       final copyText = '''
 ${widget.dua.arabicText}
 
-${widget.dua.banglaMeaning}
+${widget.dua.getMeaning(locale)}
 ''';
 
       await Clipboard.setData(ClipboardData(text: copyText));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ক্লিপবোর্ডে কপি হয়েছে'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'ক্লিপবোর্ডে কপি হয়েছে',
+                en: 'Copied to clipboard',
+              ),
+            ),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('কপি করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'কপি করতে সমস্যা হয়েছে',
+                en: 'Failed to copy',
+              ),
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -124,10 +147,16 @@ ${widget.dua.banglaMeaning}
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final title = widget.dua.getTitle(locale);
+    final category = widget.dua.getCategory(locale);
+    final transliteration = widget.dua.getTransliteration(locale);
+    final meaning = widget.dua.getMeaning(locale);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.dua.titleBangla,
+          title,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -145,12 +174,12 @@ ${widget.dua.banglaMeaning}
                   : Icons.bookmark_border,
             ),
             onPressed: _toggleBookmark,
-            tooltip: 'বুকমার্ক',
+            tooltip: context.tr(bn: 'বুকমার্ক', en: 'Bookmark'),
           ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareDua,
-            tooltip: 'শেয়ার',
+            tooltip: context.tr(bn: 'শেয়ার', en: 'Share'),
           ),
           const SizedBox(width: 8),
         ],
@@ -165,7 +194,6 @@ ${widget.dua.banglaMeaning}
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Category Badge
                   Align(
                     alignment: Alignment.center,
                     child: Container(
@@ -175,17 +203,17 @@ ${widget.dua.banglaMeaning}
                       ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF6A1B9A).withValues(alpha:0.2)
-                            : const Color(0xFF6A1B9A).withValues(alpha:0.1),
+                            ? const Color(0xFF6A1B9A).withValues(alpha: 0.2)
+                            : const Color(0xFF6A1B9A).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF9C4DCC).withValues(alpha:0.5)
-                              : const Color(0xFF6A1B9A).withValues(alpha:0.3),
+                              ? const Color(0xFF9C4DCC).withValues(alpha: 0.5)
+                              : const Color(0xFF6A1B9A).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
-                        widget.dua.category,
+                        category,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -197,8 +225,6 @@ ${widget.dua.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Arabic Text
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -208,8 +234,8 @@ ${widget.dua.banglaMeaning}
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF9C4DCC).withValues(alpha:0.3)
-                            : const Color(0xFF4A148C).withValues(alpha:0.2),
+                            ? const Color(0xFF9C4DCC).withValues(alpha: 0.3)
+                            : const Color(0xFF4A148C).withValues(alpha: 0.2),
                         width: 2,
                       ),
                     ),
@@ -228,8 +254,6 @@ ${widget.dua.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Reference (Hadith) Info
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -257,24 +281,23 @@ ${widget.dua.banglaMeaning}
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Transliteration Section
-                  _buildSectionHeader('বাংলা উচ্চারণ', Icons.record_voice_over),
+                  _buildSectionHeader(
+                    context.tr(bn: 'উচ্চারণ', en: 'Transliteration'),
+                    Icons.record_voice_over,
+                  ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF6A1B9A).withValues(alpha:0.15)
-                          : const Color(0xFF6A1B9A).withValues(alpha:0.05),
+                          ? const Color(0xFF6A1B9A).withValues(alpha: 0.15)
+                          : const Color(0xFF6A1B9A).withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      widget.dua.banglaTransliteration,
+                      transliteration,
                       style: TextStyle(
                         fontSize: 19,
                         fontStyle: FontStyle.italic,
@@ -286,29 +309,25 @@ ${widget.dua.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Meaning Section
-                  _buildSectionHeader('বাংলা অর্থ', Icons.translate),
+                  _buildSectionHeader(context.tr(bn: 'অর্থ', en: 'Meaning'), Icons.translate),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF6A1B9A).withValues(alpha:0.2)
-                          : const Color(0xFF6A1B9A).withValues(alpha:0.08),
+                          ? const Color(0xFF6A1B9A).withValues(alpha: 0.2)
+                          : const Color(0xFF6A1B9A).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF9C4DCC).withValues(alpha:0.4)
-                            : const Color(0xFF6A1B9A).withValues(alpha:0.2),
+                            ? const Color(0xFF9C4DCC).withValues(alpha: 0.4)
+                            : const Color(0xFF6A1B9A).withValues(alpha: 0.2),
                       ),
                     ),
                     child: Text(
-                      widget.dua.banglaMeaning,
+                      meaning,
                       style: TextStyle(
                         fontSize: 19,
                         height: 1.8,
@@ -317,12 +336,8 @@ ${widget.dua.banglaMeaning}
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Reference Section
                   Row(
                     children: [
                       Icon(
@@ -344,15 +359,13 @@ ${widget.dua.banglaMeaning}
                     ],
                   ),
                   const SizedBox(height: 32),
-
-                  // Action Buttons
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _copyToClipboard,
                           icon: const Icon(Icons.copy),
-                          label: const Text('কপি'),
+                          label: Text(context.tr(bn: 'কপি', en: 'Copy')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF6A1B9A),
                             side: const BorderSide(
@@ -371,7 +384,7 @@ ${widget.dua.banglaMeaning}
                         child: ElevatedButton.icon(
                           onPressed: _shareDua,
                           icon: const Icon(Icons.share),
-                          label: const Text('শেয়ার'),
+                          label: Text(context.tr(bn: 'শেয়ার', en: 'Share')),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF4A148C)
