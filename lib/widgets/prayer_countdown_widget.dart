@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import '../core/constants.dart';
 import '../services/prayer_time_engine.dart';
+import '../utils/locale_digits.dart';
 
 /// A self-contained countdown widget that updates every second.
 /// Shows time remaining until the next prayer as a circular progress ring.
@@ -41,8 +42,14 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   @override
   void initState() {
     super.initState();
-    _calculateCountdown();
     _startTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Safe place to read inherited widgets like Localizations.
+    _calculateCountdown();
   }
 
   @override
@@ -65,6 +72,10 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   }
 
   bool get _isEnglish => Localizations.localeOf(context).languageCode == 'en';
+
+  String _localizeDigits(String value) {
+    return LocaleDigits.localize(value, Localizations.localeOf(context));
+  }
 
   String _localizedPrayerName(String canonical) {
     if (_isEnglish) {
@@ -101,19 +112,22 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     String countdownTimeStr = '';
     bool isSpecial = false;
     double progress = 0.0;
+    final localeCode = _isEnglish ? 'en' : 'bn';
 
     if (selectedDateOnly.isBefore(todayOnly)) {
       // Past date
       periodName = _isEnglish
-          ? 'Viewing past date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}'
-          : 'পূর্বের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
+          ? 'Viewing past date: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}'
+          : 'পূর্বের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}';
+      periodName = _localizeDigits(periodName);
       isSpecial = true;
       progress = 0.0;
     } else if (selectedDateOnly.isAfter(todayOnly)) {
       // Future date
       periodName = _isEnglish
-          ? 'Viewing future date: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}'
-          : 'ভবিষ্যতের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy').format(widget.selectedDate)}';
+          ? 'Viewing future date: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}'
+          : 'ভবিষ্যতের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}';
+      periodName = _localizeDigits(periodName);
       isSpecial = true;
       progress = 0.0;
     } else {
@@ -138,6 +152,9 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       countdownTimeStr = timeToNext.isNegative
           ? '--:--:--'
           : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      if (countdownTimeStr != '--:--:--') {
+        countdownTimeStr = _localizeDigits(countdownTimeStr);
+      }
 
       final localizedPeriod = _localizedPrayerName(currentPeriod);
       periodName = currentPeriod == 'Sunrise'
