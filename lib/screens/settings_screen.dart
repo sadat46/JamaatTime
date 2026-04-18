@@ -80,16 +80,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _hijriOffsetLabel(int value) {
-    final dayWord = _tr(''দিন'', ''day'');
-    final dayWordPlural = _tr(''দিন'', ''days'');
+    final dayWord = _tr('দিন', 'day');
+    final dayWordPlural = _tr('দিন', 'days');
     final suffix = value.abs() == 1 ? dayWord : dayWordPlural;
     if (value == 0) {
-      return ''0 $suffix'';
+      return '0 $suffix';
     }
     if (value > 0) {
-      return ''+$value $suffix'';
+      return '+$value $suffix';
     }
-    return ''$value $suffix'';
+    return '$value $suffix';
   }
 
   Future<void> _updatePrayerSoundMode(int value) async {
@@ -246,6 +246,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           initialValue: initialValue,
+          isExpanded: true,
           items: items,
           onChanged: onChanged,
           borderRadius: BorderRadius.circular(12),

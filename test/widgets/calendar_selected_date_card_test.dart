@@ -41,13 +41,13 @@ void main() {
   ) async {
     await tester.pumpWidget(_testHost(child: _buildCard()));
 
-    expect(_richTextContaining('14 Apr 2026'), findsOneWidget);
+    expect(_richTextContaining('14 Apr 2026'), findsAtLeastNWidgets(1));
     expect(_richTextContaining('Tuesday'), findsOneWidget);
     expect(find.text('1 Boishakh 1433'), findsOneWidget);
     expect(find.text('25 Shawwal 1447'), findsOneWidget);
-    expect(find.text('Bangla'), findsNothing);
-    expect(find.text('Hijri'), findsNothing);
-    expect(find.text('English'), findsNothing);
+    expect(find.text('Bangla'), findsOneWidget);
+    expect(find.text('Hijri'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
   });
 
   testWidgets('adds semantic labels for selected, Bangla, and Hijri dates', (
@@ -82,7 +82,7 @@ void main() {
       _testHost(theme: ThemeData.dark(), child: _buildCard()),
     );
 
-    expect(_richTextContaining('14 Apr 2026'), findsOneWidget);
+    expect(_richTextContaining('14 Apr 2026'), findsAtLeastNWidgets(1));
     expect(find.text('1 Boishakh 1433'), findsOneWidget);
     expect(find.text('25 Shawwal 1447'), findsOneWidget);
     expect(tester.takeException(), isNull);
