@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/locale_text.dart';
 import '../services/bookmark_service.dart';
 import '../services/ebadat_data_service.dart';
 import '../models/ayat_model.dart';
@@ -37,7 +38,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     });
 
     try {
-      // Check if user is logged in
       if (!_bookmarkService.canBookmark) {
         setState(() {
           _isLoading = false;
@@ -45,29 +45,23 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         return;
       }
 
-      // Get all bookmark IDs
       final ayatIds = _bookmarkService.getBookmarkIds('ayat');
       final duaIds = _bookmarkService.getBookmarkIds('dua');
 
-      // Load full content from EbadatDataService
       final allAyats = await _ebadatService.loadAyats();
       final allDuas = await _ebadatService.loadDuas();
 
-      // Filter to get only bookmarked items
-      _bookmarkedAyats = allAyats
-          .where((ayat) => ayatIds.contains(ayat.id))
-          .toList();
-
-      _bookmarkedDuas = allDuas
-          .where((dua) => duaIds.contains(dua.id))
-          .toList();
+      _bookmarkedAyats =
+          allAyats.where((ayat) => ayatIds.contains(ayat.id)).toList();
+      _bookmarkedDuas =
+          allDuas.where((dua) => duaIds.contains(dua.id)).toList();
 
       setState(() {
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       setState(() {
-        _errorMessage = 'বুকমার্ক লোড করতে ব্যর্থ হয়েছে';
+        _errorMessage = 'failed';
         _isLoading = false;
       });
     }
@@ -77,9 +71,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'আমার বুকমার্ক',
-          style: TextStyle(
+        title: Text(
+          context.tr(bn: 'আমার বুকমার্ক', en: 'My Bookmarks'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
@@ -92,7 +86,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   Widget _buildBody() {
-    // Loading State
     if (_isLoading) {
       return ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -102,7 +95,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       );
     }
 
-    // Error State
     if (_errorMessage != null) {
       return Center(
         child: Column(
@@ -115,7 +107,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _errorMessage!,
+              context.tr(
+                bn: 'বুকমার্ক লোড করতে ব্যর্থ হয়েছে',
+                en: 'Failed to load bookmarks',
+              ),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -126,11 +121,14 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             ElevatedButton.icon(
               onPressed: _loadBookmarks,
               icon: const Icon(Icons.refresh),
-              label: const Text('পুনরায় চেষ্টা করুন'),
+              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF388E3C),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -138,7 +136,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       );
     }
 
-    // Not logged in state
     if (!_bookmarkService.canBookmark) {
       return Center(
         child: Column(
@@ -151,7 +148,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'বুকমার্ক দেখতে লগইন করুন',
+              context.tr(
+                bn: 'বুকমার্ক দেখতে লগইন করুন',
+                en: 'Sign in to view bookmarks',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -161,7 +161,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'আপনার সংরক্ষিত আয়াত ও দোয়া দেখতে লগইন প্রয়োজন',
+              context.tr(
+                bn: 'আপনার সংরক্ষিত আয়াত ও দোয়া দেখতে লগইন প্রয়োজন',
+                en: 'Sign in to access your saved ayat and dua',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -173,7 +176,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       );
     }
 
-    // Empty State
     if (_bookmarkedAyats.isEmpty && _bookmarkedDuas.isEmpty) {
       return Center(
         child: Column(
@@ -186,7 +188,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'কোনো বুকমার্ক নেই',
+              context.tr(bn: 'কোনো বুকমার্ক নেই', en: 'No bookmarks yet'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -195,7 +197,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'আয়াত বা দোয়া বুকমার্ক করুন',
+              context.tr(
+                bn: 'আয়াত বা দোয়া বুকমার্ক করুন',
+                en: 'Bookmark ayat or dua to see them here',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -207,7 +212,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       );
     }
 
-    // Content
     return RefreshIndicator(
       onRefresh: _loadBookmarks,
       color: const Color(0xFF388E3C),
@@ -217,10 +221,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Ayat Section
             if (_bookmarkedAyats.isNotEmpty) ...[
               _buildSectionHeader(
-                'আয়াত',
+                context.tr(bn: 'আয়াত', en: 'Ayat'),
                 _bookmarkedAyats.length,
                 Icons.menu_book,
                 const Color(0xFF1565C0),
@@ -229,11 +232,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
               ..._bookmarkedAyats.map((ayat) => _buildAyatCard(ayat)),
               const SizedBox(height: 24),
             ],
-
-            // Dua Section
             if (_bookmarkedDuas.isNotEmpty) ...[
               _buildSectionHeader(
-                'দোয়া',
+                context.tr(bn: 'দোয়া', en: 'Dua'),
                 _bookmarkedDuas.length,
                 Icons.pan_tool,
                 const Color(0xFF6A1B9A),
@@ -288,6 +289,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   Widget _buildAyatCard(AyatModel ayat) {
+    final locale = Localizations.localeOf(context);
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -329,7 +331,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ayat.titleBangla,
+                      ayat.getTitle(locale),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -338,7 +340,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${ayat.surahName} (${ayat.ayatNumber})',
+                      '${ayat.getSurahName(locale)} (${ayat.ayatNumber})',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -360,6 +362,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   Widget _buildDuaCard(DuaModel dua) {
+    final locale = Localizations.localeOf(context);
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -401,7 +404,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      dua.titleBangla,
+                      dua.getTitle(locale),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -410,7 +413,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      dua.category,
+                      dua.getCategory(locale),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
