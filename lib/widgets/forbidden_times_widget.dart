@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:adhan_dart/adhan_dart.dart';
+import '../core/locale_text.dart';
 import '../services/prayer_time_engine.dart';
 
 class _ForbiddenVisualSpec {
@@ -217,7 +218,9 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
   }
 
   Widget _buildSectionHeader(_ForbiddenVisualSpec spec, int windowCount) {
-    final windowLabel = windowCount == 1 ? '1 window' : '$windowCount windows';
+    final windowLabel = context.isEnglish
+        ? (windowCount == 1 ? '1 window' : '$windowCount windows')
+        : (windowCount == 1 ? '১টি সময়কাল' : '$windowCount টি সময়কাল');
     return Row(
       children: [
         Container(
@@ -237,7 +240,10 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Forbidden Prayer Times',
+            context.tr(
+              bn: 'নিষিদ্ধ নামাজের সময়',
+              en: 'Forbidden Prayer Times',
+            ),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -406,7 +412,9 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '$durationMinutes min',
+                        context.isEnglish
+                            ? '$durationMinutes min'
+                            : '$durationMinutes মিনিট',
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
@@ -442,7 +450,9 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
         border: Border.all(color: chipBorder),
       ),
       child: Text(
-        isActive ? 'Active' : 'Next',
+        isActive
+            ? context.tr(bn: 'চলমান', en: 'Active')
+            : context.tr(bn: 'পরবর্তী', en: 'Next'),
         style: TextStyle(
           fontSize: 9.5,
           fontWeight: FontWeight.w700,
