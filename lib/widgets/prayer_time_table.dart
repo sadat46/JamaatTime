@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/prayer_aux_calculator.dart';
 import '../core/constants.dart';
+import '../l10n/app_localizations.dart';
 
 class PrayerTimeTable extends StatelessWidget {
   final Map<String, DateTime?> times;
@@ -22,6 +23,27 @@ class PrayerTimeTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final strings = AppLocalizations.of(context);
+    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+
+    String localizedPrayerName(String name) {
+      switch (name) {
+        case 'Fajr':
+          return strings.prayer_fajr;
+        case 'Sunrise':
+          return strings.prayer_sunrise;
+        case 'Dhuhr':
+          return strings.prayer_dhuhr;
+        case 'Asr':
+          return strings.prayer_asr;
+        case 'Maghrib':
+          return strings.prayer_maghrib;
+        case 'Isha':
+          return strings.prayer_isha;
+        default:
+          return name;
+      }
+    }
 
     return Table(
       border: TableBorder.all(
@@ -44,7 +66,7 @@ class PrayerTimeTable extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                'Prayer Name',
+                isEnglish ? 'Prayer Name' : 'নামাজের নাম',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.white,
@@ -54,7 +76,7 @@ class PrayerTimeTable extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                'Prayer Time',
+                isEnglish ? 'Prayer Time' : 'নামাজের সময়',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.white,
@@ -65,7 +87,7 @@ class PrayerTimeTable extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'Jamaat Time',
+                  isEnglish ? 'Jamaat Time' : 'জামাতের সময়',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.white,
@@ -111,7 +133,7 @@ class PrayerTimeTable extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  name,
+                  localizedPrayerName(name),
                   style: TextStyle(
                     fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                     color: Theme.of(context).textTheme.bodyLarge?.color,
