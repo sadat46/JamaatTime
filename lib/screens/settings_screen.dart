@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../core/app_locale_controller.dart';
 import '../core/feature_flags.dart';
 import '../l10n/app_localizations.dart';
@@ -62,29 +62,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _locale = code);
   }
 
+  String _tr(String bn, String en) => _locale == 'en' ? en : bn;
+
   String _soundModeLabel(int value) {
     switch (value) {
       case 1:
-        return 'System sound';
+        return _tr('à¦¸à¦¿à¦¸à§à¦Ÿà§‡à¦® à¦¸à¦¾à¦‰à¦¨à§à¦¡', 'System sound');
       case 2:
-        return 'No sound';
+        return _tr('à¦¨à¦¿à¦ƒà¦¶à¦¬à§à¦¦', 'No sound');
       case 3:
-        return 'Call Sound Short 1';
+        return _tr('à¦•à¦² à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦¶à¦°à§à¦Ÿ à§§', 'Call Sound Short 1');
       case 4:
-        return 'Call Sound short 2';
+        return _tr('à¦•à¦² à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦¶à¦°à§à¦Ÿ à§¨', 'Call Sound short 2');
       default:
-        return 'Adhan sound';
+        return _tr('à¦†à¦¯à¦¾à¦¨ à¦¸à¦¾à¦‰à¦¨à§à¦¡', 'Adhan sound');
     }
   }
 
   String _hijriOffsetLabel(int value) {
+    final dayWord = _tr(''দিন'', ''day'');
+    final dayWordPlural = _tr(''দিন'', ''days'');
+    final suffix = value.abs() == 1 ? dayWord : dayWordPlural;
     if (value == 0) {
-      return '0 day';
+      return ''0 $suffix'';
     }
     if (value > 0) {
-      return '+$value day';
+      return ''+$value $suffix'';
     }
-    return '$value day';
+    return ''$value $suffix'';
   }
 
   Future<void> _updatePrayerSoundMode(int value) async {
@@ -97,17 +102,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _notificationService.handleNotificationSoundModeChange();
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('Prayer reminder sound updated.'),
+        SnackBar(
+          content: Text(
+            _tr(
+              'à¦¨à¦¾à¦®à¦¾à¦œ à¦°à¦¿à¦®à¦¾à¦‡à¦¨à§à¦¡à¦¾à¦° à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤',
+              'Prayer reminder sound updated.',
+            ),
+          ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('Error updating prayer notification settings: $e'),
+          content: Text(
+            _tr(
+              'à¦¨à¦¾à¦®à¦¾à¦œ à¦¨à§‹à¦Ÿà¦¿à¦«à¦¿à¦•à§‡à¦¶à¦¨ à¦¸à§‡à¦Ÿà¦¿à¦‚à¦¸ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦•à¦°à¦¤à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾: $e',
+              'Error updating prayer notification settings: $e',
+            ),
+          ),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
@@ -125,17 +140,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _notificationService.handleNotificationSoundModeChange();
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('Jamaat reminder sound updated.'),
+        SnackBar(
+          content: Text(
+            _tr(
+              'à¦œà¦¾à¦®à¦¾à¦¤ à¦°à¦¿à¦®à¦¾à¦‡à¦¨à§à¦¡à¦¾à¦° à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤',
+              'Jamaat reminder sound updated.',
+            ),
+          ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('Error updating jamaat notification settings: $e'),
+          content: Text(
+            _tr(
+              'à¦œà¦¾à¦®à¦¾à¦¤ à¦¨à§‹à¦Ÿà¦¿à¦«à¦¿à¦•à§‡à¦¶à¦¨ à¦¸à§‡à¦Ÿà¦¿à¦‚à¦¸ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦•à¦°à¦¤à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾: $e',
+              'Error updating jamaat notification settings: $e',
+            ),
+          ),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
@@ -251,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(_tr('সেটিংস', 'Settings')),
         centerTitle: true,
         backgroundColor: _brandGreen,
         foregroundColor: Colors.white,
@@ -262,26 +287,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
                 Text(
-                  'Fine-tune prayer calculations and reminder behavior.',
+                  _tr(
+                    'নামাজ গণনা ও রিমাইন্ডার আচরণ ঠিক করুন।',
+                    'Fine-tune prayer calculations and reminder behavior.',
+                  ),
                   style: TextStyle(color: Colors.grey[700], height: 1.3),
                 ),
                 const SizedBox(height: 14),
                 _buildSectionCard(
                   icon: Icons.schedule,
                   color: const Color(0xFF2E7D32),
-                  title: 'Prayer Calculation',
-                  subtitle:
-                      'Adjust your prayer school and Hijri date alignment.',
+                  title: _tr('নামাজ গণনা', 'Prayer Calculation'),
+                  subtitle: _tr(
+                    'আপনার মাযহাব ও হিজরি তারিখ সমন্বয় ঠিক করুন।',
+                    'Adjust your prayer school and Hijri date alignment.',
+                  ),
                   children: [
                     _buildDropdownField<String>(
-                      label: 'Prayer time school',
+                      label: _tr('নামাজের মাযহাব', 'Prayer time school'),
                       initialValue: _madhab,
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: 'hanafi',
-                          child: Text('Hanafi'),
+                          child: Text(_tr('হানাফি', 'Hanafi')),
                         ),
-                        DropdownMenuItem(value: 'shafi', child: Text('Shafi')),
+                        DropdownMenuItem(
+                          value: 'shafi',
+                          child: Text(_tr('শাফেয়ী', 'Shafi')),
+                        ),
                       ],
                       onChanged: (val) async {
                         if (val == null) return;
@@ -292,14 +325,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildDropdownField<int>(
-                      label: 'Bangladesh Hijri date offset',
+                      label: _tr(
+                        'বাংলাদেশ হিজরি তারিখ সমন্বয়',
+                        'Bangladesh Hijri date offset',
+                      ),
                       initialValue: _bangladeshHijriOffsetDays,
-                      items: const [
-                        DropdownMenuItem(value: -2, child: Text('-2 day')),
-                        DropdownMenuItem(value: -1, child: Text('-1 day')),
-                        DropdownMenuItem(value: 0, child: Text('0 day')),
-                        DropdownMenuItem(value: 1, child: Text('+1 day')),
-                        DropdownMenuItem(value: 2, child: Text('+2 day')),
+                      items: [
+                        DropdownMenuItem(
+                          value: -2,
+                          child: Text(_hijriOffsetLabel(-2)),
+                        ),
+                        DropdownMenuItem(
+                          value: -1,
+                          child: Text(_hijriOffsetLabel(-1)),
+                        ),
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(_hijriOffsetLabel(0)),
+                        ),
+                        DropdownMenuItem(
+                          value: 1,
+                          child: Text(_hijriOffsetLabel(1)),
+                        ),
+                        DropdownMenuItem(
+                          value: 2,
+                          child: Text(_hijriOffsetLabel(2)),
+                        ),
                       ],
                       onChanged: (val) async {
                         if (val == null) return;
@@ -359,19 +410,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSectionCard(
                   icon: Icons.notifications_active,
                   color: const Color(0xFF1565C0),
-                  title: 'Notifications',
-                  subtitle:
-                      'Choose sound behavior for prayer and jamaat reminders.',
+                  title: _tr('নোটিফিকেশন', 'Notifications'),
+                  subtitle: _tr(
+                    'নামাজ ও জামাত রিমাইন্ডারের সাউন্ড নির্বাচন করুন।',
+                    'Choose sound behavior for prayer and jamaat reminders.',
+                  ),
                   children: [
                     _buildDropdownField<int>(
-                      label: 'Prayer reminder sound',
+                      label: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
                       initialValue: _prayerNotificationSoundMode,
-                      items: const [
-                        DropdownMenuItem(value: 0, child: Text('Adhan sound')),
-                        DropdownMenuItem(value: 3, child: Text('Call Sound Short 1')),
-                        DropdownMenuItem(value: 4, child: Text('Call Sound short 2')),
-                        DropdownMenuItem(value: 1, child: Text('System Sound')),
-                        DropdownMenuItem(value: 2, child: Text('No Sound')),
+                      items: [
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(_soundModeLabel(0)),
+                        ),
+                        DropdownMenuItem(
+                          value: 3,
+                          child: Text(_soundModeLabel(3)),
+                        ),
+                        DropdownMenuItem(
+                          value: 4,
+                          child: Text(_soundModeLabel(4)),
+                        ),
+                        DropdownMenuItem(
+                          value: 1,
+                          child: Text(_soundModeLabel(1)),
+                        ),
+                        DropdownMenuItem(
+                          value: 2,
+                          child: Text(_soundModeLabel(2)),
+                        ),
                       ],
                       onChanged: (val) async {
                         if (val == null) return;
@@ -380,14 +448,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildDropdownField<int>(
-                      label: 'Jamaat reminder sound',
+                      label: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
                       initialValue: _jamaatNotificationSoundMode,
-                      items: const [
-                        DropdownMenuItem(value: 0, child: Text('Adhan sound')),
-                        DropdownMenuItem(value: 3, child: Text('Call Sound Short 1')),
-                        DropdownMenuItem(value: 4, child: Text('Call Sound short 2')),
-                        DropdownMenuItem(value: 1, child: Text('System Sound')),
-                        DropdownMenuItem(value: 2, child: Text('No Sound')),
+                      items: [
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(_soundModeLabel(0)),
+                        ),
+                        DropdownMenuItem(
+                          value: 3,
+                          child: Text(_soundModeLabel(3)),
+                        ),
+                        DropdownMenuItem(
+                          value: 4,
+                          child: Text(_soundModeLabel(4)),
+                        ),
+                        DropdownMenuItem(
+                          value: 1,
+                          child: Text(_soundModeLabel(1)),
+                        ),
+                        DropdownMenuItem(
+                          value: 2,
+                          child: Text(_soundModeLabel(2)),
+                        ),
                       ],
                       onChanged: (val) async {
                         if (val == null) return;
@@ -416,15 +499,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         size: 20,
                       ),
                     ),
-                    title: const Text(
-                      'Focus Guard',
+                    title: Text(
+                      _tr('ফোকাস গার্ড', 'Focus Guard'),
                       style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     subtitle: Text(
-                      'Block YouTube Shorts to stay focused.',
+                      _tr(
+                        'ফোকাস ধরে রাখতে YouTube Shorts ব্লক করুন।',
+                        'Block YouTube Shorts to stay focused.',
+                      ),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -449,10 +535,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'Current setup: ${_madhab.toUpperCase()} · '
-                    'Hijri ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
-                    'Prayer ${_soundModeLabel(_prayerNotificationSoundMode)} · '
-                    'Jamaat ${_soundModeLabel(_jamaatNotificationSoundMode)}',
+                    _tr(
+                      'বর্তমান সেটআপ: ${_madhab.toUpperCase()} · '
+                      'হিজরি ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
+                      'নামাজ ${_soundModeLabel(_prayerNotificationSoundMode)} · '
+                      'জামাত ${_soundModeLabel(_jamaatNotificationSoundMode)}',
+                      'Current setup: ${_madhab.toUpperCase()} · '
+                      'Hijri ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
+                      'Prayer ${_soundModeLabel(_prayerNotificationSoundMode)} · '
+                      'Jamaat ${_soundModeLabel(_jamaatNotificationSoundMode)}',
+                    ),
                     style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                   ),
                 ),
@@ -461,3 +553,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+
