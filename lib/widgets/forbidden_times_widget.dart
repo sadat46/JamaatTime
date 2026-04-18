@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import '../core/locale_text.dart';
 import '../services/prayer_time_engine.dart';
+import '../utils/locale_digits.dart';
 
 class _ForbiddenVisualSpec {
   final List<Color> panelColors;
@@ -164,6 +165,23 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     super.dispose();
   }
 
+  String _localizeDigits(BuildContext context, String value) {
+    return LocaleDigits.localize(value, Localizations.localeOf(context));
+  }
+
+  String _localizedWindowName(BuildContext context, String canonicalName) {
+    switch (canonicalName) {
+      case 'After Sunrise':
+        return context.tr(bn: 'সূর্যোদয়ের পরে', en: 'After Sunrise');
+      case 'Zawal (Zenith)':
+        return context.tr(bn: 'জাওয়াল (মধ্যাহ্ন)', en: 'Zawal (Zenith)');
+      case 'Before Sunset':
+        return context.tr(bn: 'সূর্যাস্তের আগে', en: 'Before Sunset');
+      default:
+        return canonicalName;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.prayerTimes == null) {
@@ -200,7 +218,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(spec, forbiddenWindows.length),
+            _buildSectionHeader(context, spec, forbiddenWindows.length),
             const SizedBox(height: 8),
             for (int i = 0; i < forbiddenWindows.length; i++) ...[
               _buildWindowCard(
@@ -217,10 +235,17 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     );
   }
 
-  Widget _buildSectionHeader(_ForbiddenVisualSpec spec, int windowCount) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    _ForbiddenVisualSpec spec,
+    int windowCount,
+  ) {
+    final localizedCount = _localizeDigits(context, '$windowCount');
     final windowLabel = context.isEnglish
-        ? (windowCount == 1 ? '1 window' : '$windowCount windows')
-        : (windowCount == 1 ? '১টি সময়কাল' : '$windowCount টি সময়কাল');
+        ? (windowCount == 1
+            ? '$localizedCount window'
+            : '$localizedCount windows')
+        : '$localizedCount টি সময়কাল';
     return Row(
       children: [
         Container(
@@ -320,6 +345,11 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     required bool reduceMotion,
   }) {
     final durationMinutes = window.end.difference(window.start).inMinutes.abs();
+    final localizedDurationMinutes = _localizeDigits(
+      context,
+      '$durationMinutes',
+    );
+    final localizedRange = _localizeDigits(context, window.toRangeString());
     final animatedBorder = isActive
         ? Color.lerp(
             spec.activeBorder.withValues(alpha: 0.72),
@@ -379,7 +409,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
                     children: [
                       Expanded(
                         child: Text(
-                          window.name,
+                          _localizedWindowName(context, window.name),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -400,7 +430,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
                     children: [
                       Expanded(
                         child: Text(
-                          window.toRangeString(),
+                          localizedRange,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -413,8 +443,8 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
                       const SizedBox(width: 6),
                       Text(
                         context.isEnglish
-                            ? '$durationMinutes min'
-                            : '$durationMinutes মিনিট',
+                            ? '$localizedDurationMinutes min'
+                            : '$localizedDurationMinutes মিনিট',
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
@@ -462,3 +492,4 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     );
   }
 }
+
