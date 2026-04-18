@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../core/locale_text.dart';
 import '../../models/umrah_model.dart';
 
 class UmrahDetailScreen extends StatefulWidget {
@@ -26,7 +27,12 @@ class _UmrahDetailScreenState extends State<UmrahDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _isBookmarked ? 'বুকমার্কে যুক্ত হয়েছে' : 'বুকমার্ক থেকে সরানো হয়েছে',
+          _isBookmarked
+              ? context.tr(bn: 'বুকমার্কে যুক্ত হয়েছে', en: 'Added to bookmarks')
+              : context.tr(
+                  bn: 'বুকমার্ক থেকে সরানো হয়েছে',
+                  en: 'Removed from bookmarks',
+                ),
         ),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
@@ -35,37 +41,44 @@ class _UmrahDetailScreenState extends State<UmrahDetailScreen> {
   }
 
   void _shareSection() async {
+    final locale = Localizations.localeOf(context);
+    final rules = widget.section.getRules(locale);
     try {
       final duasText = widget.section.relatedDuas
           .map((dua) => '''
-${dua.titleBangla}
+${dua.getTitle(locale)}
 ${dua.arabicText}
-উচ্চারণ: ${dua.banglaTransliteration}
-অর্থ: ${dua.banglaMeaning}
+${context.tr(bn: 'উচ্চারণ', en: 'Transliteration')}: ${dua.getTransliteration(locale)}
+${context.tr(bn: 'অর্থ', en: 'Meaning')}: ${dua.getMeaning(locale)}
 ''')
-          .join('\n━━━━━━━━━━━━━━━━━━━━━\n\n');
+          .join('\n---------------------\n\n');
 
       final shareText = '''
-${widget.section.titleBangla}
+${widget.section.getTitle(locale)}
 ${widget.section.titleArabic}
 
-বিবরণ:
-${widget.section.description}
+${context.tr(bn: 'বিবরণ', en: 'Description')}:
+${widget.section.getDescription(locale)}
 
-${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.section.rules.map((rule) => '• $rule').join('\n')}\n\n' : ''}${widget.section.relatedDuas.isNotEmpty ? 'সংশ্লিষ্ট দোয়াসমূহ:\n$duasText' : ''}
+${rules.isNotEmpty ? '${context.tr(bn: 'নিয়মাবলী', en: 'Rules')}:\n${rules.map((rule) => '• $rule').join('\n')}\n\n' : ''}${widget.section.relatedDuas.isNotEmpty ? '${context.tr(bn: 'সংশ্লিষ্ট দোয়াসমূহ', en: 'Related Duas')}:\n$duasText' : ''}
 ''';
 
       await Share.share(
         shareText,
-        subject: widget.section.titleBangla,
+        subject: widget.section.getTitle(locale),
       );
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('শেয়ার করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'শেয়ার করতে সমস্যা হয়েছে',
+                en: 'Failed to share',
+              ),
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -74,10 +87,15 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final title = widget.section.getTitle(locale);
+    final description = widget.section.getDescription(locale);
+    final rules = widget.section.getRules(locale);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.section.titleBangla,
+          title,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -91,12 +109,12 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
               _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
             ),
             onPressed: _toggleBookmark,
-            tooltip: 'বুকমার্ক',
+            tooltip: context.tr(bn: 'বুকমার্ক', en: 'Bookmark'),
           ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareSection,
-            tooltip: 'শেয়ার',
+            tooltip: context.tr(bn: 'শেয়ার', en: 'Share'),
           ),
           const SizedBox(width: 8),
         ],
@@ -111,7 +129,6 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Arabic Title
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -135,13 +152,12 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Divider
                   const Divider(thickness: 1.5),
                   const SizedBox(height: 24),
-
-                  // Description Section
-                  _buildSectionHeader('বিবরণ', Icons.description),
+                  _buildSectionHeader(
+                    context.tr(bn: 'বিবরণ', en: 'Description'),
+                    Icons.description,
+                  ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -153,7 +169,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                       ),
                     ),
                     child: Text(
-                      widget.section.description,
+                      description,
                       style: const TextStyle(
                         fontSize: 19,
                         height: 1.8,
@@ -161,13 +177,14 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                       ),
                     ),
                   ),
-
-                  // Rules Section (if available)
-                  if (widget.section.rules.isNotEmpty) ...[
+                  if (rules.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     const Divider(thickness: 1.5),
                     const SizedBox(height: 24),
-                    _buildSectionHeader('নিয়মাবলী', Icons.checklist),
+                    _buildSectionHeader(
+                      context.tr(bn: 'নিয়মাবলী', en: 'Rules'),
+                      Icons.checklist,
+                    ),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -177,7 +194,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: widget.section.rules.map((rule) {
+                        children: rules.map((rule) {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Row(
@@ -208,13 +225,14 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                       ),
                     ),
                   ],
-
-                  // Related Duas Section
                   if (widget.section.relatedDuas.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     const Divider(thickness: 1.5),
                     const SizedBox(height: 24),
-                    _buildSectionHeader('সংশ্লিষ্ট দোয়াসমূহ', Icons.auto_stories),
+                    _buildSectionHeader(
+                      context.tr(bn: 'সংশ্লিষ্ট দোয়াসমূহ', en: 'Related Duas'),
+                      Icons.auto_stories,
+                    ),
                     const SizedBox(height: 16),
                     ...widget.section.relatedDuas.map((dua) {
                       return Padding(
@@ -223,7 +241,6 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                       );
                     }),
                   ],
-
                   const SizedBox(height: 16),
                 ],
               ),
@@ -256,6 +273,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
   }
 
   Widget _buildDuaCard(UmrahDuaModel dua) {
+    final locale = Localizations.localeOf(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -275,7 +293,6 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Dua Title
               Row(
                 children: [
                   const Icon(
@@ -286,7 +303,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      dua.titleBangla,
+                      dua.getTitle(locale),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -301,15 +318,13 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                       color: Color(0xFFE65100),
                     ),
                     onPressed: () => _copyDuaToClipboard(dua),
-                    tooltip: 'কপি',
+                    tooltip: context.tr(bn: 'কপি', en: 'Copy'),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Arabic Text
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -329,8 +344,6 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Transliteration
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -338,7 +351,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  dua.banglaTransliteration,
+                  dua.getTransliteration(locale),
                   style: TextStyle(
                     fontSize: 17,
                     fontStyle: FontStyle.italic,
@@ -348,8 +361,6 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Meaning
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -360,7 +371,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                   ),
                 ),
                 child: Text(
-                  dua.banglaMeaning,
+                  dua.getMeaning(locale),
                   style: const TextStyle(
                     fontSize: 17,
                     height: 1.7,
@@ -376,11 +387,12 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
   }
 
   void _showDuaDetails(UmrahDuaModel dua) {
+    final locale = Localizations.localeOf(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          dua.titleBangla,
+          dua.getTitle(locale),
           style: const TextStyle(
             color: Color(0xFFE65100),
             fontWeight: FontWeight.bold,
@@ -391,7 +403,6 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Arabic Text
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -411,16 +422,16 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'উচ্চারণ:',
-                style: TextStyle(
+              Text(
+                '${context.tr(bn: 'উচ্চারণ', en: 'Transliteration')}:',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFFE65100),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                dua.banglaTransliteration,
+                dua.getTransliteration(locale),
                 style: const TextStyle(
                   fontSize: 17,
                   fontStyle: FontStyle.italic,
@@ -428,16 +439,16 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'অর্থ:',
-                style: TextStyle(
+              Text(
+                '${context.tr(bn: 'অর্থ', en: 'Meaning')}:',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFFE65100),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                dua.banglaMeaning,
+                dua.getMeaning(locale),
                 style: const TextStyle(
                   fontSize: 17,
                   height: 1.7,
@@ -449,9 +460,9 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'বন্ধ করুন',
-              style: TextStyle(color: Color(0xFFE65100)),
+            child: Text(
+              context.tr(bn: 'বন্ধ করুন', en: 'Close'),
+              style: const TextStyle(color: Color(0xFFE65100)),
             ),
           ),
           ElevatedButton.icon(
@@ -460,7 +471,7 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
               Navigator.pop(context);
             },
             icon: const Icon(Icons.copy),
-            label: const Text('কপি'),
+            label: Text(context.tr(bn: 'কপি', en: 'Copy')),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE65100),
               foregroundColor: Colors.white,
@@ -472,35 +483,46 @@ ${widget.section.rules.isNotEmpty ? 'নিয়মাবলী:\n${widget.sect
   }
 
   void _copyDuaToClipboard(UmrahDuaModel dua) async {
+    final locale = Localizations.localeOf(context);
     try {
       final copyText = '''
-${dua.titleBangla}
+${dua.getTitle(locale)}
 
 ${dua.arabicText}
 
-উচ্চারণ: ${dua.banglaTransliteration}
+${context.tr(bn: 'উচ্চারণ', en: 'Transliteration')}: ${dua.getTransliteration(locale)}
 
-অর্থ: ${dua.banglaMeaning}
+${context.tr(bn: 'অর্থ', en: 'Meaning')}: ${dua.getMeaning(locale)}
 ''';
 
       await Clipboard.setData(ClipboardData(text: copyText));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('দোয়া ক্লিপবোর্ডে কপি হয়েছে'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'দোয়া ক্লিপবোর্ডে কপি হয়েছে',
+                en: 'Dua copied to clipboard',
+              ),
+            ),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('কপি করতে সমস্যা হয়েছে'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'কপি করতে সমস্যা হয়েছে',
+                en: 'Failed to copy',
+              ),
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
