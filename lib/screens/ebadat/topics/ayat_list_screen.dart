@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../core/locale_text.dart';
 import '../tabs/ayat_tab.dart';
 
-/// Screen that wraps AyatTab for navigation from the grid dashboard
 class AyatListScreen extends StatelessWidget {
   const AyatListScreen({super.key});
 
@@ -9,9 +9,9 @@ class AyatListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'আয়াত',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.tr(bn: 'আয়াত', en: 'Ayat'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1565C0),
         foregroundColor: Colors.white,
