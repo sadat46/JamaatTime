@@ -16,6 +16,9 @@ class BanglaCalendar {
     }).join();
   }
 
+  /// Converts Western digits in [text] into Bangla digits.
+  static String toBanglaDigits(String text) => _toBanglaDigits(text);
+
   static bool _isLeapYear(int year) {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
   }
