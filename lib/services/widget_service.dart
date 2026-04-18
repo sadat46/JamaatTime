@@ -17,6 +17,7 @@ import '../services/prayer_aux_calculator.dart';
 import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
+import '../utils/locale_digits.dart';
 import '../firebase_options.dart';
 import 'hijri_date_converter.dart';
 
@@ -139,6 +140,31 @@ Future<void> backgroundCallback(Uri? uri) async {
 class WidgetService {
   static const String _androidWidgetName = 'PrayerWidgetProvider';
   static const _fmt = 'hh:mm a';
+  static const Map<String, String> _bnLocationPhraseMap = {
+    'GPS Location': 'জিপিএস অবস্থান',
+    'Barishal Cantt': 'বরিশাল ক্যান্ট',
+    'Bogra Cantt': 'বগুড়া ক্যান্ট',
+    'Chittagong Cantt': 'চট্টগ্রাম ক্যান্ট',
+    'Dhaka Cantt': 'ঢাকা ক্যান্ট',
+    'Ghatail Cantt': 'ঘাটাইল ক্যান্ট',
+    'Jashore Cantt': 'যশোর ক্যান্ট',
+    'Kumilla Cantt': 'কুমিল্লা ক্যান্ট',
+    'Ramu Cantt': 'রামু ক্যান্ট',
+    'Rangpur Cantt': 'রংপুর ক্যান্ট',
+    'Savar Cantt': 'সাভার ক্যান্ট',
+    'Sylhet Cantt': 'সিলেট ক্যান্ট',
+    'Makkah': 'মক্কা',
+    'Madinah': 'মদিনা',
+    'Jeddah': 'জেদ্দা',
+  };
+  static const Map<String, String> _bnLocationWordMap = {
+    'Savar': 'সাভার',
+    'Dhaka': 'ঢাকা',
+    'District': 'জেলা',
+    'Division': 'বিভাগ',
+    'Bangladesh': 'বাংলাদেশ',
+    'Cantt': 'ক্যান্ট',
+  };
 
   static Future<void> updateWidgetData({
     required Map<String, DateTime?> times,
@@ -148,10 +174,11 @@ class WidgetService {
     required int hijriOffsetDays,
     DateTime? tomorrowFajr,
     Map<String, dynamic>? jamaatTimes,
-  }) async {
+    }) async {
     try {
       final now = DateTime.now();
-      final timeFormat = DateFormat(_fmt);
+      final localeCode = locale.languageCode.toLowerCase();
+      final timeFormat = DateFormat(_fmt, localeCode == 'bn' ? 'bn' : 'en');
       final widgetData = computeWidgetPreviewData(
         times: times,
         locale: locale,
@@ -164,8 +191,13 @@ class WidgetService {
       final hijriDate = HijriDateConverter.formatHijriDate(
         date,
         dayOffset: hijriOffsetDays,
+        languageCode: localeCode,
       );
       final banglaDate = BanglaCalendar.fromGregorian(date);
+      final islamicDate = localeCode == 'bn'
+          ? LocaleDigits.localize('$hijriDate  |  $banglaDate', locale)
+          : '$hijriDate  |  $banglaDate';
+      final localizedLocation = _localizedLocationName(locationName, locale);
 
       await Future.wait([
         HomeWidget.saveWidgetData<String>('prayer_name', widgetData.prayerName),
@@ -214,9 +246,10 @@ class WidgetService {
         HomeWidget.saveWidgetData<String>('row_time_4', widgetData.rowTimes[3]),
         HomeWidget.saveWidgetData<String>(
           'islamic_date',
-          '$hijriDate  |  $banglaDate',
+          islamicDate,
         ),
-        HomeWidget.saveWidgetData<String>('location', locationName),
+        HomeWidget.saveWidgetData<String>('location', localizedLocation),
+        HomeWidget.saveWidgetData<String>('locale_code', localeCode),
       ]);
 
       await HomeWidget.updateWidget(androidName: _androidWidgetName);
@@ -296,7 +329,7 @@ class WidgetService {
         .map((name) => name == '-' ? '-' : _localizedPrayerName(locale, name))
         .toList(growable: false);
     final rowTimes = rowPrayers
-        .map((name) => _formatPrayerTime(times[name], timeFormat))
+        .map((name) => _formatPrayerTime(times[name], timeFormat, locale))
         .toList(growable: false);
 
     final remainingLabel = currentPeriod == 'Sunrise'
@@ -314,7 +347,7 @@ class WidgetService {
 
     return WidgetPreviewData(
       prayerName: _localizedPrayerName(locale, currentPeriod),
-      prayerTime: _formatPrayerTime(currentPeriodTime, timeFormat),
+      prayerTime: _formatPrayerTime(currentPeriodTime, timeFormat, locale),
       remainingLabel: remainingLabel,
       nextPrayerEpochMillis: nextEpochMillis,
       countdownRunning: countdownRunning,
@@ -346,9 +379,36 @@ class WidgetService {
     }
   }
 
-  static String _formatPrayerTime(DateTime? time, DateFormat fmt) {
-    if (time == null) return '-';
-    return fmt.format(time.toLocal());
+  static String _formatPrayerTime(DateTime? time, DateFormat fmt, Locale locale) {
+    final pattern = fmt.pattern ?? _fmt;
+    return PrayerTimeEngine.instance.formatDisplayTime(
+      time,
+      pattern: pattern,
+      languageCode: locale.languageCode,
+    );
+  }
+
+  static String _localizedLocationName(String locationName, Locale locale) {
+    var localized = locationName.trim();
+    if (locale.languageCode.toLowerCase() != 'bn') {
+      return localized;
+    }
+
+    for (final entry in _bnLocationPhraseMap.entries) {
+      localized = localized.replaceAll(
+        RegExp(RegExp.escape(entry.key), caseSensitive: false),
+        entry.value,
+      );
+    }
+
+    for (final entry in _bnLocationWordMap.entries) {
+      localized = localized.replaceAll(
+        RegExp('\\b${RegExp.escape(entry.key)}\\b', caseSensitive: false),
+        entry.value,
+      );
+    }
+
+    return LocaleDigits.localize(localized, locale);
   }
 
   static _JamaatWidgetState _computeJamaatWidgetState({

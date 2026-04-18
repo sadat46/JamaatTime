@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:hijri_calendar/hijri_calendar.dart';
+import '../utils/bangla_calendar.dart';
 
 /// Immutable Hijri date parts used by app features.
 class HijriDateParts {
@@ -32,6 +33,21 @@ class HijriDateConverter {
     'Dhu al-Hijjah',
   ];
 
+  static const List<String> _hijriMonthsBn = [
+    'মুহাররম',
+    'সফর',
+    'রবিউল আউয়াল',
+    'রবিউস সানি',
+    'জুমাদাল উলা',
+    'জুমাদাস সানিয়া',
+    'রজব',
+    'শাবান',
+    'রমজান',
+    'শাওয়াল',
+    'জিলকদ',
+    'জিলহজ',
+  ];
+
   static HijriDateParts toHijri(DateTime date, {int dayOffset = 0}) {
     // Normalize to local noon before conversion to avoid edge effects near
     // midnight when device timezone and conversion timezone differ.
@@ -49,14 +65,33 @@ class HijriDateConverter {
     );
   }
 
-  static String formatHijriDate(DateTime date, {int dayOffset = 0}) {
+  static String formatHijriDate(
+    DateTime date, {
+    int dayOffset = 0,
+    String languageCode = 'en',
+  }) {
     final hijriDate = toHijri(date, dayOffset: dayOffset);
-    if (hijriDate.month < 1 || hijriDate.month > _hijriMonths.length) {
-      return '${hijriDate.day} ${hijriDate.month} ${hijriDate.year} AH';
+    final isBangla = languageCode.toLowerCase() == 'bn';
+    final months = isBangla ? _hijriMonthsBn : _hijriMonths;
+
+    final dayStr = isBangla
+        ? BanglaCalendar.toBanglaDigits('${hijriDate.day}')
+        : '${hijriDate.day}';
+    final yearStr = isBangla
+        ? BanglaCalendar.toBanglaDigits('${hijriDate.year}')
+        : '${hijriDate.year}';
+
+    if (hijriDate.month < 1 || hijriDate.month > months.length) {
+      final monthStr = isBangla
+          ? BanglaCalendar.toBanglaDigits('${hijriDate.month}')
+          : '${hijriDate.month}';
+      final suffix = isBangla ? 'হিজরি' : 'AH';
+      return '$dayStr $monthStr $yearStr $suffix';
     }
 
-    final monthName = _hijriMonths[hijriDate.month - 1];
-    return '${hijriDate.day} $monthName ${hijriDate.year} AH';
+    final monthName = months[hijriDate.month - 1];
+    final suffix = isBangla ? 'হিজরি' : 'AH';
+    return '$dayStr $monthName $yearStr $suffix';
   }
 
   static bool isRamadan(DateTime date, {int dayOffset = 0}) {

@@ -14,15 +14,19 @@ import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
 
+import java.util.Locale;
+
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
     private static final int ALARM_REQUEST_CODE = 2;
     private static final int SELF_HEAL_REQUEST_CODE = 3;
+    private static final int TICK_REQUEST_CODE = 4;
     private static final String HOME_WIDGET_BACKGROUND_ACTION =
         "es.antonborri.home_widget.action.BACKGROUND";
     private static final String HOME_WIDGET_BACKGROUND_RECEIVER =
         "es.antonborri.home_widget.HomeWidgetBackgroundReceiver";
     private static final String BOUNDARY_URI = "homewidget://boundary";
+    private static final String TICK_ACTION = "com.sadat.jamaattime.action.WIDGET_TICK";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -48,6 +52,8 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String rowTime4 = prefs.getString("row_time_4", "-");
             String islamicDate = prefs.getString("islamic_date", "-");
             String location = prefs.getString("location", "-");
+            String localeCode = prefs.getString("locale_code", "en");
+            boolean isBangla = "bn".equalsIgnoreCase(localeCode);
 
             Log.d(TAG, "Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
             long nowMillis = System.currentTimeMillis();
@@ -60,19 +66,35 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 views.setTextViewText(R.id.jamaat_label, jamaatLabel);
 
                 if (running && nextEpoch > nowMillis) {
-                    long base = SystemClock.elapsedRealtime() + (nextEpoch - nowMillis);
-                    views.setChronometerCountDown(R.id.remaining_time, true);
-                    views.setChronometer(R.id.remaining_time, base, null, true);
+                    if (isBangla) {
+                        views.setChronometer(R.id.remaining_time, 0, null, false);
+                        views.setTextViewText(
+                            R.id.remaining_time,
+                            formatBanglaCountdown(nextEpoch, nowMillis)
+                        );
+                    } else {
+                        long base = SystemClock.elapsedRealtime() + (nextEpoch - nowMillis);
+                        views.setChronometerCountDown(R.id.remaining_time, true);
+                        views.setChronometer(R.id.remaining_time, base, null, true);
+                    }
                 } else {
                     views.setChronometer(R.id.remaining_time, 0, null, false);
                     views.setTextViewText(R.id.remaining_time, "-");
                 }
 
                 if (jamaatRunning && jamaatEpoch > nowMillis) {
-                    long jamaatBase = SystemClock.elapsedRealtime() + (jamaatEpoch - nowMillis);
                     views.setViewVisibility(R.id.jamaat_time, View.VISIBLE);
-                    views.setChronometerCountDown(R.id.jamaat_time, true);
-                    views.setChronometer(R.id.jamaat_time, jamaatBase, null, true);
+                    if (isBangla) {
+                        views.setChronometer(R.id.jamaat_time, 0, null, false);
+                        views.setTextViewText(
+                            R.id.jamaat_time,
+                            formatBanglaCountdown(jamaatEpoch, nowMillis)
+                        );
+                    } else {
+                        long jamaatBase = SystemClock.elapsedRealtime() + (jamaatEpoch - nowMillis);
+                        views.setChronometerCountDown(R.id.jamaat_time, true);
+                        views.setChronometer(R.id.jamaat_time, jamaatBase, null, true);
+                    }
                 } else {
                     views.setViewVisibility(R.id.jamaat_time, View.GONE);
                     views.setChronometer(R.id.jamaat_time, 0, null, false);
@@ -123,6 +145,12 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 // Trigger Dart background callback to recompute fresh prayer data.
                 triggerDartRefresh(context);
             }
+
+            if (isBangla && ((running && nextEpoch > nowMillis) || (jamaatRunning && jamaatEpoch > nowMillis))) {
+                scheduleTickAlarm(context, nowMillis);
+            } else {
+                cancelTickAlarm(context);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error updating widget", e);
         }
@@ -134,6 +162,13 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             .setData(Uri.parse(BOUNDARY_URI));
         return PendingIntent.getBroadcast(
             context, ALARM_REQUEST_CODE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent buildTickPendingIntent(Context context) {
+        Intent intent = new Intent(context, PrayerWidgetProvider.class).setAction(TICK_ACTION);
+        return PendingIntent.getBroadcast(
+            context, TICK_REQUEST_CODE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
@@ -170,6 +205,24 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    private void scheduleTickAlarm(Context context, long nowMillis) {
+        long nextMinute = ((nowMillis / 60000L) + 1L) * 60000L;
+        PendingIntent pi = buildTickPendingIntent(context);
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        try {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMinute, pi);
+        } catch (SecurityException e) {
+            am.set(AlarmManager.RTC_WAKEUP, nextMinute, pi);
+        }
+    }
+
+    private void cancelTickAlarm(Context context) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        am.cancel(buildTickPendingIntent(context));
+    }
+
     private void cancelBoundaryAlarm(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
@@ -203,6 +256,45 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     public void onDisabled(Context context) {
         super.onDisabled(context);
         cancelBoundaryAlarm(context);
+        cancelTickAlarm(context);
         Log.d(TAG, "Widget disabled");
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (intent == null) return;
+        if (TICK_ACTION.equals(intent.getAction())) {
+            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+            int[] ids = manager.getAppWidgetIds(
+                new ComponentName(context, PrayerWidgetProvider.class)
+            );
+            if (ids != null && ids.length > 0) {
+                onUpdate(context, manager, ids);
+            }
+        }
+    }
+
+    private String formatBanglaCountdown(long targetEpochMillis, long nowMillis) {
+        long diffMillis = targetEpochMillis - nowMillis;
+        if (diffMillis <= 0L) return "-";
+        long totalMinutes = diffMillis / 60000L;
+        long hours = totalMinutes / 60L;
+        long minutes = totalMinutes % 60L;
+        String latin = String.format(Locale.US, "%02d:%02d", hours, minutes);
+        return toBanglaDigits(latin);
+    }
+
+    private String toBanglaDigits(String text) {
+        StringBuilder builder = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '0' && c <= '9') {
+                builder.append((char) ('\u09E6' + (c - '0')));
+            } else {
+                builder.append(c);
+            }
+        }
+        return builder.toString();
     }
 }

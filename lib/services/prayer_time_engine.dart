@@ -2,6 +2,7 @@ import 'package:adhan_dart/adhan_dart.dart';
 import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../models/location_config.dart';
+import '../utils/bangla_calendar.dart';
 import 'hijri_date_converter.dart';
 
 /// Represents a forbidden prayer time window
@@ -22,10 +23,15 @@ class ForbiddenWindow {
   }
 
   /// Format as time range string (e.g., "05:45 - 06:00")
-  String toRangeString() {
-    final startStr = DateFormat('HH:mm').format(start.toLocal());
-    final endStr = DateFormat('HH:mm').format(end.toLocal());
-    return '$startStr - $endStr';
+  String toRangeString({String languageCode = 'en'}) {
+    final localeCode = languageCode.toLowerCase() == 'bn' ? 'bn' : 'en';
+    final startStr = DateFormat('HH:mm', localeCode).format(start.toLocal());
+    final endStr = DateFormat('HH:mm', localeCode).format(end.toLocal());
+    final range = '$startStr - $endStr';
+    if (localeCode == 'bn') {
+      return BanglaCalendar.toBanglaDigits(range);
+    }
+    return range;
   }
 }
 
@@ -354,6 +360,21 @@ class PrayerTimeEngine {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[month - 1];
+  }
+
+  /// Format a display time and localize digits when needed.
+  String formatDisplayTime(
+    DateTime? time, {
+    String pattern = 'HH:mm',
+    String languageCode = 'en',
+  }) {
+    if (time == null) return '-';
+    final localeCode = languageCode.toLowerCase() == 'bn' ? 'bn' : 'en';
+    final formatted = DateFormat(pattern, localeCode).format(time.toLocal());
+    if (localeCode == 'bn') {
+      return BanglaCalendar.toBanglaDigits(formatted);
+    }
+    return formatted;
   }
 
   // ──────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+import 'package:jamaat_time/core/app_text.dart';
 import 'package:jamaat_time/services/widget_service.dart';
+import 'package:jamaat_time/utils/bangla_calendar.dart';
 import 'package:flutter/widgets.dart';
 
 void main() {
@@ -68,6 +70,20 @@ void main() {
 
       // Sunrise is not a row item; row remains main-prayer-only.
       expect(data.rowLabels, ['Dhuhr', 'Asr', 'Maghrib', 'Isha']);
+    });
+
+    test('bangla locale localizes prayer and row time digits', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        locale: const Locale('bn'),
+        now: DateTime(2026, 4, 13, 6, 30),
+        timeFormat: DateFormat('HH:mm'),
+      );
+
+      expect(data.prayerName, AppText.of(const Locale('bn')).prayer_sunrise);
+      expect(data.prayerTime, BanglaCalendar.toBanglaDigits('06:15'));
+      expect(data.rowTimes[0], BanglaCalendar.toBanglaDigits('12:10'));
+      expect(data.rowTimes[1], BanglaCalendar.toBanglaDigits('15:40'));
     });
 
     test('active jamaat countdown uses current main prayer label', () {
