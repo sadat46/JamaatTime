@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
 import '../core/locale_text.dart';
+import '../utils/locale_digits.dart';
 
 class CalendarSelectedDateCard extends StatelessWidget {
   const CalendarSelectedDateCard({
@@ -35,7 +36,10 @@ class CalendarSelectedDateCard extends StatelessWidget {
     required String value,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final displayValue = _normalizedChipValue(value);
+    final displayValue = LocaleDigits.localize(
+      _normalizedChipValue(value),
+      Localizations.localeOf(context),
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -84,6 +88,9 @@ class CalendarSelectedDateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final localizedGregorianDate = LocaleDigits.localize(gregorianDate, locale);
+    final localizedWeekday = LocaleDigits.localize(weekday, locale);
 
     return Semantics(
       label:
@@ -135,7 +142,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
                           text: TextSpan(
                             children: [
                               TextSpan(
-                                text: gregorianDate,
+                                text: localizedGregorianDate,
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,
@@ -154,7 +161,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
                                 ),
                               ),
                               TextSpan(
-                                text: weekday,
+                                text: localizedWeekday,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
