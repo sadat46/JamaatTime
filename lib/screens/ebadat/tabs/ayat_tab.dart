@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/locale_text.dart';
 import '../../../models/ayat_model.dart';
 import '../../../services/ebadat_data_service.dart';
 import '../../../widgets/ebadat/ayat_card.dart';
@@ -21,11 +22,22 @@ class _AyatTabState extends State<AyatTab> {
   String? _selectedCategory;
   bool _isLoading = true;
   String? _errorMessage;
+  String? _lastLocaleCode;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final localeCode = Localizations.localeOf(context).languageCode;
+    if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
+      _loadData();
+    }
+    _lastLocaleCode = localeCode;
   }
 
   Future<void> _loadData() async {
@@ -35,33 +47,49 @@ class _AyatTabState extends State<AyatTab> {
     });
 
     try {
-      // Load ayats and categories in parallel
+      final locale = Localizations.localeOf(context);
       final results = await Future.wait([
         _ebadatService.loadAyats(),
-        _ebadatService.getAyatCategories(),
+        _ebadatService.getAyatCategories(locale: locale),
       ]);
+
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _ayats = results[0] as List<AyatModel>;
         _categories = results[1] as List<String>;
-        _filteredAyats = _ayats;
+        _filteredAyats = _selectedCategory == null
+            ? _ayats
+            : _ayats
+                .where(
+                  (ayat) => ayat.getCategory(locale) == _selectedCategory,
+                )
+                .toList();
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
       setState(() {
-        _errorMessage = 'ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।';
+        _errorMessage = 'failed';
         _isLoading = false;
       });
     }
   }
 
   void _filterByCategory(String? category) {
+    final locale = Localizations.localeOf(context);
     setState(() {
       _selectedCategory = category;
       if (category == null) {
         _filteredAyats = _ayats;
       } else {
-        _filteredAyats = _ayats.where((ayat) => ayat.category == category).toList();
+        _filteredAyats = _ayats
+            .where((ayat) => ayat.getCategory(locale) == category)
+            .toList();
       }
     });
   }
@@ -77,7 +105,6 @@ class _AyatTabState extends State<AyatTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Loading State
     if (_isLoading) {
       return ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -87,7 +114,6 @@ class _AyatTabState extends State<AyatTab> {
       );
     }
 
-    // Error State
     if (_errorMessage != null) {
       return Center(
         child: Column(
@@ -100,7 +126,10 @@ class _AyatTabState extends State<AyatTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              _errorMessage!,
+              context.tr(
+                bn: 'ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।',
+                en: 'Failed to load data. Please try again.',
+              ),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -111,7 +140,7 @@ class _AyatTabState extends State<AyatTab> {
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: const Text('পুনরায় চেষ্টা করুন'),
+              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1565C0),
                 foregroundColor: Colors.white,
@@ -123,7 +152,6 @@ class _AyatTabState extends State<AyatTab> {
       );
     }
 
-    // Empty State
     if (_filteredAyats.isEmpty) {
       return Center(
         child: Column(
@@ -137,8 +165,14 @@ class _AyatTabState extends State<AyatTab> {
             const SizedBox(height: 16),
             Text(
               _selectedCategory != null
-                  ? 'এই ক্যাটাগরিতে কোনো আয়াত নেই'
-                  : 'কোনো আয়াত পাওয়া যায়নি',
+                  ? context.tr(
+                      bn: 'এই ক্যাটাগরিতে কোনো আয়াত নেই',
+                      en: 'No ayat found in this category',
+                    )
+                  : context.tr(
+                      bn: 'কোনো আয়াত পাওয়া যায়নি',
+                      en: 'No ayat found',
+                    ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -150,7 +184,9 @@ class _AyatTabState extends State<AyatTab> {
               TextButton.icon(
                 onPressed: () => _filterByCategory(null),
                 icon: const Icon(Icons.clear),
-                label: const Text('ফিল্টার মুছে ফেলুন'),
+                label: Text(
+                  context.tr(bn: 'ফিল্টার মুছে ফেলুন', en: 'Clear Filter'),
+                ),
               ),
             ],
           ],
@@ -158,10 +194,8 @@ class _AyatTabState extends State<AyatTab> {
       );
     }
 
-    // Main Content
     return Column(
       children: [
-        // Category Filter Chips
         if (_categories.isNotEmpty)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -169,11 +203,10 @@ class _AyatTabState extends State<AyatTab> {
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
-                // "All" chip
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: const Text('সব'),
+                    label: Text(context.tr(bn: 'সব', en: 'All')),
                     selected: _selectedCategory == null,
                     onSelected: (selected) {
                       if (selected) _filterByCategory(null);
@@ -190,7 +223,6 @@ class _AyatTabState extends State<AyatTab> {
                     ),
                   ),
                 ),
-                // Category chips
                 ..._categories.map((category) {
                   final isSelected = _selectedCategory == category;
                   return Padding(
@@ -217,12 +249,10 @@ class _AyatTabState extends State<AyatTab> {
               ],
             ),
           ),
-
-        // Ayat List
         Expanded(
           child: ListView.builder(
             physics: const BouncingScrollPhysics(),
-            cacheExtent: 500, // Pre-render items for smoother scrolling
+            cacheExtent: 500,
             itemCount: _filteredAyats.length,
             padding: const EdgeInsets.only(bottom: 16),
             itemBuilder: (context, index) {
