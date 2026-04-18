@@ -16,6 +16,7 @@ import '../services/location_config_service.dart';
 import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
+import '../utils/locale_digits.dart';
 import '../widgets/calendar_selected_date_card.dart';
 
 class _SelectedDateCardData {
@@ -103,6 +104,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       AppLocaleController.instance.current.languageCode == 'en';
 
   String _trCurrent(String bn, String en) => _isEnglishCurrent ? en : bn;
+
+  String _localizeDigitsCurrent(String value) {
+    if (value == '-' || value == '--') return value;
+    return LocaleDigits.localize(value, AppLocaleController.instance.current);
+  }
 
   @override
   void initState() {
@@ -337,7 +343,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _calendarMonthLabel() {
-    return DateFormat('MMMM yyyy').format(_focusedDay);
+    final localeCode = _isEnglishCurrent ? 'en' : 'bn';
+    return _localizeDigitsCurrent(
+      DateFormat('MMMM yyyy', localeCode).format(_focusedDay),
+    );
   }
 
   String _calendarHijriMonthLabel() {
@@ -349,19 +358,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final monthList = _isEnglishCurrent
         ? _hijriMonthsEnglish
         : _hijriMonthsBangla;
+    final hijriYear = _localizeDigitsCurrent('${hijriDate.year}');
     if (hijriDate.month < 1 || hijriDate.month > monthList.length) {
-      return '${hijriDate.month} ${hijriDate.year} AH';
+      final hijriMonth = _localizeDigitsCurrent('${hijriDate.month}');
+      return '$hijriMonth $hijriYear AH';
     }
     final monthName = monthList[hijriDate.month - 1];
-    return '$monthName ${hijriDate.year} AH';
+    return '$monthName $hijriYear AH';
   }
 
   String _gregorianDateLine(DateTime day) {
-    return DateFormat('d MMM yyyy').format(day);
+    final localeCode = _isEnglishCurrent ? 'en' : 'bn';
+    return _localizeDigitsCurrent(DateFormat('d MMM yyyy', localeCode).format(day));
   }
 
   String _weekdayLine(DateTime day) {
-    return DateFormat('EEEE').format(day);
+    final localeCode = _isEnglishCurrent ? 'en' : 'bn';
+    return DateFormat('EEEE', localeCode).format(day);
   }
 
   String _hijriDateLine(DateTime day) {
@@ -443,7 +456,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   String _formatHHmmTo12Hour(String value) {
     try {
       final parsed = DateFormat('HH:mm').parseStrict(value);
-      return DateFormat('h:mm a').format(parsed);
+      return _localizeDigitsCurrent(DateFormat('h:mm a').format(parsed));
     } catch (_) {
       return value;
     }
@@ -454,7 +467,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (prayerTime == null) {
       return '--';
     }
-    return DateFormat('h:mm a').format(prayerTime.toLocal());
+    return _localizeDigitsCurrent(
+      DateFormat('h:mm a').format(prayerTime.toLocal()),
+    );
   }
 
   String _displayJamaatTimeForPrayer(String prayerName) {
@@ -530,7 +545,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '${day.day}',
+              _localizeDigitsCurrent('${day.day}'),
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
@@ -539,7 +554,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              '$hijriDay',
+              _localizeDigitsCurrent('$hijriDay'),
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 10,
