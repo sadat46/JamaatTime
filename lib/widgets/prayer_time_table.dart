@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/prayer_aux_calculator.dart';
 import '../core/constants.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/locale_digits.dart';
 
 class PrayerTimeTable extends StatelessWidget {
   final Map<String, DateTime?> times;
@@ -24,7 +25,8 @@ class PrayerTimeTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final strings = AppLocalizations.of(context);
-    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+    final locale = Localizations.localeOf(context);
+    final isEnglish = locale.languageCode == 'en';
 
     String localizedPrayerName(String name) {
       switch (name) {
@@ -107,7 +109,7 @@ class PrayerTimeTable extends StatelessWidget {
         ].map((name) {
           final t = times[name];
           final timeStr = t != null
-              ? DateFormat('HH:mm').format(t.toLocal())
+              ? LocaleDigits.localize(DateFormat('HH:mm').format(t.toLocal()), locale)
               : '-';
 
           String jamaatStr = '-';
@@ -118,6 +120,7 @@ class PrayerTimeTable extends StatelessWidget {
               maghribPrayerTime: times['Maghrib'],
               selectedCity: selectedCity,
             );
+            jamaatStr = LocaleDigits.localize(jamaatStr, locale);
           }
 
           final isCurrent = name == currentPrayer;
