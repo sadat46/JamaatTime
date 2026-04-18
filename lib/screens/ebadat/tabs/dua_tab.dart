@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/locale_text.dart';
 import '../../../models/dua_model.dart';
 import '../../../services/ebadat_data_service.dart';
 import '../../../widgets/ebadat/dua_card.dart';
@@ -21,11 +22,22 @@ class _DuaTabState extends State<DuaTab> {
   String? _selectedCategory;
   bool _isLoading = true;
   String? _errorMessage;
+  String? _lastLocaleCode;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final localeCode = Localizations.localeOf(context).languageCode;
+    if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
+      _loadData();
+    }
+    _lastLocaleCode = localeCode;
   }
 
   Future<void> _loadData() async {
@@ -35,33 +47,47 @@ class _DuaTabState extends State<DuaTab> {
     });
 
     try {
-      // Load duas and categories in parallel
+      final locale = Localizations.localeOf(context);
       final results = await Future.wait([
         _ebadatService.loadDuas(),
-        _ebadatService.getDuaCategories(),
+        _ebadatService.getDuaCategories(locale: locale),
       ]);
+
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _duas = results[0] as List<DuaModel>;
         _categories = results[1] as List<String>;
-        _filteredDuas = _duas;
+        _filteredDuas = _selectedCategory == null
+            ? _duas
+            : _duas
+                .where((dua) => dua.getCategory(locale) == _selectedCategory)
+                .toList();
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
       setState(() {
-        _errorMessage = 'ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।';
+        _errorMessage = 'failed';
         _isLoading = false;
       });
     }
   }
 
   void _filterByCategory(String? category) {
+    final locale = Localizations.localeOf(context);
     setState(() {
       _selectedCategory = category;
       if (category == null) {
         _filteredDuas = _duas;
       } else {
-        _filteredDuas = _duas.where((dua) => dua.category == category).toList();
+        _filteredDuas = _duas
+            .where((dua) => dua.getCategory(locale) == category)
+            .toList();
       }
     });
   }
@@ -77,7 +103,6 @@ class _DuaTabState extends State<DuaTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Loading State
     if (_isLoading) {
       return ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -87,7 +112,6 @@ class _DuaTabState extends State<DuaTab> {
       );
     }
 
-    // Error State
     if (_errorMessage != null) {
       return Center(
         child: Column(
@@ -100,7 +124,10 @@ class _DuaTabState extends State<DuaTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              _errorMessage!,
+              context.tr(
+                bn: 'ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।',
+                en: 'Failed to load data. Please try again.',
+              ),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -111,7 +138,7 @@ class _DuaTabState extends State<DuaTab> {
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: const Text('পুনরায় চেষ্টা করুন'),
+              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6A1B9A),
                 foregroundColor: Colors.white,
@@ -123,7 +150,6 @@ class _DuaTabState extends State<DuaTab> {
       );
     }
 
-    // Empty State
     if (_filteredDuas.isEmpty) {
       return Center(
         child: Column(
@@ -137,8 +163,14 @@ class _DuaTabState extends State<DuaTab> {
             const SizedBox(height: 16),
             Text(
               _selectedCategory != null
-                  ? 'এই ক্যাটাগরিতে কোনো দোয়া নেই'
-                  : 'কোনো দোয়া পাওয়া যায়নি',
+                  ? context.tr(
+                      bn: 'এই ক্যাটাগরিতে কোনো দোয়া নেই',
+                      en: 'No dua found in this category',
+                    )
+                  : context.tr(
+                      bn: 'কোনো দোয়া পাওয়া যায়নি',
+                      en: 'No dua found',
+                    ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -150,7 +182,9 @@ class _DuaTabState extends State<DuaTab> {
               TextButton.icon(
                 onPressed: () => _filterByCategory(null),
                 icon: const Icon(Icons.clear),
-                label: const Text('ফিল্টার মুছে ফেলুন'),
+                label: Text(
+                  context.tr(bn: 'ফিল্টার মুছে ফেলুন', en: 'Clear Filter'),
+                ),
               ),
             ],
           ],
@@ -158,10 +192,8 @@ class _DuaTabState extends State<DuaTab> {
       );
     }
 
-    // Main Content
     return Column(
       children: [
-        // Category Filter Chips
         if (_categories.isNotEmpty)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -169,11 +201,10 @@ class _DuaTabState extends State<DuaTab> {
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
-                // "All" chip
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: const Text('সব'),
+                    label: Text(context.tr(bn: 'সব', en: 'All')),
                     selected: _selectedCategory == null,
                     onSelected: (selected) {
                       if (selected) _filterByCategory(null);
@@ -190,7 +221,6 @@ class _DuaTabState extends State<DuaTab> {
                     ),
                   ),
                 ),
-                // Category chips
                 ..._categories.map((category) {
                   final isSelected = _selectedCategory == category;
                   return Padding(
@@ -217,12 +247,10 @@ class _DuaTabState extends State<DuaTab> {
               ],
             ),
           ),
-
-        // Dua List
         Expanded(
           child: ListView.builder(
             physics: const BouncingScrollPhysics(),
-            cacheExtent: 500, // Pre-render items for smoother scrolling
+            cacheExtent: 500,
             itemCount: _filteredDuas.length,
             padding: const EdgeInsets.only(bottom: 16),
             itemBuilder: (context, index) {
