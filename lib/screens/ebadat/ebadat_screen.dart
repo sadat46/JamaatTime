@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/locale_text.dart';
 import '../../models/ebadat_topic.dart';
 import '../../services/bookmark_service.dart';
 import '../../widgets/ebadat/ebadat_topic_card.dart';
@@ -33,7 +34,6 @@ class _EbadatScreenState extends State<EbadatScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize BookmarkService to load user's bookmarks
     BookmarkService().initialize();
   }
 
@@ -44,7 +44,7 @@ class _EbadatScreenState extends State<EbadatScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('ইবাদত'),
+        title: Text(context.tr(bn: 'ইবাদত', en: 'Ebadat')),
         centerTitle: true,
         backgroundColor: theme.appBarTheme.backgroundColor,
         foregroundColor: theme.appBarTheme.foregroundColor,
@@ -76,55 +76,55 @@ class _EbadatScreenState extends State<EbadatScreen> {
     Widget screen;
 
     switch (topic.id) {
-      case 0: // Monajat
+      case 0:
         screen = const MonajatListScreen();
         break;
-      case 1: // Umrah
+      case 1:
         screen = const UmrahListScreen();
         break;
-      case 2: // Ayat
+      case 2:
         screen = const AyatListScreen();
         break;
-      case 3: // Dua
+      case 3:
         screen = const DuaListScreen();
         break;
-      case 4: // Tahajjud Namaz
+      case 4:
         screen = const WorshipGuideScreen(guide: tahajjudGuide);
         break;
-      case 5: // Fard Ghusl
+      case 5:
         screen = const WorshipGuideScreen(guide: ghuslGuide);
         break;
-      case 7: // Tayammum
+      case 7:
         screen = const WorshipGuideScreen(guide: tayammumGuide);
         break;
-      case 8: // Zakat
+      case 8:
         screen = const ZakatCalculatorScreen();
         break;
-      case 9: // Qasr Namaz
+      case 9:
         screen = const WorshipGuideScreen(guide: qasrGuide);
         break;
-      case 10: // Wudu/Oju
+      case 10:
         screen = const WorshipGuideScreen(guide: wuduGuide);
         break;
-      case 11: // Janazah Namaz
+      case 11:
         screen = const WorshipGuideScreen(guide: janazahGuide);
         break;
-      case 12: // Witr Namaz
+      case 12:
         screen = const WorshipGuideScreen(guide: witrGuide);
         break;
-      case 14: // Salatul Attahiyatu (Tahiyyatul Masjid)
+      case 14:
         screen = const WorshipGuideScreen(guide: tahiyyatulMasjidGuide);
         break;
-      case 16: // Eman (Faith)
+      case 16:
         screen = const WorshipGuideScreen(guide: emanGuide);
         break;
-      case 17: // Namaz (Salah/Prayer)
+      case 17:
         screen = const WorshipGuideScreen(guide: namazGuide);
         break;
-      case 18: // Ramadan Roja (Fasting)
+      case 18:
         screen = const WorshipGuideScreen(guide: ramadanRojaGuide);
         break;
-      default: // Placeholder screens for remaining topics
+      default:
         screen = TopicPlaceholderScreen(topic: topic);
     }
 
