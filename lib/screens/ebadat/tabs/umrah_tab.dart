@@ -5,14 +5,17 @@ import '../../../services/ebadat_data_service.dart';
 import '../umrah_detail_screen.dart';
 
 class UmrahTab extends StatefulWidget {
-  const UmrahTab({super.key});
+  final EbadatDataService ebadatService;
+
+  UmrahTab({super.key, EbadatDataService? ebadatService})
+    : ebadatService = ebadatService ?? EbadatDataService();
 
   @override
   State<UmrahTab> createState() => _UmrahTabState();
 }
 
 class _UmrahTabState extends State<UmrahTab> {
-  final EbadatDataService _ebadatService = EbadatDataService();
+  EbadatDataService get _ebadatService => widget.ebadatService;
 
   List<UmrahSectionModel> _sections = [];
   bool _isLoading = true;
@@ -64,19 +67,14 @@ class _UmrahTabState extends State<UmrahTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(
-              color: Color(0xFFE65100),
-            ),
+            const CircularProgressIndicator(color: Color(0xFFE65100)),
             const SizedBox(height: 16),
             Text(
               context.tr(
                 bn: 'ওমরাহ গাইড লোড হচ্ছে...',
                 en: 'Loading Umrah guide...',
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),
@@ -88,11 +86,7 @@ class _UmrahTabState extends State<UmrahTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
               context.tr(
@@ -100,20 +94,22 @@ class _UmrahTabState extends State<UmrahTab> {
                 en: 'Failed to load data. Please try again.',
               ),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
+              label: Text(
+                context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE65100),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -126,11 +122,7 @@ class _UmrahTabState extends State<UmrahTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.flight_takeoff,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.flight_takeoff, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               context.tr(
@@ -138,10 +130,7 @@ class _UmrahTabState extends State<UmrahTab> {
                 en: 'No Umrah guide found',
               ),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -174,10 +163,7 @@ class _UmrahSectionCard extends StatelessWidget {
   final UmrahSectionModel section;
   final VoidCallback? onTap;
 
-  const _UmrahSectionCard({
-    required this.section,
-    this.onTap,
-  });
+  const _UmrahSectionCard({required this.section, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -185,9 +171,7 @@ class _UmrahSectionCard extends StatelessWidget {
     final rules = section.getRules(locale);
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
         onTap: onTap,
@@ -261,8 +245,7 @@ class _UmrahSectionCard extends StatelessWidget {
                             ),
                           ),
                         ],
-                        if (rules.isNotEmpty &&
-                            section.relatedDuas.isNotEmpty)
+                        if (rules.isNotEmpty && section.relatedDuas.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
@@ -292,11 +275,7 @@ class _UmrahSectionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 20,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.arrow_forward_ios, size: 20, color: Colors.grey[400]),
             ],
           ),
         ),

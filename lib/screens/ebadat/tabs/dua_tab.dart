@@ -7,14 +7,26 @@ import '../../../widgets/ebadat/loading_card.dart';
 import '../dua_detail_screen.dart';
 
 class DuaTab extends StatefulWidget {
-  const DuaTab({super.key});
+  final EbadatDataService ebadatService;
+  final Widget Function(BuildContext context, DuaModel dua, VoidCallback onTap)?
+  cardBuilder;
+
+  DuaTab({super.key, EbadatDataService? ebadatService})
+    : ebadatService = ebadatService ?? EbadatDataService(),
+      cardBuilder = null;
+
+  DuaTab.withBuilder({
+    super.key,
+    EbadatDataService? ebadatService,
+    required this.cardBuilder,
+  }) : ebadatService = ebadatService ?? EbadatDataService();
 
   @override
   State<DuaTab> createState() => _DuaTabState();
 }
 
 class _DuaTabState extends State<DuaTab> {
-  final EbadatDataService _ebadatService = EbadatDataService();
+  EbadatDataService get _ebadatService => widget.ebadatService;
 
   List<DuaModel> _duas = [];
   List<DuaModel> _filteredDuas = [];
@@ -25,20 +37,20 @@ class _DuaTabState extends State<DuaTab> {
   String? _lastLocaleCode;
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final localeCode = Localizations.localeOf(context).languageCode;
-    if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
-      _selectedCategory = null;
+    if (_lastLocaleCode == null) {
+      _lastLocaleCode = localeCode;
       _loadData();
+      return;
     }
-    _lastLocaleCode = localeCode;
+    if (_lastLocaleCode != localeCode) {
+      _selectedCategory = null;
+      _lastLocaleCode = localeCode;
+      _loadData();
+      return;
+    }
   }
 
   Future<void> _loadData() async {
@@ -252,11 +264,20 @@ class _DuaTabState extends State<DuaTab> {
             itemBuilder: (context, index) {
               final dua = _filteredDuas[index];
               return RepaintBoundary(
-                child: DuaCard(
-                  key: ValueKey(dua.id),
-                  dua: dua,
-                  onTap: () => _navigateToDetail(dua),
-                ),
+                child: widget.cardBuilder != null
+                    ? KeyedSubtree(
+                        key: ValueKey(dua.id),
+                        child: widget.cardBuilder!(
+                          context,
+                          dua,
+                          () => _navigateToDetail(dua),
+                        ),
+                      )
+                    : DuaCard(
+                        key: ValueKey(dua.id),
+                        dua: dua,
+                        onTap: () => _navigateToDetail(dua),
+                      ),
               );
             },
           ),

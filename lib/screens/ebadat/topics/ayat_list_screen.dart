@@ -17,7 +17,7 @@ class AyatListScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: const AyatTab(),
+      body: AyatTab(),
     );
   }
 }

@@ -1,37 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/core/app_locale_controller.dart';
 import 'package:jamaat_time/core/locale_prefs.dart';
-import 'package:jamaat_time/l10n/app_localizations.dart';
 import 'package:jamaat_time/screens/settings_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _wrapWithLocale(Widget child, Locale locale) {
-  return MaterialApp(
-    locale: locale,
-    localizationsDelegates: const [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: child,
-  );
-}
+import '../helpers/localized_test_wrapper.dart';
 
 void main() {
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    await AppLocaleController.bootstrap();
+    await seedMockLocalePrefs('bn');
   });
 
   testWidgets('renders language section with Bengali label by default', (
     tester,
   ) async {
     await tester.pumpWidget(
-      _wrapWithLocale(const SettingsScreen(), const Locale('bn')),
+      wrapWithLocale(child: const SettingsScreen(), locale: const Locale('bn')),
     );
     await tester.pumpAndSettle();
 
@@ -43,7 +27,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _wrapWithLocale(const SettingsScreen(), const Locale('bn')),
+      wrapWithLocale(child: const SettingsScreen(), locale: const Locale('bn')),
     );
     await tester.pumpAndSettle();
 

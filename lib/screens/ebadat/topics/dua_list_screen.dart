@@ -17,7 +17,7 @@ class DuaListScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: const DuaTab(),
+      body: DuaTab(),
     );
   }
 }

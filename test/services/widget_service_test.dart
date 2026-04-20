@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:jamaat_time/core/app_text.dart';
 import 'package:jamaat_time/services/widget_service.dart';
@@ -6,6 +7,11 @@ import 'package:jamaat_time/utils/bangla_calendar.dart';
 import 'package:flutter/widgets.dart';
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting('en');
+    await initializeDateFormatting('bn');
+  });
+
   Map<String, DateTime?> buildTimes() {
     return {
       'Fajr': DateTime(2026, 4, 13, 5, 0),

@@ -17,7 +17,7 @@ class UmrahListScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: const UmrahTab(),
+      body: UmrahTab(),
     );
   }
 }

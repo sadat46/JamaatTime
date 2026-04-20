@@ -7,14 +7,30 @@ import '../../../widgets/ebadat/loading_card.dart';
 import '../ayat_detail_screen.dart';
 
 class AyatTab extends StatefulWidget {
-  const AyatTab({super.key});
+  final EbadatDataService ebadatService;
+  final Widget Function(
+    BuildContext context,
+    AyatModel ayat,
+    VoidCallback onTap,
+  )?
+  cardBuilder;
+
+  AyatTab({super.key, EbadatDataService? ebadatService})
+    : ebadatService = ebadatService ?? EbadatDataService(),
+      cardBuilder = null;
+
+  AyatTab.withBuilder({
+    super.key,
+    EbadatDataService? ebadatService,
+    required this.cardBuilder,
+  }) : ebadatService = ebadatService ?? EbadatDataService();
 
   @override
   State<AyatTab> createState() => _AyatTabState();
 }
 
 class _AyatTabState extends State<AyatTab> {
-  final EbadatDataService _ebadatService = EbadatDataService();
+  EbadatDataService get _ebadatService => widget.ebadatService;
 
   List<AyatModel> _ayats = [];
   List<AyatModel> _filteredAyats = [];
@@ -25,20 +41,20 @@ class _AyatTabState extends State<AyatTab> {
   String? _lastLocaleCode;
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final localeCode = Localizations.localeOf(context).languageCode;
-    if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
-      _selectedCategory = null;
+    if (_lastLocaleCode == null) {
+      _lastLocaleCode = localeCode;
       _loadData();
+      return;
     }
-    _lastLocaleCode = localeCode;
+    if (_lastLocaleCode != localeCode) {
+      _selectedCategory = null;
+      _lastLocaleCode = localeCode;
+      _loadData();
+      return;
+    }
   }
 
   Future<void> _loadData() async {
@@ -252,11 +268,20 @@ class _AyatTabState extends State<AyatTab> {
             itemBuilder: (context, index) {
               final ayat = _filteredAyats[index];
               return RepaintBoundary(
-                child: AyatCard(
-                  key: ValueKey(ayat.id),
-                  ayat: ayat,
-                  onTap: () => _navigateToDetail(ayat),
-                ),
+                child: widget.cardBuilder != null
+                    ? KeyedSubtree(
+                        key: ValueKey(ayat.id),
+                        child: widget.cardBuilder!(
+                          context,
+                          ayat,
+                          () => _navigateToDetail(ayat),
+                        ),
+                      )
+                    : AyatCard(
+                        key: ValueKey(ayat.id),
+                        ayat: ayat,
+                        onTap: () => _navigateToDetail(ayat),
+                      ),
               );
             },
           ),

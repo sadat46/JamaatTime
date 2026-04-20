@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/widgets/calendar_selected_date_card.dart';
 
+import '../helpers/localized_test_wrapper.dart';
+
 Widget _testHost({
   required Widget child,
   ThemeData? theme,
   double width = 360,
+  Locale locale = const Locale('en'),
 }) {
-  return MaterialApp(
-    theme: theme ?? ThemeData.light(),
-    home: Scaffold(
-      body: Center(
-        child: SizedBox(width: width, child: child),
+  return wrapWithLocale(
+    locale: locale,
+    child: Theme(
+      data: theme ?? ThemeData.light(),
+      child: Scaffold(
+        body: Center(
+          child: SizedBox(width: width, child: child),
+        ),
       ),
     ),
   );
@@ -30,13 +36,12 @@ CalendarSelectedDateCard _buildCard() {
 
 Finder _richTextContaining(String text) {
   return find.byWidgetPredicate(
-    (widget) =>
-        widget is RichText && widget.text.toPlainText().contains(text),
+    (widget) => widget is RichText && widget.text.toPlainText().contains(text),
   );
 }
 
 void main() {
-  testWidgets('shows Gregorian header and normalized date chips', (
+  testWidgets('shows Gregorian header and normalized date chips in English', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_testHost(child: _buildCard()));
@@ -48,6 +53,18 @@ void main() {
     expect(find.text('Bangla'), findsOneWidget);
     expect(find.text('Hijri'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
+  });
+
+  testWidgets('shows localized chip labels in Bengali locale', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _testHost(child: _buildCard(), locale: const Locale('bn')),
+    );
+
+    expect(find.text('ইংরেজি'), findsOneWidget);
+    expect(find.text('বাংলা'), findsOneWidget);
+    expect(find.text('হিজরি'), findsOneWidget);
   });
 
   testWidgets('adds semantic labels for selected, Bangla, and Hijri dates', (

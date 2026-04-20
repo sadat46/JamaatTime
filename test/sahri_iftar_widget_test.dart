@@ -2,24 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/widgets/sahri_iftar_widget.dart';
 
+import 'helpers/localized_test_wrapper.dart';
+
 void main() {
   Widget buildTestWidget({
     required DateTime? fajrTime,
     required DateTime? maghribTime,
+    Locale locale = const Locale('en'),
   }) {
-    return MaterialApp(
-      home: Scaffold(
+    return wrapWithLocale(
+      locale: locale,
+      child: Scaffold(
         body: SahriIftarWidget(fajrTime: fajrTime, maghribTime: maghribTime),
       ),
     );
   }
 
-  testWidgets('renders Sahri and Iftar as separate cards', (tester) async {
+  testWidgets('renders Sahri and Iftar cards in English locale', (
+    tester,
+  ) async {
     final now = DateTime.now();
     await tester.pumpWidget(
       buildTestWidget(
         fajrTime: now.add(const Duration(hours: 2)),
         maghribTime: now.add(const Duration(hours: 8)),
+        locale: const Locale('en'),
       ),
     );
 
@@ -33,6 +40,28 @@ void main() {
     expect(find.textContaining('Begins at'), findsOneWidget);
     expect(find.byIcon(Icons.nightlight_round), findsOneWidget);
     expect(find.byIcon(Icons.wb_twilight_rounded), findsOneWidget);
+  });
+
+  testWidgets('renders Sahri and Iftar cards in Bengali locale', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await tester.pumpWidget(
+      buildTestWidget(
+        fajrTime: now.add(const Duration(hours: 2)),
+        maghribTime: now.add(const Duration(hours: 8)),
+        locale: const Locale('bn'),
+      ),
+    );
+
+    expect(find.byKey(const Key('sahri-card')), findsOneWidget);
+    expect(find.byKey(const Key('iftar-card')), findsOneWidget);
+    expect(find.text('সাহরি শেষ'), findsOneWidget);
+    expect(find.text('ইফতার শুরু'), findsOneWidget);
+    expect(find.text('বাকি সময়'), findsNWidgets(2));
+    expect(find.text('ফোকাসের জন্য কার্ডে চাপ দিন'), findsNWidgets(2));
+    expect(find.textContaining('শেষ'), findsWidgets);
+    expect(find.textContaining('শুরু'), findsWidgets);
   });
 
   testWidgets('tapping a card opens fullscreen and can close', (tester) async {
