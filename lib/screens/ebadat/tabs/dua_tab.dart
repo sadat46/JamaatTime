@@ -35,6 +35,7 @@ class _DuaTabState extends State<DuaTab> {
     super.didChangeDependencies();
     final localeCode = Localizations.localeOf(context).languageCode;
     if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
+      _selectedCategory = null;
       _loadData();
     }
     _lastLocaleCode = localeCode;
@@ -48,23 +49,23 @@ class _DuaTabState extends State<DuaTab> {
 
     try {
       final locale = Localizations.localeOf(context);
-      final results = await Future.wait([
-        _ebadatService.loadDuas(),
-        _ebadatService.getDuaCategories(locale: locale),
-      ]);
+      final duas = await _ebadatService.loadDuas();
+      final categories = await _ebadatService.getDuaCategories(locale: locale);
+      final filteredDuas = _selectedCategory == null
+          ? duas
+          : await _ebadatService.getDuasByCategory(
+              _selectedCategory!,
+              locale: locale,
+            );
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _duas = results[0] as List<DuaModel>;
-        _categories = results[1] as List<String>;
-        _filteredDuas = _selectedCategory == null
-            ? _duas
-            : _duas
-                .where((dua) => dua.getCategory(locale) == _selectedCategory)
-                .toList();
+        _duas = duas;
+        _categories = categories;
+        _filteredDuas = filteredDuas;
         _isLoading = false;
       });
     } catch (_) {
@@ -78,26 +79,26 @@ class _DuaTabState extends State<DuaTab> {
     }
   }
 
-  void _filterByCategory(String? category) {
-    final locale = Localizations.localeOf(context);
+  Future<void> _filterByCategory(String? category) async {
     setState(() {
       _selectedCategory = category;
-      if (category == null) {
-        _filteredDuas = _duas;
-      } else {
-        _filteredDuas = _duas
-            .where((dua) => dua.getCategory(locale) == category)
-            .toList();
-      }
+    });
+    final locale = Localizations.localeOf(context);
+    final filteredDuas = category == null
+        ? _duas
+        : await _ebadatService.getDuasByCategory(category, locale: locale);
+    if (!mounted || _selectedCategory != category) {
+      return;
+    }
+    setState(() {
+      _filteredDuas = filteredDuas;
     });
   }
 
   void _navigateToDetail(DuaModel dua) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => DuaDetailScreen(dua: dua),
-      ),
+      MaterialPageRoute(builder: (context) => DuaDetailScreen(dua: dua)),
     );
   }
 
@@ -117,11 +118,7 @@ class _DuaTabState extends State<DuaTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
               context.tr(
@@ -129,20 +126,22 @@ class _DuaTabState extends State<DuaTab> {
                 en: 'Failed to load data. Please try again.',
               ),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
+              label: Text(
+                context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6A1B9A),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -155,11 +154,7 @@ class _DuaTabState extends State<DuaTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               _selectedCategory != null
@@ -172,10 +167,7 @@ class _DuaTabState extends State<DuaTab> {
                       en: 'No dua found',
                     ),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             if (_selectedCategory != null) ...[
               const SizedBox(height: 16),
@@ -209,7 +201,9 @@ class _DuaTabState extends State<DuaTab> {
                     onSelected: (selected) {
                       if (selected) _filterByCategory(null);
                     },
-                    selectedColor: const Color(0xFF6A1B9A).withValues(alpha: 0.2),
+                    selectedColor: const Color(
+                      0xFF6A1B9A,
+                    ).withValues(alpha: 0.2),
                     checkmarkColor: const Color(0xFF6A1B9A),
                     labelStyle: TextStyle(
                       color: _selectedCategory == null
@@ -231,7 +225,9 @@ class _DuaTabState extends State<DuaTab> {
                       onSelected: (selected) {
                         _filterByCategory(selected ? category : null);
                       },
-                      selectedColor: const Color(0xFF6A1B9A).withValues(alpha: 0.2),
+                      selectedColor: const Color(
+                        0xFF6A1B9A,
+                      ).withValues(alpha: 0.2),
                       checkmarkColor: const Color(0xFF6A1B9A),
                       labelStyle: TextStyle(
                         color: isSelected

@@ -35,6 +35,7 @@ class _AyatTabState extends State<AyatTab> {
     super.didChangeDependencies();
     final localeCode = Localizations.localeOf(context).languageCode;
     if (_lastLocaleCode != null && _lastLocaleCode != localeCode) {
+      _selectedCategory = null;
       _loadData();
     }
     _lastLocaleCode = localeCode;
@@ -48,25 +49,23 @@ class _AyatTabState extends State<AyatTab> {
 
     try {
       final locale = Localizations.localeOf(context);
-      final results = await Future.wait([
-        _ebadatService.loadAyats(),
-        _ebadatService.getAyatCategories(locale: locale),
-      ]);
+      final ayats = await _ebadatService.loadAyats();
+      final categories = await _ebadatService.getAyatCategories(locale: locale);
+      final filteredAyats = _selectedCategory == null
+          ? ayats
+          : await _ebadatService.getAyatsByCategory(
+              _selectedCategory!,
+              locale: locale,
+            );
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _ayats = results[0] as List<AyatModel>;
-        _categories = results[1] as List<String>;
-        _filteredAyats = _selectedCategory == null
-            ? _ayats
-            : _ayats
-                .where(
-                  (ayat) => ayat.getCategory(locale) == _selectedCategory,
-                )
-                .toList();
+        _ayats = ayats;
+        _categories = categories;
+        _filteredAyats = filteredAyats;
         _isLoading = false;
       });
     } catch (_) {
@@ -80,26 +79,26 @@ class _AyatTabState extends State<AyatTab> {
     }
   }
 
-  void _filterByCategory(String? category) {
-    final locale = Localizations.localeOf(context);
+  Future<void> _filterByCategory(String? category) async {
     setState(() {
       _selectedCategory = category;
-      if (category == null) {
-        _filteredAyats = _ayats;
-      } else {
-        _filteredAyats = _ayats
-            .where((ayat) => ayat.getCategory(locale) == category)
-            .toList();
-      }
+    });
+    final locale = Localizations.localeOf(context);
+    final filteredAyats = category == null
+        ? _ayats
+        : await _ebadatService.getAyatsByCategory(category, locale: locale);
+    if (!mounted || _selectedCategory != category) {
+      return;
+    }
+    setState(() {
+      _filteredAyats = filteredAyats;
     });
   }
 
   void _navigateToDetail(AyatModel ayat) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => AyatDetailScreen(ayat: ayat),
-      ),
+      MaterialPageRoute(builder: (context) => AyatDetailScreen(ayat: ayat)),
     );
   }
 
@@ -119,11 +118,7 @@ class _AyatTabState extends State<AyatTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
               context.tr(
@@ -131,20 +126,22 @@ class _AyatTabState extends State<AyatTab> {
                 en: 'Failed to load data. Please try again.',
               ),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: Text(context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again')),
+              label: Text(
+                context.tr(bn: 'পুনরায় চেষ্টা করুন', en: 'Try Again'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1565C0),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -157,11 +154,7 @@ class _AyatTabState extends State<AyatTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               _selectedCategory != null
@@ -174,10 +167,7 @@ class _AyatTabState extends State<AyatTab> {
                       en: 'No ayat found',
                     ),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             if (_selectedCategory != null) ...[
               const SizedBox(height: 16),
@@ -211,7 +201,9 @@ class _AyatTabState extends State<AyatTab> {
                     onSelected: (selected) {
                       if (selected) _filterByCategory(null);
                     },
-                    selectedColor: const Color(0xFF1565C0).withValues(alpha: 0.2),
+                    selectedColor: const Color(
+                      0xFF1565C0,
+                    ).withValues(alpha: 0.2),
                     checkmarkColor: const Color(0xFF1565C0),
                     labelStyle: TextStyle(
                       color: _selectedCategory == null
@@ -233,7 +225,9 @@ class _AyatTabState extends State<AyatTab> {
                       onSelected: (selected) {
                         _filterByCategory(selected ? category : null);
                       },
-                      selectedColor: const Color(0xFF1565C0).withValues(alpha: 0.2),
+                      selectedColor: const Color(
+                        0xFF1565C0,
+                      ).withValues(alpha: 0.2),
                       checkmarkColor: const Color(0xFF1565C0),
                       labelStyle: TextStyle(
                         color: isSelected
