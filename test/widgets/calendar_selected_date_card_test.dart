@@ -41,6 +41,8 @@ Finder _richTextContaining(String text) {
 }
 
 void main() {
+  const localizedHeaderDate = '\u09E7\u09EA Apr \u09E8\u09E6\u09E8\u09EC';
+
   testWidgets('shows Gregorian header and normalized date chips in English', (
     WidgetTester tester,
   ) async {
@@ -61,10 +63,28 @@ void main() {
     await tester.pumpWidget(
       _testHost(child: _buildCard(), locale: const Locale('bn')),
     );
+    expect(_richTextContaining(localizedHeaderDate), findsAtLeastNWidgets(1));
 
     expect(find.text('ইংরেজি'), findsOneWidget);
     expect(find.text('বাংলা'), findsOneWidget);
     expect(find.text('হিজরি'), findsOneWidget);
+  });
+
+  testWidgets('header RichText inherits themed font family', (
+    WidgetTester tester,
+  ) async {
+    const fontFamily = 'TestBanglaFont';
+    final theme = ThemeData(
+      textTheme: const TextTheme(bodyMedium: TextStyle(fontFamily: fontFamily)),
+    );
+
+    await tester.pumpWidget(
+      _testHost(child: _buildCard(), theme: theme, locale: const Locale('bn')),
+    );
+
+    final headerRichTextFinder = _richTextContaining(localizedHeaderDate).first;
+    final headerRichText = tester.widget<RichText>(headerRichTextFinder);
+    expect(headerRichText.text.style?.fontFamily, fontFamily);
   });
 
   testWidgets('adds semantic labels for selected, Bangla, and Hijri dates', (

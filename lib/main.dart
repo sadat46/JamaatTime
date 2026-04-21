@@ -61,14 +61,29 @@ void main() async {
   // Load the persisted locale before the first frame so the UI renders in
   // the correct language with no flicker (D15).
   await AppLocaleController.bootstrap();
+  await _preloadActiveLocaleFonts();
 
   runApp(const MyApp());
+}
+
+Future<void> _preloadActiveLocaleFonts() async {
+  try {
+    final baseTextTheme = greenTheme.textTheme;
+    if (AppLocaleController.instance.current.languageCode == 'bn') {
+      GoogleFonts.notoSansBengaliTextTheme(baseTextTheme);
+    } else {
+      GoogleFonts.interTextTheme(baseTextTheme);
+    }
+    await GoogleFonts.pendingFonts();
+  } catch (_) {
+    // Keep startup resilient if font preloading fails.
+  }
 }
 
 ThemeData _themeFor(Locale locale) {
   final baseTextTheme = greenTheme.textTheme;
   final localizedTextTheme = locale.languageCode == 'bn'
-      ? GoogleFonts.hindSiliguriTextTheme(baseTextTheme)
+      ? GoogleFonts.notoSansBengaliTextTheme(baseTextTheme)
       : GoogleFonts.interTextTheme(baseTextTheme);
   return greenTheme.copyWith(textTheme: localizedTextTheme);
 }

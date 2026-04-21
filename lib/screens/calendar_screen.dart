@@ -369,7 +369,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   String _gregorianDateLine(DateTime day) {
     final localeCode = _isEnglishCurrent ? 'en' : 'bn';
-    return _localizeDigitsCurrent(DateFormat('d MMM yyyy', localeCode).format(day));
+    return _localizeDigitsCurrent(
+      DateFormat('d MMM yyyy', localeCode).format(day),
+    );
   }
 
   String _weekdayLine(DateTime day) {
@@ -456,7 +458,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   String _formatHHmmTo12Hour(String value) {
     try {
       final parsed = DateFormat('HH:mm').parseStrict(value);
-      return _localizeDigitsCurrent(DateFormat('h:mm a').format(parsed));
+      final localeCode = _isEnglishCurrent ? 'en' : 'bn';
+      return _localizeDigitsCurrent(
+        DateFormat('h:mm a', localeCode).format(parsed),
+      );
     } catch (_) {
       return value;
     }
@@ -467,8 +472,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (prayerTime == null) {
       return '--';
     }
+    final localeCode = _isEnglishCurrent ? 'en' : 'bn';
     return _localizeDigitsCurrent(
-      DateFormat('h:mm a').format(prayerTime.toLocal()),
+      DateFormat('h:mm a', localeCode).format(prayerTime.toLocal()),
     );
   }
 
@@ -765,7 +771,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         border: Border.all(color: borderColor),
       ),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        child: Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(

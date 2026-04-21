@@ -24,7 +24,10 @@ class CalendarSelectedDateCard extends StatelessWidget {
 
   String _normalizedChipValue(String value) {
     return value
-        .replaceAll(RegExp(r'\b(Bongabdo|Bangabdo)\b', caseSensitive: false), '')
+        .replaceAll(
+          RegExp(r'\b(Bongabdo|Bangabdo)\b', caseSensitive: false),
+          '',
+        )
         .replaceAll(RegExp(r'\bAH\b', caseSensitive: false), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
@@ -93,11 +96,10 @@ class CalendarSelectedDateCard extends StatelessWidget {
     final localizedWeekday = LocaleDigits.localize(weekday, locale);
 
     return Semantics(
-      label:
-          context.tr(
-            bn: 'নির্বাচিত তারিখ $gregorianDate, $weekday। বাংলা ${_normalizedChipValue(banglaDate)}। হিজরি ${_normalizedChipValue(hijriDate)}।',
-            en: 'Selected date $gregorianDate, $weekday. Bangla ${_normalizedChipValue(banglaDate)}. Hijri ${_normalizedChipValue(hijriDate)}.',
-          ),
+      label: context.tr(
+        bn: 'নির্বাচিত তারিখ $gregorianDate, $weekday। বাংলা ${_normalizedChipValue(banglaDate)}। হিজরি ${_normalizedChipValue(hijriDate)}।',
+        en: 'Selected date $gregorianDate, $weekday. Bangla ${_normalizedChipValue(banglaDate)}. Hijri ${_normalizedChipValue(hijriDate)}.',
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: cardBackground,
@@ -140,6 +142,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
                           maxLines: 1,
                           softWrap: false,
                           text: TextSpan(
+                            style: DefaultTextStyle.of(context).style,
                             children: [
                               TextSpan(
                                 text: localizedGregorianDate,
@@ -167,8 +170,9 @@ class CalendarSelectedDateCard extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                   color: isDarkMode
                                       ? Colors.white70
-                                      : AppConstants.brandGreenDark
-                                            .withValues(alpha: 0.85),
+                                      : AppConstants.brandGreenDark.withValues(
+                                          alpha: 0.85,
+                                        ),
                                 ),
                               ),
                             ],

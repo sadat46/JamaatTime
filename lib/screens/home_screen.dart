@@ -34,10 +34,10 @@ extension DateTimeExtension on DateTime {
 
 /// Row type for conditional styling
 enum PrayerRowType {
-  prayer,      // Standard prayer times (Fajr, Dhuhr, etc.)
-  info,        // Informational rows (Sunrise)
-  sahriIftar,  // Sahri/Iftar rows (amber styling)
-  forbidden,   // Forbidden time windows (red styling)
+  prayer, // Standard prayer times (Fajr, Dhuhr, etc.)
+  info, // Informational rows (Sunrise)
+  sahriIftar, // Sahri/Iftar rows (amber styling)
+  forbidden, // Forbidden time windows (red styling)
 }
 
 /// Pre-computed data for a prayer table row (avoids calculations in build())
@@ -47,7 +47,7 @@ class PrayerRowData {
   final String jamaatStr;
   final bool isCurrent;
   final PrayerRowType type;
-  final String? endTimeStr;  // For forbidden windows (shows range)
+  final String? endTimeStr; // For forbidden windows (shows range)
 
   const PrayerRowData({
     required this.name,
@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? jamaatTimes;
   bool isLoadingJamaat = false;
   String? jamaatError;
-  DateTime? _lastJamaatUpdate;  // Track last successful jamaat times fetch
+  DateTime? _lastJamaatUpdate; // Track last successful jamaat times fetch
   DateTime selectedDate = DateTime.now(); // Add selected date for jamaat times
 
   final List<String> canttNames = AppConstants.canttNames;
@@ -98,7 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _lastScheduledDate = DateTime.now().subtract(
     const Duration(days: 1),
   );
-  int _bangladeshHijriOffsetDays = SettingsService.defaultBangladeshHijriOffsetDays;
+  int _bangladeshHijriOffsetDays =
+      SettingsService.defaultBangladeshHijriOffsetDays;
 
   // Pre-computed prayer table data (avoids recalculation in build())
   List<PrayerRowData> _prayerTableData = [];
@@ -144,15 +145,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _notificationService.setLocationConfig(_locationConfig!);
 
     // Get calculation parameters based on location
-    params = PrayerTimeEngine.instance.getCalculationParametersForConfig(_locationConfig!);
+    params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+      _locationConfig!,
+    );
 
     // Only apply madhab for Bangladesh (not applicable for Saudi)
     if (_locationConfig!.country == Country.bangladesh) {
       final madhab = await _settingsService.getMadhab();
       params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
     }
-    _bangladeshHijriOffsetDays =
-        await _settingsService.getBangladeshHijriOffsetDays();
+    _bangladeshHijriOffsetDays = await _settingsService
+        .getBangladeshHijriOffsetDays();
 
     // Initialize times with default values to avoid null issues
     final coords = Coordinates(
@@ -203,7 +206,8 @@ class _HomeScreenState extends State<HomeScreen> {
         if (selectedCity != null && _locationConfig != null) {
           if (_locationConfig!.jamaatSource == JamaatSource.server) {
             _fetchJamaatTimes(selectedCity!);
-          } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+          } else if (_locationConfig!.jamaatSource ==
+              JamaatSource.localOffset) {
             _calculateLocalJamaatTimes();
           }
         }
@@ -227,7 +231,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // Single listener for all settings changes (combining madhab and notification settings)
-    _settingsSubscription = _settingsService.onSettingsChanged.listen((_) async {
+    _settingsSubscription = _settingsService.onSettingsChanged.listen((
+      _,
+    ) async {
       await _loadMadhab();
       await _loadBangladeshHijriOffset();
       await _handleNotificationSettingsChange();
@@ -235,7 +241,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _fetchJamaatTimes(String city, {bool forceRefresh = false}) async {
+  Future<void> _fetchJamaatTimes(
+    String city, {
+    bool forceRefresh = false,
+  }) async {
     setState(() {
       isLoadingJamaat = true;
       jamaatError = null;
@@ -243,14 +252,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-
       // Use JamaatService for consistent data structure
       final times = await _jamaatService.getJamaatTimes(
         city: city,
         date: selectedDate,
         forceRefresh: forceRefresh,
       );
-      
+
       if (times != null) {
         // Create a complete jamaat times map including calculated Maghrib time
         final completeJamaatTimes = Map<String, dynamic>.from(times);
@@ -266,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         jamaatTimes = completeJamaatTimes;
-        _lastJamaatUpdate = DateTime.now();  // Track successful fetch
+        _lastJamaatUpdate = DateTime.now(); // Track successful fetch
         isLoadingJamaat = false;
 
         // Pre-compute table data after jamaat times update
@@ -322,7 +330,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (prayerName != null && times[prayerName] != null) {
         final prayerTime = times[prayerName]!;
         final jamaatTime = prayerTime.add(Duration(minutes: offset));
-        newJamaatTimes[prayerKey] = DateFormat('HH:mm').format(jamaatTime.toLocal());
+        newJamaatTimes[prayerKey] = DateFormat(
+          'HH:mm',
+        ).format(jamaatTime.toLocal());
       }
     }
 
@@ -337,20 +347,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updatePrayerTimes() {
-    final coords = _coords ??
+    final coords =
+        _coords ??
         (_locationConfig != null
-            ? Coordinates(
-                _locationConfig!.latitude,
-                _locationConfig!.longitude,
-              )
+            ? Coordinates(_locationConfig!.latitude, _locationConfig!.longitude)
             : Coordinates(
                 AppConstants.defaultLatitude,
                 AppConstants.defaultLongitude,
               ));
-    
+
     // Use selectedDate for prayer times calculation instead of _now
     final dateForCalculation = selectedDate;
-    
+
     prayerTimes = PrayerTimes(
       coordinates: coords,
       date: dateForCalculation,
@@ -402,7 +410,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final selectedDateOnly = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
 
     // Only schedule notifications for current date
     if (selectedDateOnly != today) {
@@ -428,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Reset notification scheduling flag to force rescheduling
       _notificationsScheduled = false;
-      
+
       // Reschedule notifications with new settings
       if (jamaatTimes != null) {
         await _scheduleNotificationsIfNeeded();
@@ -440,7 +452,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadMadhab() async {
     // Only apply madhab for Bangladesh locations
-    if (_locationConfig == null || _locationConfig!.country != Country.bangladesh) {
+    if (_locationConfig == null ||
+        _locationConfig!.country != Country.bangladesh) {
       return;
     }
 
@@ -521,8 +534,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _notificationService.setLocationConfig(_locationConfig!);
 
         // Update calculation parameters (no Bangladesh/Saudi adjustments)
-        params = PrayerTimeEngine.instance
-            .getCalculationParametersForConfig(_locationConfig!);
+        params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+          _locationConfig!,
+        );
 
         // Clear jamaat times - not available for random locations
         jamaatTimes = null;
@@ -544,12 +558,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (nearestCity != null) {
           selectedCity = nearestCity;
-          _locationConfig = _locationConfigService.getConfigForCity(nearestCity);
+          _locationConfig = _locationConfigService.getConfigForCity(
+            nearestCity,
+          );
           _locationConfigService.setCurrentConfig(_locationConfig!);
           _notificationService.setLocationConfig(_locationConfig!);
 
-          params = PrayerTimeEngine.instance
-              .getCalculationParametersForConfig(_locationConfig!);
+          params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+            _locationConfig!,
+          );
 
           // Calculate local jamaat times for Saudi
           _calculateLocalJamaatTimes();
@@ -561,14 +578,18 @@ class _HomeScreenState extends State<HomeScreen> {
         // BANGLADESH: Keep existing selected city or default
         // (User is physically in Bangladesh but using GPS)
         // Keep the selected city config, just update coordinates
-        if (_locationConfig == null || _locationConfig!.country != Country.bangladesh) {
+        if (_locationConfig == null ||
+            _locationConfig!.country != Country.bangladesh) {
           selectedCity = AppConstants.defaultCity;
-          _locationConfig = _locationConfigService.getConfigForCity(selectedCity!);
+          _locationConfig = _locationConfigService.getConfigForCity(
+            selectedCity!,
+          );
           _locationConfigService.setCurrentConfig(_locationConfig!);
           _notificationService.setLocationConfig(_locationConfig!);
 
-          params = PrayerTimeEngine.instance
-              .getCalculationParametersForConfig(_locationConfig!);
+          params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+            _locationConfig!,
+          );
 
           final madhab = await _settingsService.getMadhab();
           params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
@@ -667,11 +688,15 @@ class _HomeScreenState extends State<HomeScreen> {
     // If viewing a past date, show the last prayer of that day
     // If viewing today, show current prayer
     // If viewing future date, show first prayer (Fajr)
-    
+
     final now = DateTime.now();
-    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final selectedDateOnly = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     final todayOnly = DateTime(now.year, now.month, now.day);
-    
+
     if (selectedDateOnly.isBefore(todayOnly)) {
       // Past date - show last prayer (Isha)
       return 'Isha';
@@ -697,21 +722,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<PrayerRowData> tableData = [];
 
     // Only Main Prayer Times (6 rows)
-    const prayerNames = [
-      'Fajr',
-      'Sunrise',
-      'Dhuhr',
-      'Asr',
-      'Maghrib',
-      'Isha',
-    ];
+    const prayerNames = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
     for (final name in prayerNames) {
       // Compute time string using device local time
       final t = times[name];
-      final timeStr = t != null
-          ? DateFormat('HH:mm').format(t.toLocal())
-          : '-';
+      final timeStr = t != null ? DateFormat('HH:mm').format(t.toLocal()) : '-';
 
       // Determine row type
       PrayerRowType type;
@@ -762,13 +778,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      tableData.add(PrayerRowData(
-        name: name,
-        timeStr: timeStr,
-        jamaatStr: jamaatStr,
-        isCurrent: name == currentPrayer,
-        type: type,
-      ));
+      tableData.add(
+        PrayerRowData(
+          name: name,
+          timeStr: timeStr,
+          jamaatStr: jamaatStr,
+          isCurrent: name == currentPrayer,
+          type: type,
+        ),
+      );
     }
 
     _prayerTableData = tableData;
@@ -786,25 +804,34 @@ class _HomeScreenState extends State<HomeScreen> {
     // Only update widget for today's date
     final now = DateTime.now();
     final todayOnly = DateTime(now.year, now.month, now.day);
-    final selectedOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final selectedOnly = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     if (selectedOnly != todayOnly) return;
 
     final hijriOffset = _locationConfig!.country == Country.bangladesh
         ? _bangladeshHijriOffsetDays
         : 0;
 
-    final coords = _coords ??
+    final coords =
+        _coords ??
         Coordinates(_locationConfig!.latitude, _locationConfig!.longitude);
-    final tomorrow =
-        DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    final tomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(const Duration(days: 1));
     final tomorrowTimes = PrayerTimes(
       coordinates: coords,
       date: tomorrow,
       calculationParameters: params!,
       precision: true,
     );
-    final tomorrowFajr = PrayerTimeEngine.instance
-        .createPrayerTimesMap(tomorrowTimes)['Fajr'];
+    final tomorrowFajr = PrayerTimeEngine.instance.createPrayerTimesMap(
+      tomorrowTimes,
+    )['Fajr'];
 
     WidgetService.updateWidgetData(
       times: times,
@@ -880,8 +907,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final isInfo = row.type == PrayerRowType.info;
     final isActive = row.isCurrent;
     final localizedTimeStr = _localizedDigitsForContext(context, row.timeStr);
-    final localizedJamaatStr =
-        _localizedDigitsForContext(context, row.jamaatStr);
+    final localizedJamaatStr = _localizedDigitsForContext(
+      context,
+      row.jamaatStr,
+    );
     final hasJamaat = row.jamaatStr != '-';
     final prayerIcon = _prayerIconForName(row.name);
     final iconAccent = _prayerIconAccent(row.name);
@@ -892,8 +921,8 @@ class _HomeScreenState extends State<HomeScreen> {
         color: isActive
             ? Colors.green.shade50
             : isInfo
-                ? Colors.grey.shade50
-                : Colors.white,
+            ? Colors.grey.shade50
+            : Colors.white,
         border: Border.all(
           color: isActive
               ? AppConstants.brandGreen.withValues(alpha: 0.3)
@@ -936,16 +965,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: iconAccent.withValues(alpha: isActive ? 0.16 : 0.10),
+                        color: iconAccent.withValues(
+                          alpha: isActive ? 0.16 : 0.10,
+                        ),
                         border: Border.all(
-                          color: iconAccent.withValues(alpha: isActive ? 0.45 : 0.30),
+                          color: iconAccent.withValues(
+                            alpha: isActive ? 0.45 : 0.30,
+                          ),
                         ),
                       ),
-                      child: Icon(
-                        prayerIcon,
-                        size: 16,
-                        color: iconAccent,
-                      ),
+                      child: Icon(prayerIcon, size: 16, color: iconAccent),
                     ),
                     const SizedBox(width: 10),
                     // Prayer name
@@ -954,13 +983,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Text(
                         _localizedPrayerName(context, row.name),
                         style: TextStyle(
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                          fontStyle: isInfo ? FontStyle.italic : FontStyle.normal,
+                          fontWeight: isActive
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          fontStyle: isInfo
+                              ? FontStyle.italic
+                              : FontStyle.normal,
                           color: isActive
                               ? AppConstants.brandGreenDark
                               : isInfo
-                                  ? Colors.blueGrey
-                                  : Colors.black87,
+                              ? Colors.blueGrey
+                              : Colors.black87,
                           fontSize: 14,
                         ),
                       ),
@@ -973,8 +1006,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                          fontStyle: isInfo ? FontStyle.italic : FontStyle.normal,
+                          fontWeight: isActive
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontStyle: isInfo
+                              ? FontStyle.italic
+                              : FontStyle.normal,
                           color: isActive
                               ? AppConstants.brandGreenDark
                               : Colors.black87,
@@ -991,7 +1028,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               localizedJamaatStr,
                               style: !hasJamaat
-                                  ? const TextStyle(color: Colors.grey, fontSize: 13)
+                                  ? const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 13,
+                                    )
                                   : TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: AppConstants.brandGreen,
@@ -1000,7 +1040,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             if (hasJamaat) ...[
                               const SizedBox(width: 4),
-                              Icon(Icons.mosque, size: 12, color: AppConstants.brandGreen),
+                              Icon(
+                                Icons.mosque,
+                                size: 12,
+                                color: AppConstants.brandGreen,
+                              ),
                             ],
                           ],
                         ),
@@ -1020,70 +1064,80 @@ class _HomeScreenState extends State<HomeScreen> {
     final items = <DropdownMenuItem<String>>[];
 
     // Bangladesh cities section
-    items.add(const DropdownMenuItem(
-      enabled: false,
-      value: null,
-      child: Text(
-        '🇧🇩 Bangladesh',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-      ),
-    ));
-    for (final city in AppConstants.bangladeshCities) {
-      items.add(DropdownMenuItem(
-        value: city,
-        child: Row(
-          children: [
-            const Icon(Icons.mosque, size: 15, color: Colors.white70),
-            const SizedBox(width: 6),
-            Text(city),
-          ],
-        ),
-      ));
-    }
-
-    // Saudi Arabia cities section
-    items.add(const DropdownMenuItem(
-      enabled: false,
-      value: null,
-      child: Padding(
-        padding: EdgeInsets.only(top: 8),
+    items.add(
+      const DropdownMenuItem(
+        enabled: false,
+        value: null,
         child: Text(
-          '🇸🇦 Saudi Arabia',
+          '🇧🇩 Bangladesh',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ),
-    ));
-    for (final city in AppConstants.saudiCities) {
-      items.add(DropdownMenuItem(
-        value: city,
-        child: Row(
-          children: [
-            const Icon(Icons.mosque, size: 15, color: Colors.white70),
-            const SizedBox(width: 6),
-            Text(city),
-          ],
+    );
+    for (final city in AppConstants.bangladeshCities) {
+      items.add(
+        DropdownMenuItem(
+          value: city,
+          child: Row(
+            children: [
+              const Icon(Icons.mosque, size: 15, color: Colors.white70),
+              const SizedBox(width: 6),
+              Text(city),
+            ],
+          ),
         ),
-      ));
+      );
+    }
+
+    // Saudi Arabia cities section
+    items.add(
+      const DropdownMenuItem(
+        enabled: false,
+        value: null,
+        child: Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            '🇸🇦 Saudi Arabia',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+        ),
+      ),
+    );
+    for (final city in AppConstants.saudiCities) {
+      items.add(
+        DropdownMenuItem(
+          value: city,
+          child: Row(
+            children: [
+              const Icon(Icons.mosque, size: 15, color: Colors.white70),
+              const SizedBox(width: 6),
+              Text(city),
+            ],
+          ),
+        ),
+      );
     }
 
     return items;
   }
 
   String _toHijriString(DateTime date) {
-    final offset =
-        _locationConfig?.country == Country.bangladesh
-            ? _bangladeshHijriOffsetDays
-            : 0;
+    final offset = _locationConfig?.country == Country.bangladesh
+        ? _bangladeshHijriOffsetDays
+        : 0;
 
-    return HijriDateConverter.formatHijriDate(
-      date,
-      dayOffset: offset,
-    );
+    return HijriDateConverter.formatHijriDate(date, dayOffset: offset);
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('EEE, d MMM, yyyy').format(selectedDate);
+    final localeCode = Localizations.localeOf(context).languageCode == 'en'
+        ? 'en'
+        : 'bn';
+    final dateStr = _localizedDigitsForContext(
+      context,
+      DateFormat('EEE, d MMM, yyyy', localeCode).format(selectedDate),
+    );
     final hijriStr = _toHijriString(selectedDate);
     final banglaDateStr = BanglaCalendar.fromGregorian(selectedDate);
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -1133,370 +1187,504 @@ class _HomeScreenState extends State<HomeScreen> {
                       vertical: 8.0,
                     ),
                     child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // ── Gradient Hero Header ──
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final maxCardWidth = constraints.maxWidth < 500
-                            ? constraints.maxWidth
-                            : 500.0;
-                        return Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: maxCardWidth),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppConstants.brandGreenDark,
-                                    AppConstants.brandGreen,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── Gradient Hero Header ──
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final maxCardWidth = constraints.maxWidth < 500
+                                ? constraints.maxWidth
+                                : 500.0;
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: maxCardWidth,
                                 ),
-                                borderRadius: const BorderRadius.vertical(
-                                  bottom: Radius.circular(24),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppConstants.brandGreenDark.withValues(alpha: 0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: constraints.maxWidth < 400
-                                      ? 12.0
-                                      : 16.0,
-                                  vertical: 16.0,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // ── LEFT SIDE: Countdown ring ──
-                                    PrayerCountdownWidget(
-                                      prayerTimes: times,
-                                      selectedDate: selectedDate,
-                                      coordinates: _coords,
-                                      calculationParams: params,
-                                      textStyle: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                      specialTextStyle: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        AppConstants.brandGreenDark,
+                                        AppConstants.brandGreen,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    const SizedBox(width: 28),
-                                    // ── RIGHT SIDE: Info stack ──
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          // Location selector
-                                          if (_locationConfig == null ||
-                                              _locationConfig!.jamaatSource != JamaatSource.none)
-                                            DropdownButton<String>(
-                                              isExpanded: true,
-                                              value: selectedCity,
-                                              items: _buildCityDropdownItems(),
-                                              dropdownColor: AppConstants.brandGreenDark,
-                                              style: const TextStyle(color: Colors.white, fontSize: 13),
-                                              iconEnabledColor: Colors.white70,
-                                              underline: Container(height: 1, color: Colors.white38),
-                                              isDense: true,
-                                              padding: EdgeInsets.zero,
-                                              onChanged: (value) async {
-                                                if (value == null || value == selectedCity) {
-                                                  return;
-                                                }
-
-                                                setState(() {
-                                                  selectedCity = value;
-                                                });
-
-                                                final prefs = await SharedPreferences.getInstance();
-                                                await prefs.setBool('is_gps_mode', false);
-                                                await prefs.setString('selected_city', value);
-
-                                                _locationConfig = _locationConfigService.getConfigForCity(value);
-                                                _locationConfigService.setCurrentConfig(_locationConfig!);
-                                                _notificationService.setLocationConfig(_locationConfig!);
-
-                                                params = PrayerTimeEngine.instance.getCalculationParametersForConfig(_locationConfig!);
-
-                                                if (_locationConfig!.country == Country.bangladesh) {
-                                                  final madhab = await _settingsService.getMadhab();
-                                                  params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-                                                }
-
-                                                _notificationsScheduled = false;
-
-                                                _coords = Coordinates(
-                                                  _locationConfig!.latitude,
-                                                  _locationConfig!.longitude,
-                                                );
-
-                                                _updatePrayerTimes();
-
-                                                if (_locationConfig!.jamaatSource == JamaatSource.server) {
-                                                  await _fetchJamaatTimes(value);
-                                                } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
-                                                  _calculateLocalJamaatTimes();
-                                                }
-                                              },
-                                            ),
-                                          if (_locationConfig != null &&
-                                              _locationConfig!.jamaatSource == JamaatSource.none)
-                                            Text(
-                                              currentPlaceName ??
-                                                  _tr(context, 'সনাক্ত করা হচ্ছে...', 'Detecting...'),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                fontSize: 13,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          const SizedBox(height: 6),
-                                          // Clock row
-                                          Row(
+                                    borderRadius: const BorderRadius.vertical(
+                                      bottom: Radius.circular(24),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppConstants.brandGreenDark
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: constraints.maxWidth < 400
+                                          ? 12.0
+                                          : 16.0,
+                                      vertical: 16.0,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        // ── LEFT SIDE: Countdown ring ──
+                                        PrayerCountdownWidget(
+                                          prayerTimes: times,
+                                          selectedDate: selectedDate,
+                                          coordinates: _coords,
+                                          calculationParams: params,
+                                          textStyle: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                          specialTextStyle: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 28),
+                                        // ── RIGHT SIDE: Info stack ──
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              const Icon(
-                                                Icons.access_time,
-                                                size: 16,
-                                                color: Colors.white70,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              LiveClockWidget(
-                                                textStyle: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                  fontSize: 15,
+                                              // Location selector
+                                              if (_locationConfig == null ||
+                                                  _locationConfig!
+                                                          .jamaatSource !=
+                                                      JamaatSource.none)
+                                                DropdownButton<String>(
+                                                  isExpanded: true,
+                                                  value: selectedCity,
+                                                  items:
+                                                      _buildCityDropdownItems(),
+                                                  dropdownColor: AppConstants
+                                                      .brandGreenDark,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 13,
+                                                  ),
+                                                  iconEnabledColor:
+                                                      Colors.white70,
+                                                  underline: Container(
+                                                    height: 1,
+                                                    color: Colors.white38,
+                                                  ),
+                                                  isDense: true,
+                                                  padding: EdgeInsets.zero,
+                                                  onChanged: (value) async {
+                                                    if (value == null ||
+                                                        value == selectedCity) {
+                                                      return;
+                                                    }
+
+                                                    setState(() {
+                                                      selectedCity = value;
+                                                    });
+
+                                                    final prefs =
+                                                        await SharedPreferences.getInstance();
+                                                    await prefs.setBool(
+                                                      'is_gps_mode',
+                                                      false,
+                                                    );
+                                                    await prefs.setString(
+                                                      'selected_city',
+                                                      value,
+                                                    );
+
+                                                    _locationConfig =
+                                                        _locationConfigService
+                                                            .getConfigForCity(
+                                                              value,
+                                                            );
+                                                    _locationConfigService
+                                                        .setCurrentConfig(
+                                                          _locationConfig!,
+                                                        );
+                                                    _notificationService
+                                                        .setLocationConfig(
+                                                          _locationConfig!,
+                                                        );
+
+                                                    params = PrayerTimeEngine
+                                                        .instance
+                                                        .getCalculationParametersForConfig(
+                                                          _locationConfig!,
+                                                        );
+
+                                                    if (_locationConfig!
+                                                            .country ==
+                                                        Country.bangladesh) {
+                                                      final madhab =
+                                                          await _settingsService
+                                                              .getMadhab();
+                                                      params!.madhab =
+                                                          madhab == 'hanafi'
+                                                          ? Madhab.hanafi
+                                                          : Madhab.shafi;
+                                                    }
+
+                                                    _notificationsScheduled =
+                                                        false;
+
+                                                    _coords = Coordinates(
+                                                      _locationConfig!.latitude,
+                                                      _locationConfig!
+                                                          .longitude,
+                                                    );
+
+                                                    _updatePrayerTimes();
+
+                                                    if (_locationConfig!
+                                                            .jamaatSource ==
+                                                        JamaatSource.server) {
+                                                      await _fetchJamaatTimes(
+                                                        value,
+                                                      );
+                                                    } else if (_locationConfig!
+                                                            .jamaatSource ==
+                                                        JamaatSource
+                                                            .localOffset) {
+                                                      _calculateLocalJamaatTimes();
+                                                    }
+                                                  },
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          // Date strings
-                                          Text(
-                                            dateStr,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                          Text(
-                                            hijriStr,
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            banglaDateStr,
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.7),
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          // GPS location row
-                                          GestureDetector(
-                                            onTap: _fetchUserLocation,
-                                            child: Row(
-                                              children: [
-                                                const Icon(Icons.my_location, size: 16, color: Colors.white70),
-                                                const SizedBox(width: 4),
-                                                Expanded(
-                                                  child: currentPlaceName != null
-                                                      ? Text(
-                                                          currentPlaceName!,
-                                                          style: const TextStyle(
-                                                            color: Colors.white70,
-                                                            fontSize: 12,
-                                                          ),
-                                                          overflow: TextOverflow.ellipsis,
-                                                        )
-                                                      : isFetchingPlaceName
-                                                      ? const SizedBox(
-                                                          height: 14,
-                                                          width: 14,
-                                                          child: CircularProgressIndicator(
-                                                            strokeWidth: 2,
-                                                            color: Colors.white70,
-                                                          ),
-                                                        )
-                                                      : const SizedBox.shrink(),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          // Jamaat times status (conditional)
-                                          if (isLoadingJamaat)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 4),
-                                              child: Row(
-                                                children: [
-                                                  const SizedBox(
-                                                    width: 14,
-                                                    height: 14,
-                                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Flexible(
-                                                    child: Text(
-                                                      _tr(context, 'জামাত সময় লোড হচ্ছে...', 'Loading jamaat times...'),
-                                                      style: const TextStyle(fontSize: 11, color: Colors.white60),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          if (jamaatError != null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 4),
-                                              child: Row(
-                                                children: [
-                                                  const Icon(Icons.error, size: 14, color: Colors.orangeAccent),
-                                                  const SizedBox(width: 6),
-                                                  Expanded(
-                                                    child: Text(
-                                                      jamaatError!,
-                                                      style: const TextStyle(fontSize: 11, color: Colors.orangeAccent),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          if (_locationConfig != null &&
-                                              _locationConfig!.jamaatSource == JamaatSource.none &&
-                                              !isLoadingJamaat &&
-                                              jamaatError == null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 4),
-                                              child: Row(
-                                                children: [
-                                                  const Icon(Icons.info_outline, size: 14, color: Colors.white70),
-                                                  const SizedBox(width: 6),
-                                                  Flexible(
-                                                    child: Text(
+                                              if (_locationConfig != null &&
+                                                  _locationConfig!
+                                                          .jamaatSource ==
+                                                      JamaatSource.none)
+                                                Text(
+                                                  currentPlaceName ??
                                                       _tr(
                                                         context,
-                                                        'GPS মোড: জামাত সময় নেই',
-                                                        'GPS Mode: No jamaat times',
+                                                        'সনাক্ত করা হচ্ছে...',
+                                                        'Detecting...',
                                                       ),
-                                                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              const SizedBox(height: 6),
+                                              // Clock row
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.access_time,
+                                                    size: 16,
+                                                    color: Colors.white70,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  LiveClockWidget(
+                                                    textStyle: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.white,
+                                                      fontSize: 15,
                                                     ),
                                                   ),
                                                 ],
                                               ),
-                                            ),
-                                        ],
-                                      ),
+                                              const SizedBox(height: 4),
+                                              // Date strings
+                                              Text(
+                                                dateStr,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              Text(
+                                                hijriStr,
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                banglaDateStr,
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.7),
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              // GPS location row
+                                              GestureDetector(
+                                                onTap: _fetchUserLocation,
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.my_location,
+                                                      size: 16,
+                                                      color: Colors.white70,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                      child:
+                                                          currentPlaceName !=
+                                                              null
+                                                          ? Text(
+                                                              currentPlaceName!,
+                                                              style:
+                                                                  const TextStyle(
+                                                                    color: Colors
+                                                                        .white70,
+                                                                    fontSize:
+                                                                        12,
+                                                                  ),
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            )
+                                                          : isFetchingPlaceName
+                                                          ? const SizedBox(
+                                                              height: 14,
+                                                              width: 14,
+                                                              child:
+                                                                  CircularProgressIndicator(
+                                                                    strokeWidth:
+                                                                        2,
+                                                                    color: Colors
+                                                                        .white70,
+                                                                  ),
+                                                            )
+                                                          : const SizedBox.shrink(),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              // Jamaat times status (conditional)
+                                              if (isLoadingJamaat)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 4,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      const SizedBox(
+                                                        width: 14,
+                                                        height: 14,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              color: Colors
+                                                                  .white70,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Flexible(
+                                                        child: Text(
+                                                          _tr(
+                                                            context,
+                                                            'জামাত সময় লোড হচ্ছে...',
+                                                            'Loading jamaat times...',
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 11,
+                                                                color: Colors
+                                                                    .white60,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              if (jamaatError != null)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 4,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.error,
+                                                        size: 14,
+                                                        color:
+                                                            Colors.orangeAccent,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Expanded(
+                                                        child: Text(
+                                                          jamaatError!,
+                                                          style: const TextStyle(
+                                                            fontSize: 11,
+                                                            color: Colors
+                                                                .orangeAccent,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              if (_locationConfig != null &&
+                                                  _locationConfig!
+                                                          .jamaatSource ==
+                                                      JamaatSource.none &&
+                                                  !isLoadingJamaat &&
+                                                  jamaatError == null)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 4,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.info_outline,
+                                                        size: 14,
+                                                        color: Colors.white70,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Flexible(
+                                                        child: Text(
+                                                          _tr(
+                                                            context,
+                                                            'GPS মোড: জামাত সময় নেই',
+                                                            'GPS Mode: No jamaat times',
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 11,
+                                                                color: Colors
+                                                                    .white70,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // ── Prayer Times Section ──
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      decoration: BoxDecoration(
-                        color: prayerBandColor,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: prayerBandBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              SectionHeader(
-                                title: _tr(context, 'নামাজের সময়', 'Prayer Times'),
-                              ),
-                              if (_lastJamaatUpdate != null && !isLoadingJamaat)
-                                Text(
-                                  '${_tr(context, 'সর্বশেষ আপডেট', 'Last updated')}: ${_localizedDigitsForContext(context, DateFormat('HH:mm').format(_lastJamaatUpdate!))}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // ── Prayer Times Section ──
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                          decoration: BoxDecoration(
+                            color: prayerBandColor,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: prayerBandBorder),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SectionHeader(
+                                    title: _tr(
+                                      context,
+                                      'নামাজের সময়',
+                                      'Prayer Times',
+                                    ),
+                                  ),
+                                  if (_lastJamaatUpdate != null &&
+                                      !isLoadingJamaat)
+                                    Text(
+                                      '${_tr(context, 'সর্বশেষ আপডেট', 'Last updated')}: ${_localizedDigitsForContext(context, DateFormat('HH:mm').format(_lastJamaatUpdate!))}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (isLoadingJamaat)
+                                const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              if (jamaatError != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Text(
+                                    jamaatError!,
+                                    style: const TextStyle(
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ),
+                              // Card-based prayer rows
+                              ..._prayerTableData.map(
+                                (row) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: _buildPrayerCard(row, context),
+                                ),
+                              ),
                             ],
                           ),
-                          if (isLoadingJamaat)
-                            const Center(child: CircularProgressIndicator()),
-                          if (jamaatError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Text(
-                                jamaatError!,
-                                style: const TextStyle(color: Colors.orange),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // ── Sahri & Iftar Times Section ──
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                          decoration: BoxDecoration(
+                            color: sahriBandColor,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: sahriBandBorder),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SectionHeader(
+                                title: _tr(
+                                  context,
+                                  'সাহরি ও ইফতার সময়',
+                                  'Sahri & Iftar Times',
+                                ),
                               ),
-                            ),
-                          // Card-based prayer rows
-                          ..._prayerTableData.map((row) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: _buildPrayerCard(row, context),
-                          )),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // ── Sahri & Iftar Times Section ──
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      decoration: BoxDecoration(
-                        color: sahriBandColor,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: sahriBandBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SectionHeader(
-                            title: _tr(context, 'সাহরি ও ইফতার সময়', 'Sahri & Iftar Times'),
+                              SahriIftarWidget(
+                                fajrTime: times['Fajr'],
+                                maghribTime: times['Maghrib'],
+                                showTitle: false,
+                              ),
+                            ],
                           ),
-                          SahriIftarWidget(
-                            fajrTime: times['Fajr'],
-                            maghribTime: times['Maghrib'],
-                            showTitle: false,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                        ),
+                        const SizedBox(height: 12),
 
-                    // ── Forbidden Prayer Times Section ──
-                    ForbiddenTimesWidget(
-                      prayerTimes: prayerTimes,
+                        // ── Forbidden Prayer Times Section ──
+                        ForbiddenTimesWidget(prayerTimes: prayerTimes),
+                      ],
                     ),
-                    ],
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 }
