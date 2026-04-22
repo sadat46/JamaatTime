@@ -316,8 +316,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="2dp"
-            android:paddingStart="24dp">
+            android:layout_marginTop="2dp">
             <ImageView
                 android:layout_width="15dp"
                 android:layout_height="15dp"
@@ -336,13 +335,12 @@
                 android:textSize="13sp"
                 android:maxLines="1"
                 android:ellipsize="end"/>
-
             <ImageView
                 android:id="@+id/refresh_button"
-                android:layout_width="28dp"
-                android:layout_height="40dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:layout_marginStart="8dp"
-                android:padding="5dp"
+                android:padding="4dp"
                 android:src="@android:drawable/ic_popup_sync"
                 android:tint="#111111"
                 android:contentDescription="Refresh"
