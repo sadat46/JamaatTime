@@ -45,7 +45,7 @@ void main() {
         );
 
         expect(data.prayerName, 'Fajr');
-        expect(data.remainingLabel, 'Fajr Time Remaining');
+        expect(data.remainingLabel, 'Prayer ends in');
         expect(
           data.nextPrayerEpochMillis,
           DateTime(2026, 4, 13, 6, 15).millisecondsSinceEpoch,
@@ -57,26 +57,29 @@ void main() {
       },
     );
 
-    test('between Sunrise and Dhuhr: shows Sunrise and Coming Dhuhr', () {
-      final data = WidgetService.computeWidgetPreviewData(
-        times: buildTimes(),
-        locale: const Locale('en'),
-        now: DateTime(2026, 4, 13, 6, 30),
-        timeFormat: DateFormat('HH:mm'),
-      );
+    test(
+      'between Sunrise and Dhuhr: shows Sunrise and next prayer countdown',
+      () {
+        final data = WidgetService.computeWidgetPreviewData(
+          times: buildTimes(),
+          locale: const Locale('en'),
+          now: DateTime(2026, 4, 13, 6, 30),
+          timeFormat: DateFormat('HH:mm'),
+        );
 
-      expect(data.prayerName, 'Sunrise');
-      expect(data.prayerTime, '06:15');
-      expect(data.remainingLabel, 'Coming Dhuhr');
-      expect(
-        data.nextPrayerEpochMillis,
-        DateTime(2026, 4, 13, 12, 10).millisecondsSinceEpoch,
-      );
-      expect(data.countdownRunning, isTrue);
+        expect(data.prayerName, 'Sunrise');
+        expect(data.prayerTime, '06:15');
+        expect(data.remainingLabel, 'Dhuhr in');
+        expect(
+          data.nextPrayerEpochMillis,
+          DateTime(2026, 4, 13, 12, 10).millisecondsSinceEpoch,
+        );
+        expect(data.countdownRunning, isTrue);
 
-      // Sunrise is not a row item; row remains main-prayer-only.
-      expect(data.rowLabels, ['Dhuhr', 'Asr', 'Maghrib', 'Isha']);
-    });
+        // Sunrise is not a row item; row remains main-prayer-only.
+        expect(data.rowLabels, ['Dhuhr', 'Asr', 'Maghrib', 'Isha']);
+      },
+    );
 
     test('bangla locale localizes prayer and row time digits', () {
       final data = WidgetService.computeWidgetPreviewData(
@@ -92,7 +95,7 @@ void main() {
       expect(data.rowTimes[1], BanglaCalendar.toBanglaDigits('15:40'));
     });
 
-    test('active jamaat countdown uses current main prayer label', () {
+    test('before jamaat: shows jamaat in countdown', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
         locale: const Locale('en'),
@@ -101,15 +104,49 @@ void main() {
         jamaatTimes: buildJamaatTimes(),
       );
 
-      expect(data.jamaatLabel, 'Fajr Jamaat in');
+      expect(data.jamaatLabel, 'Jamaat in');
+      expect(data.jamaatValueText, '');
       expect(data.jamaatCountdownRunning, isTrue);
+      expect(data.jamaatTextUsesTimeStyle, isFalse);
       expect(
         data.jamaatEpochMillis,
         DateTime(2026, 4, 13, 5, 20).millisecondsSinceEpoch,
       );
     });
 
-    test('sunrise period shows next jamaat countdown (Dhuhr)', () {
+    test('during jamaat: shows jamaat ongoing without countdown', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        locale: const Locale('en'),
+        now: DateTime(2026, 4, 13, 5, 25),
+        timeFormat: DateFormat('HH:mm'),
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(data.jamaatLabel, 'Jamaat');
+      expect(data.jamaatValueText, 'ongoing');
+      expect(data.jamaatCountdownRunning, isFalse);
+      expect(data.jamaatTextUsesTimeStyle, isTrue);
+      expect(data.jamaatEpochMillis, 0);
+    });
+
+    test('after jamaat: shows jamaat ended', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        locale: const Locale('en'),
+        now: DateTime(2026, 4, 13, 5, 31),
+        timeFormat: DateFormat('HH:mm'),
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(data.jamaatLabel, 'Jamaat');
+      expect(data.jamaatValueText, 'ended');
+      expect(data.jamaatCountdownRunning, isFalse);
+      expect(data.jamaatTextUsesTimeStyle, isTrue);
+      expect(data.jamaatEpochMillis, 0);
+    });
+
+    test('sunrise period shows next jamaat static time line', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),
         locale: const Locale('en'),
@@ -119,12 +156,11 @@ void main() {
       );
 
       expect(data.prayerName, 'Sunrise');
-      expect(data.jamaatLabel, 'Dhuhr Jamaat in');
-      expect(data.jamaatCountdownRunning, isTrue);
-      expect(
-        data.jamaatEpochMillis,
-        DateTime(2026, 4, 13, 12, 25).millisecondsSinceEpoch,
-      );
+      expect(data.jamaatLabel, 'Dhuhr Jamaat at 12:25');
+      expect(data.jamaatValueText, '');
+      expect(data.jamaatCountdownRunning, isFalse);
+      expect(data.jamaatTextUsesTimeStyle, isFalse);
+      expect(data.jamaatEpochMillis, 0);
     });
 
     test('missing jamaat data shows N/A state', () {
@@ -136,7 +172,9 @@ void main() {
       );
 
       expect(data.jamaatLabel, 'Jamaat N/A');
+      expect(data.jamaatValueText, '');
       expect(data.jamaatCountdownRunning, isFalse);
+      expect(data.jamaatTextUsesTimeStyle, isFalse);
       expect(data.jamaatEpochMillis, 0);
     });
 
@@ -151,12 +189,45 @@ void main() {
       );
 
       expect(data.prayerName, 'Isha');
-      expect(data.remainingLabel, 'Isha Time Remaining');
+      expect(data.remainingLabel, 'Prayer ends in');
       expect(data.nextPrayerEpochMillis, tomorrowFajr.millisecondsSinceEpoch);
       expect(data.countdownRunning, isTrue);
       expect(data.rowLabels, ['Fajr', 'Dhuhr', 'Asr', 'Maghrib']);
       expect(data.rowTimes, ['05:00', '12:10', '15:40', '18:20']);
     });
+
+    test(
+      'after midnight before Fajr keeps Isha state text and no jamaat countdown',
+      () {
+        final data = WidgetService.computeWidgetPreviewData(
+          times: {
+            'Fajr': DateTime(2026, 4, 14, 5, 0),
+            'Sunrise': DateTime(2026, 4, 14, 6, 15),
+            'Dhuhr': DateTime(2026, 4, 14, 12, 10),
+            'Asr': DateTime(2026, 4, 14, 15, 40),
+            'Maghrib': DateTime(2026, 4, 14, 18, 20),
+            'Isha': DateTime(2026, 4, 14, 19, 45),
+          },
+          locale: const Locale('en'),
+          now: DateTime(2026, 4, 14, 0, 30),
+          timeFormat: DateFormat('HH:mm'),
+          jamaatTimes: buildJamaatTimes(),
+        );
+
+        expect(data.prayerName, 'Isha');
+        expect(data.remainingLabel, 'Prayer ends in');
+        expect(
+          data.nextPrayerEpochMillis,
+          DateTime(2026, 4, 14, 5, 0).millisecondsSinceEpoch,
+        );
+        expect(data.countdownRunning, isTrue);
+        expect(data.jamaatLabel, 'Jamaat');
+        expect(data.jamaatValueText, 'ended');
+        expect(data.jamaatCountdownRunning, isFalse);
+        expect(data.jamaatTextUsesTimeStyle, isTrue);
+        expect(data.jamaatEpochMillis, 0);
+      },
+    );
 
     test('after Isha with missing tomorrow Fajr: countdown stops safely', () {
       final data = WidgetService.computeWidgetPreviewData(
