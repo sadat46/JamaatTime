@@ -14,19 +14,18 @@ import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
 
-import java.util.Locale;
+import java.util.Calendar;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
     private static final int ALARM_REQUEST_CODE = 2;
     private static final int SELF_HEAL_REQUEST_CODE = 3;
-    private static final int TICK_REQUEST_CODE = 4;
     private static final String HOME_WIDGET_BACKGROUND_ACTION =
         "es.antonborri.home_widget.action.BACKGROUND";
     private static final String HOME_WIDGET_BACKGROUND_RECEIVER =
         "es.antonborri.home_widget.HomeWidgetBackgroundReceiver";
     private static final String BOUNDARY_URI = "homewidget://boundary";
-    private static final String TICK_ACTION = "com.sadat.jamaattime.action.WIDGET_TICK";
+    private static final String REFRESH_URI = "homewidget://refresh";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -36,11 +35,13 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String prayerName = prefs.getString("prayer_name", "-");
             String prayerTime = prefs.getString("prayer_time", "-");
             String remainingLabel = prefs.getString("remaining_label", "Remaining Time");
-            long nextEpoch = prefs.getLong("next_prayer_epoch_millis", 0L);
+            long nextEpoch = readEpochMillis(prefs, "next_prayer_epoch_millis");
             boolean running = prefs.getBoolean("countdown_running", false);
             String jamaatLabel = prefs.getString("jamaat_label", "Jamaat N/A");
-            long jamaatEpoch = prefs.getLong("jamaat_epoch_millis", 0L);
+            String jamaatValueText = prefs.getString("jamaat_value_text", "");
+            long jamaatEpoch = readEpochMillis(prefs, "jamaat_epoch_millis");
             boolean jamaatRunning = prefs.getBoolean("jamaat_countdown_running", false);
+            boolean jamaatTimeStyle = prefs.getBoolean("jamaat_time_style", false);
             // 4 dynamic prayer row slots (current prayer excluded by Flutter side)
             String rowLabel1 = prefs.getString("row_label_1", "-");
             String rowTime1 = prefs.getString("row_time_1", "-");
@@ -52,11 +53,12 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String rowTime4 = prefs.getString("row_time_4", "-");
             String islamicDate = prefs.getString("islamic_date", "-");
             String location = prefs.getString("location", "-");
-            String localeCode = prefs.getString("locale_code", "en");
-            boolean isBangla = "bn".equalsIgnoreCase(localeCode);
 
             Log.d(TAG, "Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
             long nowMillis = System.currentTimeMillis();
+            boolean prayerStale = running && nextEpoch > 0L && nextEpoch <= nowMillis;
+            boolean jamaatStale = jamaatRunning && jamaatEpoch > 0L && jamaatEpoch <= nowMillis;
+            boolean needsSelfHeal = prayerStale || jamaatStale;
 
             for (int appWidgetId : appWidgetIds) {
                 RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.prayer_widget);
@@ -66,36 +68,30 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 views.setTextViewText(R.id.jamaat_label, jamaatLabel);
 
                 if (running && nextEpoch > nowMillis) {
-                    if (isBangla) {
-                        views.setChronometer(R.id.remaining_time, 0, null, false);
-                        views.setTextViewText(
-                            R.id.remaining_time,
-                            formatBanglaCountdown(nextEpoch, nowMillis)
-                        );
-                    } else {
-                        long base = SystemClock.elapsedRealtime() + (nextEpoch - nowMillis);
-                        views.setChronometerCountDown(R.id.remaining_time, true);
-                        views.setChronometer(R.id.remaining_time, base, null, true);
-                    }
+                    long base = SystemClock.elapsedRealtime() + (nextEpoch - nowMillis);
+                    views.setChronometerCountDown(R.id.remaining_time, true);
+                    views.setChronometer(R.id.remaining_time, base, null, true);
                 } else {
                     views.setChronometer(R.id.remaining_time, 0, null, false);
                     views.setTextViewText(R.id.remaining_time, "-");
                 }
 
                 if (jamaatRunning && jamaatEpoch > nowMillis) {
+                    views.setViewVisibility(R.id.jamaat_label, View.VISIBLE);
                     views.setViewVisibility(R.id.jamaat_time, View.VISIBLE);
-                    if (isBangla) {
-                        views.setChronometer(R.id.jamaat_time, 0, null, false);
-                        views.setTextViewText(
-                            R.id.jamaat_time,
-                            formatBanglaCountdown(jamaatEpoch, nowMillis)
-                        );
-                    } else {
-                        long jamaatBase = SystemClock.elapsedRealtime() + (jamaatEpoch - nowMillis);
-                        views.setChronometerCountDown(R.id.jamaat_time, true);
-                        views.setChronometer(R.id.jamaat_time, jamaatBase, null, true);
-                    }
+                    long jamaatBase = SystemClock.elapsedRealtime() + (jamaatEpoch - nowMillis);
+                    views.setChronometerCountDown(R.id.jamaat_time, true);
+                    views.setChronometer(R.id.jamaat_time, jamaatBase, null, true);
+                } else if (jamaatTimeStyle) {
+                    views.setViewVisibility(R.id.jamaat_label, View.VISIBLE);
+                    views.setViewVisibility(R.id.jamaat_time, View.VISIBLE);
+                    views.setChronometer(R.id.jamaat_time, 0, null, false);
+                    String tealValue = (jamaatValueText != null && !jamaatValueText.isEmpty())
+                        ? jamaatValueText
+                        : jamaatLabel;
+                    views.setTextViewText(R.id.jamaat_time, tealValue);
                 } else {
+                    views.setViewVisibility(R.id.jamaat_label, View.VISIBLE);
                     views.setViewVisibility(R.id.jamaat_time, View.GONE);
                     views.setChronometer(R.id.jamaat_time, 0, null, false);
                     views.setTextViewText(R.id.jamaat_time, "-");
@@ -126,7 +122,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 Intent refreshIntent = new Intent("es.antonborri.home_widget.action.BACKGROUND");
                 refreshIntent.setComponent(new ComponentName(
                     context, "es.antonborri.home_widget.HomeWidgetBackgroundReceiver"));
-                refreshIntent.setData(Uri.parse("homewidget://refresh"));
+                refreshIntent.setData(Uri.parse(REFRESH_URI));
                 PendingIntent refreshPendingIntent = PendingIntent.getBroadcast(
                     context, 1, refreshIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -135,25 +131,42 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 appWidgetManager.updateAppWidget(appWidgetId, views);
             }
 
+            if (needsSelfHeal) {
+                // Self-heal stale epochs first so Dart can rewrite current/next periods,
+                // then continue normal boundary scheduling below.
+                triggerDartRefresh(context);
+            }
             long nextBoundaryEpoch = getNextBoundaryEpoch(
                 nowMillis, running, nextEpoch, jamaatRunning, jamaatEpoch);
             if (nextBoundaryEpoch > 0L) {
                 scheduleBoundaryAlarm(context, nextBoundaryEpoch);
-            } else if ((running && nextEpoch > 0L && nextEpoch <= nowMillis)
-                    || (jamaatRunning && jamaatEpoch > 0L && jamaatEpoch <= nowMillis)) {
-                // Self-heal: prefs say countdown is running but next-epoch is in the past.
-                // Trigger Dart background callback to recompute fresh prayer data.
-                triggerDartRefresh(context);
-            }
-
-            if (isBangla && ((running && nextEpoch > nowMillis) || (jamaatRunning && jamaatEpoch > nowMillis))) {
-                scheduleTickAlarm(context, nowMillis);
-            } else {
-                cancelTickAlarm(context);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error updating widget", e);
         }
+    }
+
+    private long readEpochMillis(SharedPreferences prefs, String key) {
+        Object raw = prefs.getAll().get(key);
+        if (raw == null) {
+            return 0L;
+        }
+        if (raw instanceof Long) {
+            return (Long) raw;
+        }
+        if (raw instanceof Integer) {
+            return ((Integer) raw).longValue();
+        }
+        if (raw instanceof String) {
+            try {
+                return Long.parseLong((String) raw);
+            } catch (NumberFormatException e) {
+                Log.w(TAG, "Invalid epoch string for key " + key + ": " + raw);
+                return 0L;
+            }
+        }
+        Log.w(TAG, "Unsupported epoch type for key " + key + ": " + raw.getClass().getSimpleName());
+        return 0L;
     }
 
     private PendingIntent buildBoundaryPendingIntent(Context context) {
@@ -162,13 +175,6 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             .setData(Uri.parse(BOUNDARY_URI));
         return PendingIntent.getBroadcast(
             context, ALARM_REQUEST_CODE, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private PendingIntent buildTickPendingIntent(Context context) {
-        Intent intent = new Intent(context, PrayerWidgetProvider.class).setAction(TICK_ACTION);
-        return PendingIntent.getBroadcast(
-            context, TICK_REQUEST_CODE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
@@ -182,11 +188,12 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
             Log.d(TAG, "Boundary alarm scheduled for " + fireAt);
         } catch (SecurityException e) {
-            // Inexact fallback if exact-alarm permission was revoked at runtime (API 31+)
-            Log.w(TAG, "Exact alarm denied, falling back to inexact", e);
+            // Fallback if exact-alarm permission was revoked at runtime (API 31+).
+            // Keep allow-while-idle semantics for better boundary reliability.
+            Log.w(TAG, "Exact alarm denied, falling back to allow-while-idle", e);
             AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
             if (am == null) return;
-            am.set(AlarmManager.RTC_WAKEUP, fireAt, pi);
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
         }
     }
 
@@ -203,24 +210,6 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         } catch (PendingIntent.CanceledException e) {
             Log.w(TAG, "Self-heal pending intent cancelled", e);
         }
-    }
-
-    private void scheduleTickAlarm(Context context, long nowMillis) {
-        long nextMinute = ((nowMillis / 60000L) + 1L) * 60000L;
-        PendingIntent pi = buildTickPendingIntent(context);
-        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (am == null) return;
-        try {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMinute, pi);
-        } catch (SecurityException e) {
-            am.set(AlarmManager.RTC_WAKEUP, nextMinute, pi);
-        }
-    }
-
-    private void cancelTickAlarm(Context context) {
-        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (am == null) return;
-        am.cancel(buildTickPendingIntent(context));
     }
 
     private void cancelBoundaryAlarm(Context context) {
@@ -243,7 +232,40 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         if (jamaatRunning && jamaatEpoch > nowMillis) {
             nextBoundary = (nextBoundary == 0L) ? jamaatEpoch : Math.min(nextBoundary, jamaatEpoch);
         }
+        long nextMidnight = getNextMidnightEpoch(nowMillis);
+        if (nextMidnight > nowMillis) {
+            nextBoundary = (nextBoundary == 0L) ? nextMidnight : Math.min(nextBoundary, nextMidnight);
+        }
         return nextBoundary;
+    }
+
+    private long getNextMidnightEpoch(long nowMillis) {
+        Calendar midnight = Calendar.getInstance();
+        midnight.setTimeInMillis(nowMillis);
+        midnight.add(Calendar.DAY_OF_MONTH, 1);
+        midnight.set(Calendar.HOUR_OF_DAY, 0);
+        midnight.set(Calendar.MINUTE, 0);
+        midnight.set(Calendar.SECOND, 0);
+        midnight.set(Calendar.MILLISECOND, 0);
+        return midnight.getTimeInMillis();
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (intent == null) return;
+        String action = intent.getAction();
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action)
+                || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            Log.d(TAG, "System broadcast received: " + action + ", requesting widget refresh");
+            triggerDartRefresh(context);
+            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+            int[] widgetIds = appWidgetManager.getAppWidgetIds(
+                new ComponentName(context, PrayerWidgetProvider.class));
+            if (widgetIds != null && widgetIds.length > 0) {
+                onUpdate(context, appWidgetManager, widgetIds);
+            }
+        }
     }
 
     @Override
@@ -256,45 +278,6 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     public void onDisabled(Context context) {
         super.onDisabled(context);
         cancelBoundaryAlarm(context);
-        cancelTickAlarm(context);
         Log.d(TAG, "Widget disabled");
-    }
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        super.onReceive(context, intent);
-        if (intent == null) return;
-        if (TICK_ACTION.equals(intent.getAction())) {
-            AppWidgetManager manager = AppWidgetManager.getInstance(context);
-            int[] ids = manager.getAppWidgetIds(
-                new ComponentName(context, PrayerWidgetProvider.class)
-            );
-            if (ids != null && ids.length > 0) {
-                onUpdate(context, manager, ids);
-            }
-        }
-    }
-
-    private String formatBanglaCountdown(long targetEpochMillis, long nowMillis) {
-        long diffMillis = targetEpochMillis - nowMillis;
-        if (diffMillis <= 0L) return "-";
-        long totalMinutes = diffMillis / 60000L;
-        long hours = totalMinutes / 60L;
-        long minutes = totalMinutes % 60L;
-        String latin = String.format(Locale.US, "%02d:%02d", hours, minutes);
-        return toBanglaDigits(latin);
-    }
-
-    private String toBanglaDigits(String text) {
-        StringBuilder builder = new StringBuilder(text.length());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c >= '0' && c <= '9') {
-                builder.append((char) ('\u09E6' + (c - '0')));
-            } else {
-                builder.append(c);
-            }
-        }
-        return builder.toString();
     }
 }
