@@ -39,13 +39,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widget_jamaatNA => 'Jamaat N/A';
 
   @override
-  String get widget_jamaatOver => 'Jamaat is Over';
+  String get widget_jamaatOver => 'Jamaat ended';
+
+  @override
+  String get widget_jamaatOngoing => 'Jamaat ongoing';
 
   @override
   String get widget_jamaatInSuffix => 'Jamaat in';
 
   @override
   String get widget_comingDhuhr => 'Coming Dhuhr';
+
+  @override
+  String get widget_prayerEndsIn => 'Prayer ends in';
+
+  @override
+  String widget_nextPrayerIn(String prayer) {
+    return '$prayer in';
+  }
+
+  @override
+  String widget_nextPrayerJamaatAt(String prayer, String time) {
+    return '$prayer Jamaat at $time';
+  }
 
   @override
   String widget_timeRemaining(String prayer) {

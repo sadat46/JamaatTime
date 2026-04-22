@@ -140,6 +140,7 @@ Future<void> backgroundCallback(Uri? uri) async {
 class WidgetService {
   static const String _androidWidgetName = 'PrayerWidgetProvider';
   static const _fmt = 'hh:mm a';
+  static const Duration _jamaatOngoingWindow = Duration(minutes: 10);
   static const Map<String, String> _bnLocationPhraseMap = {
     'GPS Location': 'জিপিএস অবস্থান',
     'Barishal Cantt': 'বরিশাল ক্যান্ট',
@@ -174,7 +175,7 @@ class WidgetService {
     required int hijriOffsetDays,
     DateTime? tomorrowFajr,
     Map<String, dynamic>? jamaatTimes,
-    }) async {
+  }) async {
     try {
       final now = DateTime.now();
       final localeCode = locale.languageCode.toLowerCase();
@@ -214,7 +215,10 @@ class WidgetService {
           'countdown_running',
           widgetData.countdownRunning,
         ),
-        HomeWidget.saveWidgetData<String>('jamaat_label', widgetData.jamaatLabel),
+        HomeWidget.saveWidgetData<String>(
+          'jamaat_label',
+          widgetData.jamaatLabel,
+        ),
         HomeWidget.saveWidgetData<int>(
           'jamaat_epoch_millis',
           widgetData.jamaatEpochMillis,
@@ -222,6 +226,14 @@ class WidgetService {
         HomeWidget.saveWidgetData<bool>(
           'jamaat_countdown_running',
           widgetData.jamaatCountdownRunning,
+        ),
+        HomeWidget.saveWidgetData<bool>(
+          'jamaat_time_style',
+          widgetData.jamaatTextUsesTimeStyle,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'jamaat_value_text',
+          widgetData.jamaatValueText,
         ),
         // 4 dynamic prayer row slots
         HomeWidget.saveWidgetData<String>(
@@ -244,10 +256,7 @@ class WidgetService {
           widgetData.rowLabels[3],
         ),
         HomeWidget.saveWidgetData<String>('row_time_4', widgetData.rowTimes[3]),
-        HomeWidget.saveWidgetData<String>(
-          'islamic_date',
-          islamicDate,
-        ),
+        HomeWidget.saveWidgetData<String>('islamic_date', islamicDate),
         HomeWidget.saveWidgetData<String>('location', localizedLocation),
         HomeWidget.saveWidgetData<String>('locale_code', localeCode),
       ]);
@@ -302,6 +311,7 @@ class WidgetService {
       times: times,
       now: now,
     );
+    final isSunriseState = currentPeriod == 'Sunrise';
     final currentPeriodTime = times[currentPeriod];
     final todayNextTime = times[nextPeriod];
 
@@ -332,16 +342,17 @@ class WidgetService {
         .map((name) => _formatPrayerTime(times[name], timeFormat, locale))
         .toList(growable: false);
 
-    final remainingLabel = currentPeriod == 'Sunrise'
-        ? strings.widget_comingDhuhr
-        : strings.widget_timeRemaining(_localizedPrayerName(locale, currentPeriod));
-    final jamaatPrayerName = currentPeriod == 'Sunrise'
-        ? 'Dhuhr'
-        : currentMainPrayer;
+    final remainingLabel = isSunriseState
+        ? strings.widget_nextPrayerIn(_localizedPrayerName(locale, nextPeriod))
+        : strings.widget_prayerEndsIn;
     final jamaatStatus = _computeJamaatWidgetState(
       now: now,
       locale: locale,
-      jamaatPrayerName: jamaatPrayerName,
+      timeFormat: timeFormat,
+      currentPeriod: currentPeriod,
+      currentMainPrayer: currentMainPrayer,
+      nextPeriod: nextPeriod,
+      times: times,
       jamaatTimes: jamaatTimes,
     );
 
@@ -352,8 +363,10 @@ class WidgetService {
       nextPrayerEpochMillis: nextEpochMillis,
       countdownRunning: countdownRunning,
       jamaatLabel: jamaatStatus.label,
+      jamaatValueText: jamaatStatus.valueText,
       jamaatEpochMillis: jamaatStatus.epochMillis,
       jamaatCountdownRunning: jamaatStatus.countdownRunning,
+      jamaatTextUsesTimeStyle: jamaatStatus.textUsesTimeStyle,
       rowLabels: rowLabels,
       rowTimes: rowTimes,
     );
@@ -379,7 +392,11 @@ class WidgetService {
     }
   }
 
-  static String _formatPrayerTime(DateTime? time, DateFormat fmt, Locale locale) {
+  static String _formatPrayerTime(
+    DateTime? time,
+    DateFormat fmt,
+    Locale locale,
+  ) {
     final pattern = fmt.pattern ?? _fmt;
     return PrayerTimeEngine.instance.formatDisplayTime(
       time,
@@ -414,39 +431,107 @@ class WidgetService {
   static _JamaatWidgetState _computeJamaatWidgetState({
     required DateTime now,
     required Locale locale,
-    required String jamaatPrayerName,
+    required DateFormat timeFormat,
+    required String currentPeriod,
+    required String currentMainPrayer,
+    required String nextPeriod,
+    required Map<String, DateTime?> times,
     required Map<String, dynamic>? jamaatTimes,
   }) {
-    if (jamaatTimes == null || jamaatTimes.isEmpty) {
-      return _JamaatWidgetState.na(locale);
+    if (currentPeriod == 'Sunrise') {
+      return _computeSunriseJamaatWidgetState(
+        now: now,
+        locale: locale,
+        timeFormat: timeFormat,
+        nextPeriod: nextPeriod,
+        jamaatTimes: jamaatTimes,
+      );
     }
 
-    final jamaatKey = PrayerAuxCalculator.instance.getJamaatTimeKey(
-      jamaatPrayerName,
-    );
-    final raw = jamaatTimes[jamaatKey];
-    if (raw == null || raw.toString().trim().isEmpty) {
-      return _JamaatWidgetState.na(locale);
+    final fajrTime = times['Fajr'];
+    final isOvernightIsha =
+        currentPeriod == 'Isha' && fajrTime != null && now.isBefore(fajrTime);
+    if (isOvernightIsha) {
+      return _JamaatWidgetState.over(locale);
     }
 
-    final normalized = PrayerAuxCalculator.instance.formatJamaatTime(
-      raw.toString(),
+    final jamaatTime = _resolveTodayJamaatTime(
+      now: now,
+      prayerName: currentMainPrayer,
+      jamaatTimes: jamaatTimes,
     );
-    final jamaatTime = _parseTodayJamaatTime(now, normalized);
     if (jamaatTime == null) {
       return _JamaatWidgetState.na(locale);
     }
 
     if (now.isBefore(jamaatTime)) {
       final strings = AppText.of(locale);
-      final prayerLabel = _localizedPrayerName(locale, jamaatPrayerName);
       return _JamaatWidgetState(
-        label: '$prayerLabel ${strings.widget_jamaatInSuffix}',
+        label: strings.widget_jamaatInSuffix,
+        valueText: '',
         epochMillis: jamaatTime.millisecondsSinceEpoch,
         countdownRunning: true,
+        textUsesTimeStyle: false,
       );
     }
+
+    if (now.isBefore(jamaatTime.add(_jamaatOngoingWindow))) {
+      return _JamaatWidgetState.ongoing(locale);
+    }
     return _JamaatWidgetState.over(locale);
+  }
+
+  static _JamaatWidgetState _computeSunriseJamaatWidgetState({
+    required DateTime now,
+    required Locale locale,
+    required DateFormat timeFormat,
+    required String nextPeriod,
+    required Map<String, dynamic>? jamaatTimes,
+  }) {
+    final sunriseNextPrayer =
+        PrayerTimeEngine.mainPrayerOrder.contains(nextPeriod)
+        ? nextPeriod
+        : 'Dhuhr';
+    final jamaatTime = _resolveTodayJamaatTime(
+      now: now,
+      prayerName: sunriseNextPrayer,
+      jamaatTimes: jamaatTimes,
+    );
+    if (jamaatTime == null) {
+      return _JamaatWidgetState.na(locale);
+    }
+
+    final strings = AppText.of(locale);
+    final prayerLabel = _localizedPrayerName(locale, sunriseNextPrayer);
+    final jamaatTimeLabel = _formatPrayerTime(jamaatTime, timeFormat, locale);
+    return _JamaatWidgetState(
+      label: strings.widget_nextPrayerJamaatAt(prayerLabel, jamaatTimeLabel),
+      valueText: '',
+      epochMillis: 0,
+      countdownRunning: false,
+      textUsesTimeStyle: false,
+    );
+  }
+
+  static DateTime? _resolveTodayJamaatTime({
+    required DateTime now,
+    required String prayerName,
+    required Map<String, dynamic>? jamaatTimes,
+  }) {
+    if (jamaatTimes == null || jamaatTimes.isEmpty) {
+      return null;
+    }
+
+    final jamaatKey = PrayerAuxCalculator.instance.getJamaatTimeKey(prayerName);
+    final raw = jamaatTimes[jamaatKey];
+    if (raw == null || raw.toString().trim().isEmpty) {
+      return null;
+    }
+
+    final normalized = PrayerAuxCalculator.instance.formatJamaatTime(
+      raw.toString(),
+    );
+    return _parseTodayJamaatTime(now, normalized);
   }
 
   static DateTime? _parseTodayJamaatTime(DateTime now, String hhmm) {
@@ -468,8 +553,10 @@ class WidgetPreviewData {
   final int nextPrayerEpochMillis;
   final bool countdownRunning;
   final String jamaatLabel;
+  final String jamaatValueText;
   final int jamaatEpochMillis;
   final bool jamaatCountdownRunning;
+  final bool jamaatTextUsesTimeStyle;
   final List<String> rowLabels;
   final List<String> rowTimes;
 
@@ -480,8 +567,10 @@ class WidgetPreviewData {
     required this.nextPrayerEpochMillis,
     required this.countdownRunning,
     required this.jamaatLabel,
+    required this.jamaatValueText,
     required this.jamaatEpochMillis,
     required this.jamaatCountdownRunning,
+    required this.jamaatTextUsesTimeStyle,
     required this.rowLabels,
     required this.rowTimes,
   });
@@ -490,30 +579,85 @@ class WidgetPreviewData {
 @immutable
 class _JamaatWidgetState {
   final String label;
+  final String valueText;
   final int epochMillis;
   final bool countdownRunning;
+  final bool textUsesTimeStyle;
 
   const _JamaatWidgetState({
     required this.label,
+    required this.valueText,
     required this.epochMillis,
     required this.countdownRunning,
+    required this.textUsesTimeStyle,
   });
 
   factory _JamaatWidgetState.na(Locale locale) {
     final strings = AppText.of(locale);
     return _JamaatWidgetState(
       label: strings.widget_jamaatNA,
+      valueText: '',
       epochMillis: 0,
       countdownRunning: false,
+      textUsesTimeStyle: false,
     );
   }
 
   factory _JamaatWidgetState.over(Locale locale) {
     final strings = AppText.of(locale);
+    final baseLabel = _baseLabel(locale);
     return _JamaatWidgetState(
-      label: strings.widget_jamaatOver,
+      label: baseLabel,
+      valueText: _statusValue(
+        fullLabel: strings.widget_jamaatOver,
+        baseLabel: baseLabel,
+      ),
       epochMillis: 0,
       countdownRunning: false,
+      textUsesTimeStyle: true,
     );
+  }
+
+  factory _JamaatWidgetState.ongoing(Locale locale) {
+    final strings = AppText.of(locale);
+    final baseLabel = _baseLabel(locale);
+    return _JamaatWidgetState(
+      label: baseLabel,
+      valueText: _statusValue(
+        fullLabel: strings.widget_jamaatOngoing,
+        baseLabel: baseLabel,
+      ),
+      epochMillis: 0,
+      countdownRunning: false,
+      textUsesTimeStyle: true,
+    );
+  }
+
+  static String _baseLabel(Locale locale) {
+    final seed = AppText.of(locale).widget_jamaatInSuffix.trim();
+    final firstSpace = seed.indexOf(' ');
+    if (firstSpace > 0) {
+      return seed.substring(0, firstSpace).trim();
+    }
+    return seed;
+  }
+
+  static String _statusValue({
+    required String fullLabel,
+    required String baseLabel,
+  }) {
+    final full = fullLabel.trim();
+    final base = baseLabel.trim();
+    if (base.isNotEmpty && full.startsWith(base)) {
+      final remainder = full.substring(base.length).trimLeft();
+      if (remainder.isNotEmpty) {
+        return remainder;
+      }
+    }
+    final firstSpace = full.indexOf(' ');
+    if (firstSpace > 0 && firstSpace < full.length - 1) {
+      return full.substring(firstSpace + 1).trimLeft();
+    }
+    return full;
   }
 }

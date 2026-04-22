@@ -158,11 +158,17 @@ abstract class AppLocalizations {
   /// **'Jamaat N/A'**
   String get widget_jamaatNA;
 
-  /// Home-screen widget label after the jamaat time has passed
+  /// Home-screen widget label after jamaat window has passed
   ///
   /// In en, this message translates to:
-  /// **'Jamaat is Over'**
+  /// **'Jamaat ended'**
   String get widget_jamaatOver;
+
+  /// Home-screen widget label while jamaat is ongoing
+  ///
+  /// In en, this message translates to:
+  /// **'Jamaat ongoing'**
+  String get widget_jamaatOngoing;
 
   /// Home-screen widget label prefix, e.g. 'Fajr Jamaat in 12m'
   ///
@@ -175,6 +181,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Coming Dhuhr'**
   String get widget_comingDhuhr;
+
+  /// Widget countdown label for normal prayer periods
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer ends in'**
+  String get widget_prayerEndsIn;
+
+  /// Widget countdown label during Sunrise using next prayer name
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} in'**
+  String widget_nextPrayerIn(String prayer);
+
+  /// Widget sunrise line showing next prayer jamaat time
+  ///
+  /// In en, this message translates to:
+  /// **'{prayer} Jamaat at {time}'**
+  String widget_nextPrayerJamaatAt(String prayer, String time);
 
   /// Widget countdown label for active prayer period
   ///

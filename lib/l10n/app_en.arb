@@ -20,12 +20,29 @@
   "@settings_languageEnglish": {"description": "Dropdown item label for English"},
   "widget_jamaatNA": "Jamaat N/A",
   "@widget_jamaatNA": {"description": "Home-screen widget label when no jamaat is scheduled"},
-  "widget_jamaatOver": "Jamaat is Over",
-  "@widget_jamaatOver": {"description": "Home-screen widget label after the jamaat time has passed"},
+  "widget_jamaatOver": "Jamaat ended",
+  "@widget_jamaatOver": {"description": "Home-screen widget label after jamaat window has passed"},
+  "widget_jamaatOngoing": "Jamaat ongoing",
+  "@widget_jamaatOngoing": {"description": "Home-screen widget label while jamaat is ongoing"},
   "widget_jamaatInSuffix": "Jamaat in",
   "@widget_jamaatInSuffix": {"description": "Home-screen widget label prefix, e.g. 'Fajr Jamaat in 12m'"},
   "widget_comingDhuhr": "Coming Dhuhr",
   "@widget_comingDhuhr": {"description": "Widget countdown label during Sunrise period"},
+  "widget_prayerEndsIn": "Prayer ends in",
+  "@widget_prayerEndsIn": {"description": "Widget countdown label for normal prayer periods"},
+  "widget_nextPrayerIn": "{prayer} in",
+  "@widget_nextPrayerIn": {
+    "description": "Widget countdown label during Sunrise using next prayer name",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "widget_nextPrayerJamaatAt": "{prayer} Jamaat at {time}",
+  "@widget_nextPrayerJamaatAt": {
+    "description": "Widget sunrise line showing next prayer jamaat time",
+    "placeholders": {
+      "prayer": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
   "widget_timeRemaining": "{prayer} Time Remaining",
   "@widget_timeRemaining": {
     "description": "Widget countdown label for active prayer period",

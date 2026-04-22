@@ -11,8 +11,21 @@
   "settings_languageEnglish": "English",
   "widget_jamaatNA": "জামাত নেই",
   "widget_jamaatOver": "জামাত শেষ",
+  "widget_jamaatOngoing": "জামাত চলমান",
   "widget_jamaatInSuffix": "জামাত শুরু হবে",
   "widget_comingDhuhr": "আসছে যোহর",
+  "widget_prayerEndsIn": "নামাজ শেষ হবে",
+  "widget_nextPrayerIn": "{prayer} শুরু হবে",
+  "@widget_nextPrayerIn": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
+  "widget_nextPrayerJamaatAt": "{prayer} জামাত {time}",
+  "@widget_nextPrayerJamaatAt": {
+    "placeholders": {
+      "prayer": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
   "widget_timeRemaining": "{prayer} বাকি",
   "@widget_timeRemaining": {
     "placeholders": {"prayer": {"type": "String"}}
