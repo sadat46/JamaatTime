@@ -103,6 +103,20 @@ void main() {
       expect(data.rowTimes[1], BanglaCalendar.toBanglaDigits('15:40'));
     });
 
+    test('bangla locale uses updated prayer and jamaat countdown labels', () {
+      final data = WidgetService.computeWidgetPreviewData(
+        times: buildTimes(),
+        locale: const Locale('bn'),
+        now: DateTime(2026, 4, 13, 5, 10),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('bn')),
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(data.remainingLabel, 'ওয়াক্ত শেষ হতে বাকি');
+      expect(data.jamaatLabel, 'জামাত শুরু হতে বাকি');
+      expect(data.jamaatCountdownRunning, isTrue);
+    });
+
     test('before jamaat: shows jamaat in countdown', () {
       final data = WidgetService.computeWidgetPreviewData(
         times: buildTimes(),

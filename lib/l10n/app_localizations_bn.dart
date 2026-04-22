@@ -45,13 +45,13 @@ class AppLocalizationsBn extends AppLocalizations {
   String get widget_jamaatOngoing => 'জামাত চলমান';
 
   @override
-  String get widget_jamaatInSuffix => 'জামাত শুরু হবে';
+  String get widget_jamaatInSuffix => 'জামাত শুরু হতে বাকি';
 
   @override
   String get widget_comingDhuhr => 'আসছে যোহর';
 
   @override
-  String get widget_prayerEndsIn => 'নামাজ শেষ হবে';
+  String get widget_prayerEndsIn => 'ওয়াক্ত শেষ হতে বাকি';
 
   @override
   String widget_nextPrayerIn(String prayer) {
