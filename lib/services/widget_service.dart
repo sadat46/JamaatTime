@@ -139,7 +139,7 @@ Future<void> backgroundCallback(Uri? uri) async {
 
 class WidgetService {
   static const String _androidWidgetName = 'PrayerWidgetProvider';
-  static const _fmt = 'hh:mm a';
+  static const _fmt = 'HH:mm';
   static const Duration _jamaatOngoingWindow = Duration(minutes: 10);
   static const Map<String, String> _bnLocationPhraseMap = {
     'GPS Location': 'জিপিএস অবস্থান',
@@ -179,7 +179,7 @@ class WidgetService {
     try {
       final now = DateTime.now();
       final localeCode = locale.languageCode.toLowerCase();
-      final timeFormat = DateFormat(_fmt, localeCode == 'bn' ? 'bn' : 'en');
+      final timeFormat = widgetTimeFormatForLocale(locale);
       final widgetData = computeWidgetPreviewData(
         times: times,
         locale: locale,
@@ -265,6 +265,12 @@ class WidgetService {
     } catch (e) {
       // Widget updates are best-effort, never block the app
     }
+  }
+
+  @visibleForTesting
+  static DateFormat widgetTimeFormatForLocale(Locale locale) {
+    final localeCode = locale.languageCode.toLowerCase();
+    return DateFormat(_fmt, localeCode == 'bn' ? 'bn' : 'en');
   }
 
   static Future<void> forceRefresh({

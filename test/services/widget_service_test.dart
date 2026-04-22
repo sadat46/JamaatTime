@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 import 'package:jamaat_time/core/app_text.dart';
 import 'package:jamaat_time/services/widget_service.dart';
 import 'package:jamaat_time/utils/bangla_calendar.dart';
@@ -41,10 +40,17 @@ void main() {
           times: buildTimes(),
           locale: const Locale('en'),
           now: DateTime(2026, 4, 13, 5, 30),
-          timeFormat: DateFormat('HH:mm'),
+          timeFormat: WidgetService.widgetTimeFormatForLocale(
+            const Locale('en'),
+          ),
         );
 
         expect(data.prayerName, 'Fajr');
+        expect(data.prayerTime, '05:00');
+        expect(
+          data.prayerTime.contains('AM') || data.prayerTime.contains('PM'),
+          isFalse,
+        );
         expect(data.remainingLabel, 'Prayer ends in');
         expect(
           data.nextPrayerEpochMillis,
@@ -64,7 +70,9 @@ void main() {
           times: buildTimes(),
           locale: const Locale('en'),
           now: DateTime(2026, 4, 13, 6, 30),
-          timeFormat: DateFormat('HH:mm'),
+          timeFormat: WidgetService.widgetTimeFormatForLocale(
+            const Locale('en'),
+          ),
         );
 
         expect(data.prayerName, 'Sunrise');
@@ -86,7 +94,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('bn'),
         now: DateTime(2026, 4, 13, 6, 30),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('bn')),
       );
 
       expect(data.prayerName, AppText.of(const Locale('bn')).prayer_sunrise);
@@ -100,7 +108,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 5, 10),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
         jamaatTimes: buildJamaatTimes(),
       );
 
@@ -119,7 +127,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 5, 25),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
         jamaatTimes: buildJamaatTimes(),
       );
 
@@ -135,7 +143,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 5, 31),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
         jamaatTimes: buildJamaatTimes(),
       );
 
@@ -151,12 +159,16 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 6, 30),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
         jamaatTimes: buildJamaatTimes(),
       );
 
       expect(data.prayerName, 'Sunrise');
       expect(data.jamaatLabel, 'Dhuhr Jamaat at 12:25');
+      expect(
+        data.jamaatLabel.contains('AM') || data.jamaatLabel.contains('PM'),
+        isFalse,
+      );
       expect(data.jamaatValueText, '');
       expect(data.jamaatCountdownRunning, isFalse);
       expect(data.jamaatTextUsesTimeStyle, isFalse);
@@ -168,7 +180,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 5, 10),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
       );
 
       expect(data.jamaatLabel, 'Jamaat N/A');
@@ -184,7 +196,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 23, 0),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
         tomorrowFajr: tomorrowFajr,
       );
 
@@ -210,7 +222,9 @@ void main() {
           },
           locale: const Locale('en'),
           now: DateTime(2026, 4, 14, 0, 30),
-          timeFormat: DateFormat('HH:mm'),
+          timeFormat: WidgetService.widgetTimeFormatForLocale(
+            const Locale('en'),
+          ),
           jamaatTimes: buildJamaatTimes(),
         );
 
@@ -234,7 +248,7 @@ void main() {
         times: buildTimes(),
         locale: const Locale('en'),
         now: DateTime(2026, 4, 13, 23, 0),
-        timeFormat: DateFormat('HH:mm'),
+        timeFormat: WidgetService.widgetTimeFormatForLocale(const Locale('en')),
       );
 
       expect(data.prayerName, 'Isha');
