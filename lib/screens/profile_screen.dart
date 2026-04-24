@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
 import '../widgets/profile/profile_logged_in_content.dart';
 import 'admin_jamaat_panel.dart';
+import 'admin_notification_broadcast_screen.dart';
 import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
 import 'user_management_screen.dart';
@@ -497,6 +498,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onEditImportTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const AdminJamaatPanel()),
+        );
+      },
+      onBroadcastTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const AdminNotificationBroadcastScreen(),
+          ),
         );
       },
       appInfoCard: _buildAppInfoCard(),

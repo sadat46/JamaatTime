@@ -10,6 +10,7 @@ Widget _buildSubject({
   VoidCallback? onSettingsTap,
   VoidCallback? onManageUsersTap,
   VoidCallback? onEditImportTap,
+  VoidCallback? onBroadcastTap,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -24,6 +25,7 @@ Widget _buildSubject({
         onSettingsTap: onSettingsTap ?? () {},
         onManageUsersTap: onManageUsersTap ?? () {},
         onEditImportTap: onEditImportTap ?? () {},
+        onBroadcastTap: onBroadcastTap ?? () {},
         appInfoCard: const SizedBox(
           key: ValueKey<String>('profile-app-info-card'),
           height: 80,
@@ -87,6 +89,33 @@ void main() {
 
     expect(find.byKey(profileActionManageUsersKey), findsOneWidget);
     expect(find.byKey(profileActionEditImportKey), findsOneWidget);
+    expect(find.byKey(profileActionBroadcastKey), findsOneWidget);
+  });
+
+  testWidgets('hides broadcast tile for non-superadmin admin', (tester) async {
+    await tester.pumpWidget(_buildSubject(isAdmin: true));
+
+    expect(find.byKey(profileActionEditImportKey), findsOneWidget);
+    expect(find.byKey(profileActionBroadcastKey), findsNothing);
+  });
+
+  testWidgets('invokes broadcast callback on tap', (tester) async {
+    var broadcastTapCount = 0;
+
+    await tester.pumpWidget(
+      _buildSubject(
+        isSuperAdmin: true,
+        onBroadcastTap: () {
+          broadcastTapCount++;
+        },
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(profileActionBroadcastKey));
+    await tester.tap(find.byKey(profileActionBroadcastKey));
+    await tester.pump();
+
+    expect(broadcastTapCount, 1);
   });
 
   testWidgets('invokes main option callbacks on tap', (tester) async {

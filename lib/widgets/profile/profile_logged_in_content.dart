@@ -27,6 +27,9 @@ const profileActionManageUsersKey = ValueKey<String>(
 const profileActionEditImportKey = ValueKey<String>(
   'profile-action-edit-import',
 );
+const profileActionBroadcastKey = ValueKey<String>(
+  'profile-action-broadcast',
+);
 
 class ProfileLoggedInContent extends StatelessWidget {
   const ProfileLoggedInContent({
@@ -41,6 +44,7 @@ class ProfileLoggedInContent extends StatelessWidget {
     required this.onSettingsTap,
     required this.onManageUsersTap,
     required this.onEditImportTap,
+    required this.onBroadcastTap,
     required this.appInfoCard,
     this.brandGreen = const Color(0xFF388E3C),
     this.cardRadius = 18,
@@ -56,6 +60,7 @@ class ProfileLoggedInContent extends StatelessWidget {
   final VoidCallback onSettingsTap;
   final VoidCallback onManageUsersTap;
   final VoidCallback onEditImportTap;
+  final VoidCallback onBroadcastTap;
   final Widget appInfoCard;
   final Color brandGreen;
   final double cardRadius;
@@ -290,6 +295,21 @@ class ProfileLoggedInContent extends StatelessWidget {
                         en: 'Import schedules and manage yearly jamaat data',
                       ),
                       onTap: onEditImportTap,
+                    ),
+                  if (isSuperAdmin)
+                    _buildActionTile(
+                      tileKey: profileActionBroadcastKey,
+                      icon: Icons.campaign,
+                      iconColor: Colors.deepPurple,
+                      title: context.tr(
+                        bn: 'নোটিফিকেশন ব্রডকাস্ট',
+                        en: 'Notification Broadcast',
+                      ),
+                      subtitle: context.tr(
+                        bn: 'সব ব্যবহারকারীর কাছে টেক্সট বা ছবি পাঠান',
+                        en: 'Push text or image to every user',
+                      ),
+                      onTap: onBroadcastTap,
                     ),
                 ]),
               ),
