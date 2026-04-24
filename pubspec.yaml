@@ -40,6 +40,7 @@ dependencies:
   firebase_core: ^3.14.0
   firebase_auth: ^5.6.0
   cloud_firestore: ^5.6.9
+  cloud_functions: ^5.5.0
   adhan_dart: ^1.1.2
   geolocator: ^14.0.1
   intl: ^0.20.2
