@@ -11,12 +11,17 @@ import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/notification_service.dart';
+import 'services/notifications/fcm_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/widget_service.dart';
 import 'services/settings_service.dart';
 import 'core/app_locale_controller.dart';
 import 'core/constants.dart';
 import 'themes/green_theme.dart';
+
+// Global navigator key — shared with FcmService so push taps can route from
+// outside the widget tree.
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +68,17 @@ void main() async {
   await AppLocaleController.bootstrap();
   await _preloadActiveLocaleFonts();
 
+  // FCM receive layer — runs BEFORE any auth gate so guest devices
+  // subscribe to all_users and register in device_tokens/{installationId}.
+  try {
+    await FcmService().init(
+      navigatorKey: appNavigatorKey,
+      locale: AppLocaleController.instance.current.languageCode,
+    );
+  } catch (_) {
+    // Continue startup even if FCM fails — local jamaat reminders still work.
+  }
+
   runApp(const MyApp());
 }
 
@@ -98,6 +114,7 @@ class MyApp extends StatelessWidget {
       builder: (context, locale, _) {
         return MaterialApp(
           title: 'Jamaat Time',
+          navigatorKey: appNavigatorKey,
           theme: _themeFor(locale),
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
