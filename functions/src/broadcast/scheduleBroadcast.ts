@@ -7,6 +7,7 @@ import { requireString, requireEnum, optionalString } from '../lib/validate';
 import { log } from '../lib/logger';
 import { BroadcastTargetKind, BroadcastType } from './sendBroadcast';
 import { validateImageUrl } from './validateImage';
+import { assertManualBroadcastBudget } from '../lib/rateLimit';
 
 // Writes a queued broadcast in one transaction:
 //   notifications/{id}                — status='queued', full payload
@@ -34,6 +35,7 @@ export const scheduleBroadcast = onCall(
   { region: 'us-central1' },
   async (request: CallableRequest<unknown>) => {
     const me = await assertSuperAdmin(request);
+    await assertManualBroadcastBudget(me.uid);
     const data = (request.data ?? {}) as Record<string, unknown>;
 
     const type = requireEnum(data.type, 'type', TYPES) as BroadcastType;

@@ -7,6 +7,7 @@ import { requireString, requireEnum, optionalString } from '../lib/validate';
 import { log } from '../lib/logger';
 import { sendBroadcast, BroadcastTargetKind, BroadcastType } from './sendBroadcast';
 import { validateImageUrl } from './validateImage';
+import { assertManualBroadcastBudget } from '../lib/rateLimit';
 
 // P4: text-only manual broadcast.
 // P5: extended to accept type='image' + imageUrl with HEAD validation and
@@ -25,6 +26,7 @@ export const broadcastNotification = onCall(
   { region: 'us-central1' },
   async (request: CallableRequest<unknown>) => {
     const me = await assertSuperAdmin(request);
+    await assertManualBroadcastBudget(me.uid);
     const data = (request.data ?? {}) as Record<string, unknown>;
 
     const type = requireEnum(data.type, 'type', TYPES) as BroadcastType;

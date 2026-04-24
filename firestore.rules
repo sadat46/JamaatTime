@@ -81,17 +81,29 @@ service cloud.firestore {
       allow write: if false;  // Cloud Functions only.
     }
 
-    // ─── jamaat_times/** — tightened in Phase 11 ───────────────────
-    // Placeholder matches current app behavior: public read, any signed-in
-    // write. Phase 11 replaces this with isAdminOrAbove() + updatedBy /
-    // writeSource clauses that pin the write to the admin-panel path.
+    // ─── jamaat_times/** — admin-only write, identity pinned to admin panel ─
+    // Read stays public (times are shown on the home/widget screens without
+    // auth). Writes require admin/superadmin AND must stamp
+    //   updatedBy    == request.auth.uid    (P9 trigger reads this)
+    //   writeSource  == 'admin_panel'       (blocks client-spoofed strings)
+    // JamaatService.saveJamaatTimes stamps both fields on every save.
     match /jamaat_times/{city}/daily_times/{date} {
       allow read:  if true;
-      allow write: if isSignedIn();
+      allow write: if isAdminOrAbove()
+                   && request.resource.data.updatedBy == request.auth.uid
+                   && request.resource.data.writeSource == 'admin_panel';
     }
     match /jamaat_times/{city} {
       allow read:  if true;
-      allow write: if isSignedIn();
+      allow write: if isAdminOrAbove();
+    }
+
+    // ─── deny-by-default catch-all ─────────────────────────────────
+    // Any collection not explicitly matched above is denied. Prevents
+    // accidental exposure when a new collection is added server-side
+    // without a corresponding rule block.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
