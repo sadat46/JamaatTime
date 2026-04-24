@@ -20,6 +20,12 @@
 
 ---
 
+## 🔔 Active Initiatives
+
+- **Notification Broadcast System** — Android-only FCM broadcast (manual + auto on jamaat change). See [`NOTIFICATION_BROADCAST_PLAN.md`](NOTIFICATION_BROADCAST_PLAN.md).
+
+---
+
 ## 🛠️ Phase-by-Phase Execution Plan
 
 ### 📌 Phase 1: Project Initialization
