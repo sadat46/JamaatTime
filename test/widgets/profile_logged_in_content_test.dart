@@ -12,6 +12,7 @@ Widget _buildSubject({
   VoidCallback? onEditImportTap,
   VoidCallback? onBroadcastTap,
   VoidCallback? onAutoRulesTap,
+  VoidCallback? onNotifHistoryTap,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -28,6 +29,7 @@ Widget _buildSubject({
         onEditImportTap: onEditImportTap ?? () {},
         onBroadcastTap: onBroadcastTap ?? () {},
         onAutoRulesTap: onAutoRulesTap ?? () {},
+        onNotifHistoryTap: onNotifHistoryTap ?? () {},
         appInfoCard: const SizedBox(
           key: ValueKey<String>('profile-app-info-card'),
           height: 80,
@@ -93,6 +95,33 @@ void main() {
     expect(find.byKey(profileActionEditImportKey), findsOneWidget);
     expect(find.byKey(profileActionBroadcastKey), findsOneWidget);
     expect(find.byKey(profileActionAutoRulesKey), findsOneWidget);
+    expect(find.byKey(profileActionNotifHistoryKey), findsOneWidget);
+  });
+
+  testWidgets('hides notification-history tile for non-superadmin admin',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(isAdmin: true));
+
+    expect(find.byKey(profileActionNotifHistoryKey), findsNothing);
+  });
+
+  testWidgets('invokes notification-history callback on tap', (tester) async {
+    var tapCount = 0;
+
+    await tester.pumpWidget(
+      _buildSubject(
+        isSuperAdmin: true,
+        onNotifHistoryTap: () {
+          tapCount++;
+        },
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(profileActionNotifHistoryKey));
+    await tester.tap(find.byKey(profileActionNotifHistoryKey));
+    await tester.pump();
+
+    expect(tapCount, 1);
   });
 
   testWidgets('hides broadcast tile for non-superadmin admin', (tester) async {

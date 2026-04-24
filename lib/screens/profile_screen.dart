@@ -11,6 +11,7 @@ import '../widgets/profile/profile_logged_in_content.dart';
 import 'admin_auto_rules_screen.dart';
 import 'admin_jamaat_panel.dart';
 import 'admin_notification_broadcast_screen.dart';
+import 'admin_notification_history_screen.dart';
 import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
 import 'user_management_screen.dart';
@@ -512,6 +513,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => const AdminAutoRulesScreen(),
+          ),
+        );
+      },
+      onNotifHistoryTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const AdminNotificationHistoryScreen(),
           ),
         );
       },

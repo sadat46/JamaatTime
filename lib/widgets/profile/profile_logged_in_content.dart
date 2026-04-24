@@ -33,6 +33,9 @@ const profileActionBroadcastKey = ValueKey<String>(
 const profileActionAutoRulesKey = ValueKey<String>(
   'profile-action-auto-rules',
 );
+const profileActionNotifHistoryKey = ValueKey<String>(
+  'profile-action-notif-history',
+);
 
 class ProfileLoggedInContent extends StatelessWidget {
   const ProfileLoggedInContent({
@@ -49,6 +52,7 @@ class ProfileLoggedInContent extends StatelessWidget {
     required this.onEditImportTap,
     required this.onBroadcastTap,
     required this.onAutoRulesTap,
+    required this.onNotifHistoryTap,
     required this.appInfoCard,
     this.brandGreen = const Color(0xFF388E3C),
     this.cardRadius = 18,
@@ -66,6 +70,7 @@ class ProfileLoggedInContent extends StatelessWidget {
   final VoidCallback onEditImportTap;
   final VoidCallback onBroadcastTap;
   final VoidCallback onAutoRulesTap;
+  final VoidCallback onNotifHistoryTap;
   final Widget appInfoCard;
   final Color brandGreen;
   final double cardRadius;
@@ -330,6 +335,21 @@ class ProfileLoggedInContent extends StatelessWidget {
                         en: 'Configure auto-alerts when jamaat times change',
                       ),
                       onTap: onAutoRulesTap,
+                    ),
+                  if (isSuperAdmin)
+                    _buildActionTile(
+                      tileKey: profileActionNotifHistoryKey,
+                      icon: Icons.history,
+                      iconColor: Colors.indigo,
+                      title: context.tr(
+                        bn: 'নোটিফিকেশন ইতিহাস',
+                        en: 'Notification History',
+                      ),
+                      subtitle: context.tr(
+                        bn: 'পাঠানো, ব্যর্থ ও শিডিউল করা ব্রডকাস্ট দেখুন',
+                        en: 'View sent, failed, and scheduled broadcasts',
+                      ),
+                      onTap: onNotifHistoryTap,
                     ),
                 ]),
               ),
