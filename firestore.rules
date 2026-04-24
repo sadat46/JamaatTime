@@ -65,6 +65,11 @@ service cloud.firestore {
       allow read, write: if false;  // Callable-only (scheduleBroadcast, cancelScheduledBroadcast, dispatcher).
     }
 
+    // ─── notification_cooldowns/{city} — P9 trigger dedup (functions-only) ─
+    match /notification_cooldowns/{city} {
+      allow read, write: if false;
+    }
+
     // ─── system_config/** — server-side config (functions-only) ────
     match /system_config/{doc} {
       allow read, write: if false;

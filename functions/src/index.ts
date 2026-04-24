@@ -10,3 +10,4 @@ export { broadcastNotification } from './broadcast/broadcastNotification';
 export { scheduleBroadcast } from './broadcast/scheduleBroadcast';
 export { cancelScheduledBroadcast } from './broadcast/cancelScheduledBroadcast';
 export { dispatchScheduledNotifications } from './scheduled/dispatchScheduledNotifications';
+export { onJamaatChange } from './triggers/onJamaatChange';
