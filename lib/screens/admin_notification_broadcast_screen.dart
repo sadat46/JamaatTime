@@ -49,6 +49,8 @@ class _AdminNotificationBroadcastScreenState
   bool _uploading = false;
   bool _sending = false;
   String? _uploadedImageUrl;
+  bool _scheduleLater = false;
+  DateTime? _fireAt;
 
   @override
   void initState() {
@@ -126,7 +128,52 @@ class _AdminNotificationBroadcastScreenState
     if (_type == _BroadcastType.image && (_currentImageUrl ?? '').isEmpty) {
       return false;
     }
+    if (_scheduleLater) {
+      if (_fireAt == null) return false;
+      if (!_fireAt!.isAfter(DateTime.now())) return false;
+    }
     return true;
+  }
+
+  Future<void> _pickFireAt() async {
+    final now = DateTime.now();
+    final initial = _fireAt ?? now.add(const Duration(minutes: 5));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isAfter(now) ? initial : now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !mounted) return;
+    final picked = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    if (!picked.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr(
+              bn: 'ভবিষ্যতের একটি সময় বাছাই করুন',
+              en: 'Pick a time in the future',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _fireAt = picked;
+      _scheduleLater = true;
+    });
   }
 
   Future<void> _onSendPressed() async {
@@ -134,6 +181,7 @@ class _AdminNotificationBroadcastScreenState
     final body = _bodyCtrl.text.trim();
     final imageUrl = _currentImageUrl;
     final typeStr = _type == _BroadcastType.image ? 'image' : 'text';
+    final scheduledFor = _scheduleLater ? _fireAt : null;
 
     final confirmed = await BroadcastSendConfirmDialog.show(
       context,
@@ -141,6 +189,7 @@ class _AdminNotificationBroadcastScreenState
       body: body,
       type: typeStr,
       imageUrl: imageUrl,
+      scheduledFor: scheduledFor,
     );
     if (!confirmed) return;
 
@@ -155,8 +204,13 @@ class _AdminNotificationBroadcastScreenState
         if (deepLink.isNotEmpty) 'deepLink': deepLink,
         if (typeStr == 'image' && imageUrl != null) 'imageUrl': imageUrl,
       };
+      if (scheduledFor != null) {
+        payload['fireAt'] = scheduledFor.millisecondsSinceEpoch;
+      }
 
-      final callable = _functions.httpsCallable('broadcastNotification');
+      final callableName =
+          scheduledFor != null ? 'scheduleBroadcast' : 'broadcastNotification';
+      final callable = _functions.httpsCallable(callableName);
       final resp = await callable.call<Map<Object?, Object?>>(payload);
       final data = resp.data;
       final status = data['status']?.toString() ?? 'sent';
@@ -164,17 +218,31 @@ class _AdminNotificationBroadcastScreenState
       final failureReason = data['failureReason']?.toString();
 
       if (!mounted) return;
-      final label = status == 'fallback_text'
-          ? context.tr(
-              bn: 'টেক্সট ফলব্যাক পাঠানো হয়েছে ($failureReason) • $notifId',
-              en: 'Sent as text fallback ($failureReason) • $notifId',
-            )
-          : context.tr(
-              bn: 'ব্রডকাস্ট পাঠানো হয়েছে • $notifId',
-              en: 'Broadcast sent • $notifId',
-            );
+      final String label;
+      if (status == 'queued') {
+        label = context.tr(
+          bn: 'শিডিউল করা হয়েছে • $notifId',
+          en: 'Scheduled • $notifId',
+        );
+      } else if (status == 'fallback_text') {
+        label = context.tr(
+          bn: 'টেক্সট ফলব্যাক পাঠানো হয়েছে ($failureReason) • $notifId',
+          en: 'Sent as text fallback ($failureReason) • $notifId',
+        );
+      } else {
+        label = context.tr(
+          bn: 'ব্রডকাস্ট পাঠানো হয়েছে • $notifId',
+          en: 'Broadcast sent • $notifId',
+        );
+      }
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(label)));
+      if (status == 'queued') {
+        setState(() {
+          _scheduleLater = false;
+          _fireAt = null;
+        });
+      }
     } on FirebaseFunctionsException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,9 +356,11 @@ class _AdminNotificationBroadcastScreenState
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.send),
+                    : Icon(_scheduleLater ? Icons.schedule_send : Icons.send),
                 label: Text(
-                  context.tr(bn: 'সবার কাছে পাঠান', en: 'Send to everyone'),
+                  _scheduleLater
+                      ? context.tr(bn: 'শিডিউল করুন', en: 'Schedule broadcast')
+                      : context.tr(bn: 'সবার কাছে পাঠান', en: 'Send to everyone'),
                 ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -481,27 +551,56 @@ class _AdminNotificationBroadcastScreenState
         const SizedBox(height: 8),
         Row(
           children: [
-            FilledButton.icon(
-              onPressed: null,
-              icon: const Icon(Icons.bolt),
-              label: Text(context.tr(bn: 'এখন', en: 'Now')),
-              style: FilledButton.styleFrom(
-                disabledBackgroundColor: Theme.of(context).colorScheme.primary,
-                disabledForegroundColor: Colors.white,
-              ),
+            Expanded(
+              child: _scheduleLater
+                  ? OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _scheduleLater = false;
+                          _fireAt = null;
+                        });
+                      },
+                      icon: const Icon(Icons.bolt),
+                      label: Text(context.tr(bn: 'এখন', en: 'Now')),
+                    )
+                  : FilledButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.bolt),
+                      label: Text(context.tr(bn: 'এখন', en: 'Now')),
+                    ),
             ),
             const SizedBox(width: 8),
-            Tooltip(
-              message: context.tr(bn: 'শীঘ্রই', en: 'Coming soon'),
-              child: OutlinedButton.icon(
-                onPressed: null,
-                icon: const Icon(Icons.schedule),
-                label: Text(context.tr(bn: 'শিডিউল…', en: 'Schedule…')),
-              ),
+            Expanded(
+              child: _scheduleLater
+                  ? FilledButton.icon(
+                      onPressed: _pickFireAt,
+                      icon: const Icon(Icons.schedule),
+                      label: Text(context.tr(bn: 'শিডিউল…', en: 'Schedule…')),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: _pickFireAt,
+                      icon: const Icon(Icons.schedule),
+                      label: Text(context.tr(bn: 'শিডিউল…', en: 'Schedule…')),
+                    ),
             ),
           ],
         ),
+        if (_scheduleLater && _fireAt != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            context.tr(
+              bn: 'সময়: ${_formatFireAt(_fireAt!)}',
+              en: 'Scheduled for: ${_formatFireAt(_fireAt!)}',
+            ),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ],
     );
+  }
+
+  String _formatFireAt(DateTime dt) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
   }
 }
