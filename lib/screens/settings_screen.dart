@@ -67,15 +67,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _soundModeLabel(int value) {
     switch (value) {
       case 1:
-        return _tr('à¦¸à¦¿à¦¸à§à¦Ÿà§‡à¦® à¦¸à¦¾à¦‰à¦¨à§à¦¡', 'System sound');
+        return _tr('সিস্টেম সাউন্ড', 'System sound');
       case 2:
-        return _tr('à¦¨à¦¿à¦ƒà¦¶à¦¬à§à¦¦', 'No sound');
+        return _tr('নিঃশব্দ', 'No sound');
       case 3:
-        return _tr('à¦•à¦² à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦¶à¦°à§à¦Ÿ à§§', 'Call Sound Short 1');
+        return _tr('কল সাউন্ড শর্ট ১', 'Call Sound Short 1');
       case 4:
-        return _tr('à¦•à¦² à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦¶à¦°à§à¦Ÿ à§¨', 'Call Sound short 2');
+        return _tr('কল সাউন্ড শর্ট ২', 'Call Sound short 2');
       default:
-        return _tr('à¦†à¦¯à¦¾à¦¨ à¦¸à¦¾à¦‰à¦¨à§à¦¡', 'Adhan sound');
+        return _tr('আযান সাউন্ড', 'Adhan sound');
     }
   }
 
@@ -105,7 +105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(
           content: Text(
             _tr(
-              'à¦¨à¦¾à¦®à¦¾à¦œ à¦°à¦¿à¦®à¦¾à¦‡à¦¨à§à¦¡à¦¾à¦° à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤',
+              'নামাজ রিমাইন্ডার সাউন্ড আপডেট হয়েছে।',
               'Prayer reminder sound updated.',
             ),
           ),
@@ -119,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(
           content: Text(
             _tr(
-              'à¦¨à¦¾à¦®à¦¾à¦œ à¦¨à§‹à¦Ÿà¦¿à¦«à¦¿à¦•à§‡à¦¶à¦¨ à¦¸à§‡à¦Ÿà¦¿à¦‚à¦¸ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦•à¦°à¦¤à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾: $e',
+              'নামাজ নোটিফিকেশন সেটিংস আপডেট করতে সমস্যা: $e',
               'Error updating prayer notification settings: $e',
             ),
           ),
@@ -143,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(
           content: Text(
             _tr(
-              'à¦œà¦¾à¦®à¦¾à¦¤ à¦°à¦¿à¦®à¦¾à¦‡à¦¨à§à¦¡à¦¾à¦° à¦¸à¦¾à¦‰à¦¨à§à¦¡ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤',
+              'জামাত রিমাইন্ডার সাউন্ড আপডেট হয়েছে।',
               'Jamaat reminder sound updated.',
             ),
           ),
@@ -157,7 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(
           content: Text(
             _tr(
-              'à¦œà¦¾à¦®à¦¾à¦¤ à¦¨à§‹à¦Ÿà¦¿à¦«à¦¿à¦•à§‡à¦¶à¦¨ à¦¸à§‡à¦Ÿà¦¿à¦‚à¦¸ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦•à¦°à¦¤à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾: $e',
+              'জামাত নোটিফিকেশন সেটিংস আপডেট করতে সমস্যা: $e',
               'Error updating jamaat notification settings: $e',
             ),
           ),
