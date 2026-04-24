@@ -30,6 +30,9 @@ const profileActionEditImportKey = ValueKey<String>(
 const profileActionBroadcastKey = ValueKey<String>(
   'profile-action-broadcast',
 );
+const profileActionAutoRulesKey = ValueKey<String>(
+  'profile-action-auto-rules',
+);
 
 class ProfileLoggedInContent extends StatelessWidget {
   const ProfileLoggedInContent({
@@ -45,6 +48,7 @@ class ProfileLoggedInContent extends StatelessWidget {
     required this.onManageUsersTap,
     required this.onEditImportTap,
     required this.onBroadcastTap,
+    required this.onAutoRulesTap,
     required this.appInfoCard,
     this.brandGreen = const Color(0xFF388E3C),
     this.cardRadius = 18,
@@ -61,6 +65,7 @@ class ProfileLoggedInContent extends StatelessWidget {
   final VoidCallback onManageUsersTap;
   final VoidCallback onEditImportTap;
   final VoidCallback onBroadcastTap;
+  final VoidCallback onAutoRulesTap;
   final Widget appInfoCard;
   final Color brandGreen;
   final double cardRadius;
@@ -310,6 +315,21 @@ class ProfileLoggedInContent extends StatelessWidget {
                         en: 'Push text or image to every user',
                       ),
                       onTap: onBroadcastTap,
+                    ),
+                  if (isSuperAdmin)
+                    _buildActionTile(
+                      tileKey: profileActionAutoRulesKey,
+                      icon: Icons.rule,
+                      iconColor: Colors.teal,
+                      title: context.tr(
+                        bn: 'অটো-নোটিফিকেশন নিয়ম',
+                        en: 'Auto Notification Rules',
+                      ),
+                      subtitle: context.tr(
+                        bn: 'জামাতের সময় পরিবর্তনের অটো-অ্যালার্ট কনফিগার করুন',
+                        en: 'Configure auto-alerts when jamaat times change',
+                      ),
+                      onTap: onAutoRulesTap,
                     ),
                 ]),
               ),

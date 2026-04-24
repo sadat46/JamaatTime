@@ -11,6 +11,7 @@ Widget _buildSubject({
   VoidCallback? onManageUsersTap,
   VoidCallback? onEditImportTap,
   VoidCallback? onBroadcastTap,
+  VoidCallback? onAutoRulesTap,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -26,6 +27,7 @@ Widget _buildSubject({
         onManageUsersTap: onManageUsersTap ?? () {},
         onEditImportTap: onEditImportTap ?? () {},
         onBroadcastTap: onBroadcastTap ?? () {},
+        onAutoRulesTap: onAutoRulesTap ?? () {},
         appInfoCard: const SizedBox(
           key: ValueKey<String>('profile-app-info-card'),
           height: 80,
@@ -90,6 +92,7 @@ void main() {
     expect(find.byKey(profileActionManageUsersKey), findsOneWidget);
     expect(find.byKey(profileActionEditImportKey), findsOneWidget);
     expect(find.byKey(profileActionBroadcastKey), findsOneWidget);
+    expect(find.byKey(profileActionAutoRulesKey), findsOneWidget);
   });
 
   testWidgets('hides broadcast tile for non-superadmin admin', (tester) async {
@@ -97,6 +100,26 @@ void main() {
 
     expect(find.byKey(profileActionEditImportKey), findsOneWidget);
     expect(find.byKey(profileActionBroadcastKey), findsNothing);
+    expect(find.byKey(profileActionAutoRulesKey), findsNothing);
+  });
+
+  testWidgets('invokes auto-rules callback on tap', (tester) async {
+    var autoRulesTapCount = 0;
+
+    await tester.pumpWidget(
+      _buildSubject(
+        isSuperAdmin: true,
+        onAutoRulesTap: () {
+          autoRulesTapCount++;
+        },
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(profileActionAutoRulesKey));
+    await tester.tap(find.byKey(profileActionAutoRulesKey));
+    await tester.pump();
+
+    expect(autoRulesTapCount, 1);
   });
 
   testWidgets('invokes broadcast callback on tap', (tester) async {

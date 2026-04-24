@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
 import '../widgets/profile/profile_logged_in_content.dart';
+import 'admin_auto_rules_screen.dart';
 import 'admin_jamaat_panel.dart';
 import 'admin_notification_broadcast_screen.dart';
 import 'bookmarks_screen.dart';
@@ -504,6 +505,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => const AdminNotificationBroadcastScreen(),
+          ),
+        );
+      },
+      onAutoRulesTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const AdminAutoRulesScreen(),
           ),
         );
       },
