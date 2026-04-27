@@ -77,8 +77,19 @@ class NotificationHistoryRow extends StatelessWidget {
                 if (scheduledFor != null)
                   _kv(context, 'Scheduled for', _fmtTs(scheduledFor) ?? '—'),
                 if (fcmResponse != null)
-                  _kv(context, 'FCM response', fcmResponse.toString(),
-                      multi: true),
+                  _kv(
+                    context,
+                    'FCM accepted response',
+                    fcmResponse.toString(),
+                    multi: true,
+                  ),
+                if (status == 'sent')
+                  _kv(
+                    context,
+                    'Delivery meaning',
+                    'FCM accepted the topic send; device receipt is not tracked.',
+                    multi: true,
+                  ),
                 if (failureReason != null)
                   _kv(context, 'Failure', failureReason, multi: true),
                 if (dedupKey != null)
@@ -151,6 +162,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = status == 'sent' ? 'accepted' : status;
     final color = switch (status) {
       'sent' => Colors.green,
       'fallback_text' => Colors.orange,
@@ -167,7 +179,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        status,
+        label,
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w600,

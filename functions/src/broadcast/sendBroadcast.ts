@@ -45,6 +45,9 @@ export interface BroadcastResult {
 function buildFcmMessage(notifId: string, p: BroadcastPayload) {
   const data: Record<string, string> = {
     notifId,
+    notification_id: notifId,
+    title: p.title,
+    body: p.body,
     triggerSource: p.triggerSource,
   };
   if (p.deepLink) data.deepLink = p.deepLink;
@@ -112,7 +115,12 @@ export async function sendBroadcast(
 
     await notifRef.update({
       status: 'sent',
-      fcmResponse: { sendMode: 'topic', messageId },
+      fcmResponse: {
+        sendMode: 'topic',
+        messageId,
+        deliveryReceiptTracked: false,
+        perTokenErrorsTracked: false,
+      },
       sentAt: FieldValue.serverTimestamp(),
     });
 

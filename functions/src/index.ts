@@ -7,6 +7,8 @@ export { ping } from './ping';
 export { bootstrapSuperadminRole } from './role/bootstrapSuperadminRole';
 export { setUserRole } from './role/setUserRole';
 export { broadcastNotification } from './broadcast/broadcastNotification';
+export { createNotificationImageUploadUrl } from './broadcast/createNotificationImageUploadUrl';
+export { getNotificationDiagnostics } from './broadcast/getNotificationDiagnostics';
 export { scheduleBroadcast } from './broadcast/scheduleBroadcast';
 export { cancelScheduledBroadcast } from './broadcast/cancelScheduledBroadcast';
 export { dispatchScheduledNotifications } from './scheduled/dispatchScheduledNotifications';

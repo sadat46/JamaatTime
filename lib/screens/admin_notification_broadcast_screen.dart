@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../core/locale_text.dart';
 import '../services/auth_service.dart';
@@ -26,12 +26,20 @@ enum _BroadcastType { text, image }
 
 enum _ImageSource { upload, url }
 
+class _SignedR2Upload {
+  const _SignedR2Upload({required this.uploadUrl, required this.publicUrl});
+
+  final String uploadUrl;
+  final String publicUrl;
+}
+
 class _AdminNotificationBroadcastScreenState
     extends State<AdminNotificationBroadcastScreen> {
   static const int _titleMax = 65;
   static const int _bodyMax = 240;
   static const int _deepLinkMax = 500;
   static const int _imageUrlMax = 2000;
+  static const int _imageUploadMaxBytes = 1000000;
 
   final AuthService _authService = AuthService();
   final FirebaseFunctions _functions = FirebaseFunctions.instance;
@@ -44,7 +52,11 @@ class _AdminNotificationBroadcastScreenState
   _BroadcastType _type = _BroadcastType.text;
   _ImageSource _imageSource = _ImageSource.url;
   String _targetKind = 'all_users';
-  final List<String> _deepLinkPresets = const ['/home', '/settings', '/admin/jamaat'];
+  final List<String> _deepLinkPresets = const [
+    '/home',
+    '/settings',
+    '/admin/jamaat',
+  ];
 
   bool _uploading = false;
   bool _sending = false;
@@ -91,32 +103,84 @@ class _AdminNotificationBroadcastScreenState
         throw StateError('Picked file has no bytes or path.');
       }
 
-      final ext = (picked.extension ?? 'jpg').toLowerCase();
-      final stamp = DateTime.now().millisecondsSinceEpoch;
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('notification_images/$stamp.$ext');
-      final metadata = SettableMetadata(contentType: 'image/$ext');
+      final uploadBytes = bytes ?? await File(path!).readAsBytes();
+      if (uploadBytes.length > _imageUploadMaxBytes) {
+        throw StateError('Image must be 1 MB or smaller for FCM.');
+      }
 
-      final task = bytes != null
-          ? ref.putData(bytes, metadata)
-          : ref.putFile(File(path!), metadata);
-      await task;
-      final url = await ref.getDownloadURL();
+      final contentType = _contentTypeForExtension(picked.extension);
+      final signedUpload = await _createR2UploadUrl(
+        contentType: contentType,
+        sizeBytes: uploadBytes.length,
+      );
+
+      final uploadResp = await http.put(
+        Uri.parse(signedUpload.uploadUrl),
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+        body: uploadBytes,
+      );
+      if (uploadResp.statusCode < 200 || uploadResp.statusCode >= 300) {
+        throw StateError('R2 upload failed (${uploadResp.statusCode}).');
+      }
+
       if (!mounted) return;
-      setState(() => _uploadedImageUrl = url);
+      setState(() => _uploadedImageUrl = signedUpload.publicUrl);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            context.tr(bn: 'ছবি আপলোড ব্যর্থ: $e', en: 'Image upload failed: $e'),
+            context.tr(
+              bn: 'ছবি আপলোড ব্যর্থ: $e',
+              en: 'Image upload failed: $e',
+            ),
           ),
         ),
       );
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  String _contentTypeForExtension(String? rawExtension) {
+    final ext = (rawExtension ?? '').toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      default:
+        throw StateError('Only JPG, PNG, and WebP images are supported.');
+    }
+  }
+
+  Future<_SignedR2Upload> _createR2UploadUrl({
+    required String contentType,
+    required int sizeBytes,
+  }) async {
+    final callable = _functions.httpsCallable(
+      'createNotificationImageUploadUrl',
+    );
+    final resp = await callable.call<Map<Object?, Object?>>({
+      'contentType': contentType,
+      'sizeBytes': sizeBytes,
+    });
+    final data = resp.data;
+    final uploadUrl = data['uploadUrl']?.toString();
+    final publicUrl = data['publicUrl']?.toString();
+    if (uploadUrl == null || uploadUrl.isEmpty) {
+      throw StateError('Upload URL was not returned.');
+    }
+    if (publicUrl == null || publicUrl.isEmpty) {
+      throw StateError('Public image URL was not returned.');
+    }
+    return _SignedR2Upload(uploadUrl: uploadUrl, publicUrl: publicUrl);
   }
 
   bool get _canSubmit {
@@ -208,8 +272,9 @@ class _AdminNotificationBroadcastScreenState
         payload['fireAt'] = scheduledFor.millisecondsSinceEpoch;
       }
 
-      final callableName =
-          scheduledFor != null ? 'scheduleBroadcast' : 'broadcastNotification';
+      final callableName = scheduledFor != null
+          ? 'scheduleBroadcast'
+          : 'broadcastNotification';
       final callable = _functions.httpsCallable(callableName);
       final resp = await callable.call<Map<Object?, Object?>>(payload);
       final data = resp.data;
@@ -226,17 +291,18 @@ class _AdminNotificationBroadcastScreenState
         );
       } else if (status == 'fallback_text') {
         label = context.tr(
-          bn: 'টেক্সট ফলব্যাক পাঠানো হয়েছে ($failureReason) • $notifId',
-          en: 'Sent as text fallback ($failureReason) • $notifId',
+          bn: 'FCM accepted text fallback ($failureReason) - $notifId',
+          en: 'FCM accepted text fallback ($failureReason) - $notifId',
         );
       } else {
         label = context.tr(
-          bn: 'ব্রডকাস্ট পাঠানো হয়েছে • $notifId',
-          en: 'Broadcast sent • $notifId',
+          bn: 'FCM accepted broadcast - $notifId',
+          en: 'FCM accepted broadcast - $notifId',
         );
       }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(label)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(label)));
       if (status == 'queued') {
         setState(() {
           _scheduleLater = false;
@@ -360,7 +426,10 @@ class _AdminNotificationBroadcastScreenState
                 label: Text(
                   _scheduleLater
                       ? context.tr(bn: 'শিডিউল করুন', en: 'Schedule broadcast')
-                      : context.tr(bn: 'সবার কাছে পাঠান', en: 'Send to everyone'),
+                      : context.tr(
+                          bn: 'সবার কাছে পাঠান',
+                          en: 'Send to everyone',
+                        ),
                 ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -436,7 +505,10 @@ class _AdminNotificationBroadcastScreenState
               Expanded(
                 child: Text(
                   _uploadedImageUrl == null
-                      ? context.tr(bn: 'কোনো ছবি বাছাই করা হয়নি', en: 'No image picked yet')
+                      ? context.tr(
+                          bn: 'কোনো ছবি বাছাই করা হয়নি',
+                          en: 'No image picked yet',
+                        )
                       : _uploadedImageUrl!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -463,7 +535,10 @@ class _AdminNotificationBroadcastScreenState
             maxLength: _imageUrlMax,
             keyboardType: TextInputType.url,
             decoration: InputDecoration(
-              labelText: context.tr(bn: 'ছবির লিঙ্ক (HTTPS)', en: 'Image URL (HTTPS)'),
+              labelText: context.tr(
+                bn: 'ছবির লিঙ্ক (HTTPS)',
+                en: 'Image URL (HTTPS)',
+              ),
               border: const OutlineInputBorder(),
               hintText: 'https://…',
             ),
@@ -521,7 +596,10 @@ class _AdminNotificationBroadcastScreenState
             controller: _deepLinkCtrl,
             maxLength: _deepLinkMax,
             decoration: InputDecoration(
-              labelText: context.tr(bn: 'ডিপ লিঙ্ক (ঐচ্ছিক)', en: 'Deep link (optional)'),
+              labelText: context.tr(
+                bn: 'ডিপ লিঙ্ক (ঐচ্ছিক)',
+                en: 'Deep link (optional)',
+              ),
               border: const OutlineInputBorder(),
               hintText: '/home',
             ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/locale_text.dart';
 import '../services/auth_service.dart';
+import '../services/notifications/fcm_service.dart';
 import '../widgets/notifications/notification_history_row.dart';
 
 // Superadmin-only history of every notifications/{id}. Reads are gated by
@@ -28,8 +29,9 @@ class _AdminNotificationHistoryScreenState
     extends State<AdminNotificationHistoryScreen> {
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(region: 'us-central1');
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'us-central1',
+  );
   final ScrollController _scrollCtrl = ScrollController();
 
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _rows = [];
@@ -37,6 +39,10 @@ class _AdminNotificationHistoryScreenState
   bool _loading = false;
   bool _exhausted = false;
   String? _error;
+  bool _diagnosticsLoading = false;
+  String? _diagnosticsError;
+  Map<String, dynamic>? _diagnostics;
+  Map<String, String?>? _localDiagnostics;
 
   _TriggerFilter _triggerFilter = _TriggerFilter.all;
   _StatusFilter _statusFilter = _StatusFilter.all;
@@ -47,6 +53,7 @@ class _AdminNotificationHistoryScreenState
     super.initState();
     _scrollCtrl.addListener(_onScroll);
     _loadMore(reset: true);
+    _loadDiagnostics();
   }
 
   @override
@@ -118,31 +125,61 @@ class _AdminNotificationHistoryScreenState
     }
   }
 
+  Future<void> _loadDiagnostics() async {
+    if (_diagnosticsLoading) return;
+    setState(() {
+      _diagnosticsLoading = true;
+      _diagnosticsError = null;
+    });
+    try {
+      final resp = await _functions
+          .httpsCallable('getNotificationDiagnostics')
+          .call<Map<Object?, Object?>>({});
+      final local = await FcmService().debugSnapshot();
+      if (!mounted) return;
+      setState(() {
+        _diagnostics = Map<String, dynamic>.from(resp.data);
+        _localDiagnostics = local;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _diagnosticsError = e.toString());
+    } finally {
+      if (mounted) setState(() => _diagnosticsLoading = false);
+    }
+  }
+
   Future<void> _onRetry(String notifId) async {
     final row = _rows.firstWhere((d) => d.id == notifId);
     final data = row.data();
     setState(() => _busy.add(notifId));
     try {
+      final targetKind = (data['target'] as Map?)?['kind'] ?? 'all_users';
       await _functions.httpsCallable('broadcastNotification').call({
         'type': data['type'],
         'title': data['title'],
         'body': data['body'],
         'imageUrl': data['imageUrl'],
-        'targetKind': (data['target'] as Map?)?['kind'] ?? 'all_users',
+        'target': {'kind': targetKind},
         'deepLink': data['deepLink'],
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.tr(bn: 'আবার পাঠানো হয়েছে', en: 'Retry sent')),
+          content: Text(
+            context.tr(
+              bn: 'Retry accepted by FCM',
+              en: 'Retry accepted by FCM',
+            ),
+          ),
         ),
       );
       await _loadMore(reset: true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Retry failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Retry failed: $e')));
     } finally {
       if (mounted) setState(() => _busy.remove(notifId));
     }
@@ -151,9 +188,9 @@ class _AdminNotificationHistoryScreenState
   Future<void> _onCancel(String notifId) async {
     setState(() => _busy.add(notifId));
     try {
-      await _functions
-          .httpsCallable('cancelScheduledBroadcast')
-          .call({'notifId': notifId});
+      await _functions.httpsCallable('cancelScheduledBroadcast').call({
+        'notifId': notifId,
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -163,9 +200,9 @@ class _AdminNotificationHistoryScreenState
       await _loadMore(reset: true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cancel failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
     } finally {
       if (mounted) setState(() => _busy.remove(notifId));
     }
@@ -209,20 +246,23 @@ class _AdminNotificationHistoryScreenState
           IconButton(
             tooltip: context.tr(bn: 'রিফ্রেশ', en: 'Refresh'),
             icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : () => _loadMore(reset: true),
+            onPressed: _loading || _diagnosticsLoading
+                ? null
+                : () {
+                    _loadDiagnostics();
+                    _loadMore(reset: true);
+                  },
           ),
         ],
       ),
       body: Column(
         children: [
           _buildFilterBar(context),
+          _buildDiagnosticsCard(context),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(12),
-              child: Text(
-                _error!,
-                style: const TextStyle(color: Colors.red),
-              ),
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
             ),
           Expanded(child: _buildList(context)),
         ],
@@ -264,21 +304,33 @@ class _AdminNotificationHistoryScreenState
             decoration: InputDecoration(
               labelText: context.tr(bn: 'স্ট্যাটাস', en: 'Status'),
               border: const OutlineInputBorder(),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
             ),
             items: const [
               DropdownMenuItem(value: _StatusFilter.all, child: Text('All')),
-              DropdownMenuItem(value: _StatusFilter.sent, child: Text('sent')),
               DropdownMenuItem(
-                  value: _StatusFilter.fallbackText,
-                  child: Text('fallback_text')),
+                value: _StatusFilter.sent,
+                child: Text('accepted'),
+              ),
               DropdownMenuItem(
-                  value: _StatusFilter.failed, child: Text('failed')),
+                value: _StatusFilter.fallbackText,
+                child: Text('fallback_text'),
+              ),
               DropdownMenuItem(
-                  value: _StatusFilter.queued, child: Text('queued')),
+                value: _StatusFilter.failed,
+                child: Text('failed'),
+              ),
               DropdownMenuItem(
-                  value: _StatusFilter.cancelled, child: Text('cancelled')),
+                value: _StatusFilter.queued,
+                child: Text('queued'),
+              ),
+              DropdownMenuItem(
+                value: _StatusFilter.cancelled,
+                child: Text('cancelled'),
+              ),
             ],
             onChanged: (v) {
               if (v == null) return;
@@ -286,6 +338,136 @@ class _AdminNotificationHistoryScreenState
               _loadMore(reset: true);
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticsCard(BuildContext context) {
+    final counts = (_diagnostics?['counts'] as Map?) ?? const {};
+    final local = _localDiagnostics ?? const <String, String?>{};
+    final localTokenPresent = ((local['fcmToken'] ?? '').isNotEmpty)
+        ? 'yes'
+        : 'no';
+    final permission = local['authorizationStatus'] ?? 'unknown';
+    final androidEnabled = local['androidNotificationsEnabled'] ?? 'unknown';
+    final detailsMaxHeight = (MediaQuery.sizeOf(context).height * 0.34)
+        .clamp(180.0, 260.0)
+        .toDouble();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+      child: Card(
+        child: ExpansionTile(
+          leading: const Icon(Icons.analytics_outlined),
+          title: Text(context.tr(bn: 'FCM diagnostics', en: 'FCM diagnostics')),
+          subtitle: Text(
+            _diagnosticsLoading
+                ? context.tr(bn: 'Loading...', en: 'Loading...')
+                : (_diagnosticsError ??
+                      context.tr(
+                        bn: 'Topic send accepted by FCM is not receipt.',
+                        en: 'Topic send accepted by FCM is not receipt.',
+                      )),
+          ),
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: detailsMaxHeight),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                child: Column(
+                  children: [
+                    _diagLine(context, 'Send mode', 'topic: all_users'),
+                    _diagLine(
+                      context,
+                      'Delivery receipt',
+                      'not tracked for topic sends',
+                    ),
+                    _diagLine(
+                      context,
+                      'Per-token FCM errors',
+                      'unavailable until multicast/token sends are used',
+                    ),
+                    _diagLine(
+                      context,
+                      'Device token docs',
+                      _countText(counts, 'deviceTokenDocs'),
+                    ),
+                    _diagLine(
+                      context,
+                      'Android device token docs',
+                      _countText(counts, 'androidDeviceTokenDocs'),
+                    ),
+                    _diagLine(
+                      context,
+                      'Device docs on all_users',
+                      _countText(counts, 'allUsersDeviceTopicDocs'),
+                    ),
+                    _diagLine(
+                      context,
+                      'User token docs',
+                      _countText(counts, 'userTokenDocs'),
+                    ),
+                    _diagLine(
+                      context,
+                      'User docs on all_users',
+                      _countText(counts, 'allUsersUserTopicDocs'),
+                    ),
+                    _diagLine(
+                      context,
+                      'Legacy users.fcm_token',
+                      _countText(counts, 'legacyUsersWithFcmToken'),
+                    ),
+                    _diagLine(
+                      context,
+                      'Active Android users',
+                      'not tracked by current schema',
+                    ),
+                    _diagLine(
+                      context,
+                      'This device permission',
+                      '$permission; Android enabled: $androidEnabled',
+                    ),
+                    _diagLine(
+                      context,
+                      'This device FCM token',
+                      localTokenPresent,
+                    ),
+                    if (_diagnosticsError != null)
+                      _diagLine(
+                        context,
+                        'Diagnostics error',
+                        _diagnosticsError!,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _countText(Map<dynamic, dynamic> counts, String key) {
+    return counts[key]?.toString() ?? 'unknown';
+  }
+
+  Widget _diagLine(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 170,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value)),
         ],
       ),
     );

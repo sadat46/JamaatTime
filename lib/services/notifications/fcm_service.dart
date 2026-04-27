@@ -33,7 +33,6 @@ class FcmService {
     required String locale,
   }) async {
     if (_initialized) return;
-    _initialized = true;
 
     _localPlugin = FlutterLocalNotificationsPlugin();
     _repo = FcmTokenRepository();
@@ -58,7 +57,22 @@ class FcmService {
     FirebaseMessaging.onBackgroundMessage(fcmBackgroundHandler);
 
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    FirebaseMessaging.onMessage.listen(_renderer.show);
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
+    try {
+      final initial = await messaging.getInitialMessage();
+      if (initial != null) _handleOpenedApp(initial);
+    } catch (_) {
+      // Opening from a notification is best-effort; receiving must still work.
+    }
+
+    _initialized = true;
+
+    try {
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+    } catch (_) {
+      // Android notification permission can be denied; FCM receive setup remains valid.
+    }
 
     try {
       await messaging.subscribeToTopic('all_users');
@@ -66,32 +80,35 @@ class FcmService {
       // Topic subscription can fail transiently; a later call will retry.
     }
 
-    final token = await messaging.getToken();
-    await _persistToken(token: token, locale: locale);
+    try {
+      final token = await messaging.getToken();
+      await _persistToken(token: token, locale: locale);
+    } catch (_) {
+      // Do not let Firestore/App Check/network token writes disable FCM display.
+    }
 
     _tokenRefreshSub = messaging.onTokenRefresh.listen((newToken) {
-      _persistToken(token: newToken, locale: locale);
+      _persistToken(token: newToken, locale: locale).catchError((_) {});
     });
-
-    FirebaseMessaging.onMessage.listen(_renderer.show);
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
-    final initial = await messaging.getInitialMessage();
-    if (initial != null) _handleOpenedApp(initial);
 
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user == null) return;
-      final t = await messaging.getToken();
-      if (t == null) return;
-      final installationId = await _safeInstallationId();
-      if (installationId == null) {
-        await _repo.saveForUser(uid: user.uid, token: t, locale: locale);
-      } else {
-        await _repo.migrateGuestToUser(
-          installationId: installationId,
-          uid: user.uid,
-          token: t,
-          locale: locale,
-        );
+      try {
+        final t = await messaging.getToken();
+        if (t == null) return;
+        final installationId = await _safeInstallationId();
+        if (installationId == null) {
+          await _repo.saveForUser(uid: user.uid, token: t, locale: locale);
+        } else {
+          await _repo.migrateGuestToUser(
+            installationId: installationId,
+            uid: user.uid,
+            token: t,
+            locale: locale,
+          );
+        }
+      } catch (_) {
+        // Auth-linked token writes are diagnostic only for topic sends.
       }
     });
   }
@@ -135,15 +152,40 @@ class FcmService {
 
   // Exposed for a settings-screen dev button (deferred in P2).
   Future<Map<String, String?>> debugSnapshot() async {
-    final token = await FirebaseMessaging.instance.getToken();
+    String? token;
+    String authorizationStatus = 'unavailable';
+    try {
+      token = await FirebaseMessaging.instance.getToken();
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      authorizationStatus = settings.authorizationStatus.name;
+    } catch (_) {
+      token = null;
+    }
     final user = FirebaseAuth.instance.currentUser;
     final installationId = await _safeInstallationId();
+    String? androidNotificationsEnabled;
+    try {
+      final plugin = _initialized
+          ? _localPlugin
+          : FlutterLocalNotificationsPlugin();
+      final enabled = await plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.areNotificationsEnabled();
+      androidNotificationsEnabled = enabled?.toString();
+    } catch (_) {
+      androidNotificationsEnabled = null;
+    }
     return {
       'fcmToken': token,
       'uid': user?.uid,
       'email': user?.email,
       'installationId': installationId,
       'loggedIn': (user != null).toString(),
+      'authorizationStatus': authorizationStatus,
+      'androidNotificationsEnabled': androidNotificationsEnabled,
     };
   }
 
