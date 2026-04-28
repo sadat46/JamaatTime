@@ -60,8 +60,9 @@ void main() async {
     // Continue with the app even if notification service fails to initialize
   }
 
-  // Register home widget background callback for refresh button
+  // Register callbacks for both user interaction (tap) and background alarms
   HomeWidget.registerInteractivityCallback(backgroundCallback);
+  HomeWidget.registerBackgroundCallback(backgroundCallback);
 
   // Load the persisted locale before the first frame so the UI renders in
   // the correct language with no flicker (D15).
