@@ -44,7 +44,8 @@ class FcmService {
         android: AndroidInitializationSettings('@mipmap/launcher_icon'),
       ),
       onDidReceiveNotificationResponse: (response) {
-        _router?.handle(response.payload);
+        final router = _router;
+        if (router != null) unawaited(router.handlePayload(response.payload));
       },
     );
 
@@ -53,6 +54,7 @@ class FcmService {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(broadcastAndroidChannel);
+    await _router?.restorePendingIntent();
 
     FirebaseMessaging.onBackgroundMessage(fcmBackgroundHandler);
 
@@ -147,7 +149,10 @@ class FcmService {
   }
 
   void _handleOpenedApp(RemoteMessage message) {
-    _router?.handle(message.data['deepLink'] as String?);
+    final router = _router;
+    if (router != null) {
+      unawaited(router.handleRemoteMessageData(message.data));
+    }
   }
 
   // Exposed for a settings-screen dev button (deferred in P2).

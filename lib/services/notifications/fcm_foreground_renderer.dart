@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -43,7 +44,13 @@ class FcmForegroundRenderer {
       }
     }
 
-    final payload = data['deepLink'] as String?;
+    final payload = jsonEncode({
+      'notifId': data['notifId'] ?? data['notification_id'],
+      'deepLink': data['deepLink'],
+      'type': data['type'],
+      'priority': data['priority'],
+      'schemaVersion': data['schemaVersion'],
+    });
     await _plugin.show(
       message.messageId.hashCode,
       title,
@@ -67,9 +74,7 @@ class FcmForegroundRenderer {
   Future<String?> _downloadToTemp(String url) async {
     try {
       final uri = Uri.parse(url);
-      final resp = await http
-          .get(uri)
-          .timeout(const Duration(seconds: 10));
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200 || resp.bodyBytes.isEmpty) return null;
       final dir = Directory.systemTemp;
       final file = File(
