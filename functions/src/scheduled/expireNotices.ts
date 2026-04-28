@@ -4,6 +4,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '../lib/firebase';
 import { log } from '../lib/logger';
 import { markNoticeExpired } from '../notice/noticeContract';
+import { logNoticeMetric } from '../notice/noticeMetrics';
 
 const EXPIRE_BATCH_LIMIT = 400;
 
@@ -39,6 +40,8 @@ export const expireNotices = onSchedule(
     }
 
     log.info('notice_expire_summary', { expired, failed });
+    if (expired > 0) {
+      logNoticeMetric('notice.expire.count', { count: expired });
+    }
   },
 );
-

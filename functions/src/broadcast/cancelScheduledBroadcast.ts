@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { assertSuperAdmin } from '../lib/auth';
 import { requireString } from '../lib/validate';
 import { log } from '../lib/logger';
+import { logNoticeMetric } from '../notice/noticeMetrics';
 
 // Superadmin cancels a queued broadcast before the dispatcher claims it.
 // Runs in a transaction: fails fast if the scheduled row is already claimed
@@ -80,6 +81,9 @@ export const cancelScheduledBroadcast = onCall(
     });
 
     log.info('broadcast_cancelled', { notifId, cancelledBy: me.uid, finalStatus });
+    if (finalStatus === 'cancelled') {
+      logNoticeMetric('notice.cancel.count', { notifId, actorUid: me.uid });
+    }
     return { notifId, status: finalStatus };
   },
 );

@@ -7,6 +7,7 @@ import '../../../core/locale_text.dart';
 import '../data/notice_model.dart';
 import '../data/notice_read_state_service.dart';
 import '../data/notice_repository.dart';
+import '../data/notice_telemetry.dart';
 import 'notice_detail_screen.dart';
 
 enum _NoticeFilter { all, prayer, events, announcements }
@@ -78,6 +79,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         _exhausted = page.cursor == null || page.items.length < 20;
       });
       await _readState.markAllSeen(_notices);
+      NoticeTelemetry.event('notice_board_open', {
+        'count': _notices.length,
+        'fromCache': page.fromCache,
+      });
     } catch (e) {
       if (mounted) setState(() => _error = e);
     } finally {
@@ -238,6 +243,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Future<void> _openNotice(NoticeModel notice) async {
+    NoticeTelemetry.event('notice_card_tap', {'notifId': notice.id});
     await _readState.markRead(notice.id);
     if (!mounted) return;
     await Navigator.of(context).push(
@@ -252,6 +258,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Future<void> _share(NoticeModel notice) async {
+    NoticeTelemetry.event('notice_share', {'notifId': notice.id});
     await Share.share(
       '${notice.title}\n\n${notice.body}\n\njamaat-time://notice/${notice.id}',
       subject: notice.title,

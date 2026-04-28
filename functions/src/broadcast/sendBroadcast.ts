@@ -12,6 +12,7 @@ import {
   writeAdminMeta,
   writeNoticeDraft,
 } from '../notice/noticeContract';
+import { logNoticeMetric } from '../notice/noticeMetrics';
 
 // Internal helper shared by every broadcast code path:
 //   - P4: broadcastNotification (text)
@@ -201,6 +202,11 @@ export async function sendBroadcast(
       createdBy: payload.createdBy,
       publicVisible: true,
     });
+    logNoticeMetric(payload.imageFallbackReason ? 'notice.fallback.count' : 'notice.sent.count', {
+      notifId,
+      triggerSource: payload.triggerSource,
+      priority: payload.priority ?? 'normal',
+    });
 
     return {
       notifId,
@@ -250,6 +256,10 @@ export async function sendBroadcast(
           reason,
           createdBy: payload.createdBy,
         });
+        logNoticeMetric('notice.fallback.count', {
+          notifId,
+          reason: 'image_send_failed',
+        });
         return { notifId, messageId, sendMode: 'topic', status: 'fallback_text' };
       } catch (fallbackErr) {
         await markNoticeFailed({
@@ -262,6 +272,10 @@ export async function sendBroadcast(
           target,
           reason: (fallbackErr as Error).message,
           createdBy: payload.createdBy,
+        });
+        logNoticeMetric('notice.failed.count', {
+          notifId,
+          reason: 'fallback_send_failed',
         });
         throw fallbackErr;
       }
@@ -278,6 +292,7 @@ export async function sendBroadcast(
       createdBy: payload.createdBy,
       metaPath: adminMetaRef(notifId).path,
     });
+    logNoticeMetric('notice.failed.count', { notifId, reason });
     throw err;
   }
 }

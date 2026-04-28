@@ -7,6 +7,7 @@ import '../data/notice_errors.dart';
 import '../data/notice_model.dart';
 import '../data/notice_read_state_service.dart';
 import '../data/notice_repository.dart';
+import '../data/notice_telemetry.dart';
 
 class NoticeDetailScreen extends StatefulWidget {
   const NoticeDetailScreen({
@@ -38,9 +39,18 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
   }
 
   Future<NoticeModel> _load() async {
-    final notice = await _repository.getById(widget.notifId);
-    await _readState.markRead(notice.id);
-    return notice;
+    try {
+      final notice = await _repository.getById(widget.notifId);
+      await _readState.markRead(notice.id);
+      NoticeTelemetry.event('notice_detail_open', {'notifId': notice.id});
+      return notice;
+    } catch (e) {
+      NoticeTelemetry.event('notice_unavailable_view', {
+        'notifId': widget.notifId,
+        'error': e.runtimeType.toString(),
+      });
+      rethrow;
+    }
   }
 
   @override
@@ -82,6 +92,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
   }
 
   Future<void> _share(NoticeModel notice) async {
+    NoticeTelemetry.event('notice_share', {'notifId': notice.id});
     final text =
         '${notice.title}\n\n${notice.body}\n\njamaat-time://notice/${notice.id}';
     await Share.share(text, subject: notice.title);

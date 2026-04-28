@@ -29,6 +29,7 @@ import '../core/locale_text.dart';
 import '../features/notice_board/data/notice_model.dart';
 import '../features/notice_board/data/notice_read_state_service.dart';
 import '../features/notice_board/data/notice_repository.dart';
+import '../features/notice_board/data/notice_telemetry.dart';
 import '../features/notice_board/presentation/notice_board_screen.dart';
 
 // Extension to get date part only
@@ -133,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openNoticeBoard([NoticeModel? latest]) async {
+    NoticeTelemetry.event('bell_open', {'latestNotifId': latest?.id});
     if (latest != null) {
       await _noticeReadState.markAllSeen([latest]);
     }
