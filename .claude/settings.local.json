@@ -4,7 +4,16 @@
       "Bash(flutter analyze:*)",
       "Bash(cat:*)",
       "Bash(python -m json.tool:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(flutter test *)",
+      "Bash(git -C /c/Users/SADAT/Desktop/cursor_test/jamaat_time diff --stat HEAD -- android lib pubspec.yaml)",
+      "Bash(git -C /c/Users/SADAT/Desktop/cursor_test/jamaat_time log --oneline -10)",
+      "Bash(git *)",
+      "Bash(flutter pub *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npm --prefix functions run build)",
+      "Bash(npm --prefix functions run lint)"
     ]
   }
 }

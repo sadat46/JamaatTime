@@ -71,10 +71,11 @@ class _BroadcastSendConfirmDialogState
             ? context.tr(bn: 'শিডিউল নিশ্চিত করুন', en: 'Confirm schedule')
             : context.tr(bn: 'পাঠানোর আগে নিশ্চিত করুন', en: 'Confirm send'),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Text(
             scheduled != null
                 ? context.tr(
@@ -120,7 +121,8 @@ class _BroadcastSendConfirmDialogState
             ),
             onChanged: (_) => setState(() {}),
           ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
