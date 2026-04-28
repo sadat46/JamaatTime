@@ -23,6 +23,8 @@ class NoticeBoardScreen extends StatefulWidget {
 }
 
 class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
+  static const int _publicBoardCap = 200;
+
   late final NoticeRepository _repository =
       widget.repository ?? NoticeRepository();
   late final NoticeReadStateService _readState =
@@ -93,14 +95,21 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   Future<void> _loadNextPage() async {
     final cursor = _cursor;
     if (cursor == null) return;
+    if (_notices.length >= _publicBoardCap) {
+      setState(() => _exhausted = true);
+      return;
+    }
     setState(() => _loadingMore = true);
     try {
       final page = await _repository.fetchPage(cursor: cursor);
       if (!mounted) return;
       setState(() {
-        _notices.addAll(page.items);
+        _notices.addAll(page.items.take(_publicBoardCap - _notices.length));
         _cursor = page.cursor;
-        _exhausted = page.cursor == null || page.items.length < 20;
+        _exhausted =
+            _notices.length >= _publicBoardCap ||
+            page.cursor == null ||
+            page.items.length < 20;
       });
     } catch (_) {
       if (mounted) setState(() => _exhausted = true);

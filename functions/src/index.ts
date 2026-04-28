@@ -13,4 +13,5 @@ export { scheduleBroadcast } from './broadcast/scheduleBroadcast';
 export { cancelScheduledBroadcast } from './broadcast/cancelScheduledBroadcast';
 export { dispatchScheduledNotifications } from './scheduled/dispatchScheduledNotifications';
 export { expireNotices } from './scheduled/expireNotices';
+export { archiveOldNotices } from './scheduled/archiveOldNotices';
 export { onJamaatChange } from './triggers/onJamaatChange';

@@ -101,6 +101,14 @@
       ]
     },
     {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "publicVisible", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "scheduled_notifications",
       "queryScope": "COLLECTION",
       "fields": [
