@@ -24,6 +24,12 @@ import '../services/widget_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
+import '../core/feature_flags.dart';
+import '../core/locale_text.dart';
+import '../features/notice_board/data/notice_model.dart';
+import '../features/notice_board/data/notice_read_state_service.dart';
+import '../features/notice_board/data/notice_repository.dart';
+import '../features/notice_board/presentation/notice_board_screen.dart';
 
 // Extension to get date part only
 extension DateTimeExtension on DateTime {
@@ -88,6 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final NotificationService _notificationService = NotificationService();
   final JamaatService _jamaatService = JamaatService();
   final LocationConfigService _locationConfigService = LocationConfigService();
+  final NoticeRepository _noticeRepository = NoticeRepository();
+  final NoticeReadStateService _noticeReadState = NoticeReadStateService();
   LocationConfig? _locationConfig;
 
   String? currentPlaceName;
@@ -122,6 +130,22 @@ class _HomeScreenState extends State<HomeScreen> {
   String _localizedDigitsForContext(BuildContext context, String value) {
     if (value == '-') return value;
     return LocaleDigits.localize(value, Localizations.localeOf(context));
+  }
+
+  Future<void> _openNoticeBoard([NoticeModel? latest]) async {
+    if (latest != null) {
+      await _noticeReadState.markAllSeen([latest]);
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoticeBoardScreen(
+          repository: _noticeRepository,
+          readState: _noticeReadState,
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
   }
 
   @override
@@ -1167,6 +1191,60 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
             elevation: 2,
+            actions: [
+              if (kNoticeBoardEnabled)
+                StreamBuilder<NoticeModel?>(
+                  stream: _noticeRepository.watchLatest(),
+                  builder: (context, snapshot) {
+                    final latest = snapshot.data;
+                    return FutureBuilder<bool>(
+                      future: _noticeReadState.hasUnreadLatest(latest),
+                      builder: (context, unreadSnap) {
+                        final unread = unreadSnap.data == true;
+                        return Semantics(
+                          label: context.tr(
+                            bn: unread
+                                ? 'Notice Board, new notices'
+                                : 'Notice Board',
+                            en: unread
+                                ? 'Notice Board, new notices'
+                                : 'Notice Board',
+                          ),
+                          button: true,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              IconButton(
+                                tooltip: context.tr(
+                                  bn: 'Notice Board',
+                                  en: 'Notice Board',
+                                ),
+                                onPressed: () => _openNoticeBoard(latest),
+                                icon: const Icon(Icons.notifications_outlined),
+                              ),
+                              if (unread)
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: Container(
+                                    width: 9,
+                                    height: 9,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+            ],
           ),
           body: Center(
             child: ConstrainedBox(
