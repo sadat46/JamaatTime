@@ -1,109 +1,134 @@
 rules_version = '2';
 
-// Notification Broadcast System — Phase 1 schema + access rules.
-// See NOTIFICATION_BROADCAST_PLAN.md for the authoritative schema and
-// the rationale behind each match block. Phase 11 will tighten the
-// jamaat_times write rule; the placeholder below matches current app
-// behavior so this file remains safe to deploy mid-rollout.
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ─── Helpers ───────────────────────────────────────────────────
-    // The app has no Firebase custom claims today. Role lives at
-    // users/{uid}.role and is written only by Cloud Functions.
     function userRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
-    function isSignedIn()      { return request.auth != null; }
-    function isAdminOrAbove()  { return isSignedIn() && userRole() in ['admin', 'superadmin']; }
-    function isSuperAdmin()    { return isSignedIn() && userRole() == 'superadmin'; }
-
-    // ─── users/{uid} — identity & role (role is server-only) ───────
-    match /users/{uid} {
-      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdminOrAbove());
-      allow create: if isSignedIn() && request.auth.uid == uid
-                    && !('role' in request.resource.data.keys());
-      allow update: if isSignedIn() && request.auth.uid == uid
-                    && !('role' in request.resource.data.diff(resource.data).affectedKeys());
-      // delete + any `role` write → Cloud Functions only (admin SDK bypasses rules).
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdminOrAbove() {
+      return isSignedIn() && userRole() in ['admin', 'superadmin'];
+    }
+    function isSuperAdmin() {
+      return isSignedIn() && userRole() == 'superadmin';
+    }
+    function publicNoticeKeys() {
+      return [
+        'schemaVersion',
+        'notifId',
+        'type',
+        'category',
+        'title',
+        'body',
+        'imageUrl',
+        'imageWidth',
+        'imageHeight',
+        'imageBlurHash',
+        'imageFallback',
+        'deepLink',
+        'locale',
+        'localizedVariants',
+        'status',
+        'publicVisible',
+        'priority',
+        'pinned',
+        'expiresAt',
+        'archivedAt',
+        'triggerSource',
+        'audience',
+        'createdAt',
+        'scheduledFor',
+        'sentAt',
+        'publishedAt',
+        'updatedAt',
+      ];
+    }
+    function isVisiblePublicNotice() {
+      return resource.data.publicVisible == true
+             && resource.data.status in ['sent', 'fallback_text']
+             && (!('expiresAt' in resource.data)
+                 || resource.data.expiresAt == null
+                 || resource.data.expiresAt > request.time)
+             && resource.data.keys().hasOnly(publicNoticeKeys());
     }
 
-    // ─── notifications/** — history log (backend writes only) ──────
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdminOrAbove());
+      allow create: if isSignedIn()
+                    && request.auth.uid == uid
+                    && !('role' in request.resource.data.keys());
+      allow update: if isSignedIn()
+                    && request.auth.uid == uid
+                    && !('role' in request.resource.data.diff(resource.data).affectedKeys());
+      allow delete: if false;
+    }
+
     match /notifications/{notifId} {
-      allow read:  if isAdminOrAbove();
-      allow write: if false;  // Cloud Functions only.
+      allow read: if isAdminOrAbove() || isVisiblePublicNotice();
+      allow write: if false;
+
+      match /admin_meta/{doc} {
+        allow read: if isAdminOrAbove();
+        allow write: if false;
+      }
 
       match /{subcollection=**} {
-        allow read:  if isAdminOrAbove();
+        allow read: if isAdminOrAbove();
         allow write: if false;
       }
     }
 
-    // ─── notification_rules/** — auto-trigger configuration ────────
     match /notification_rules/{doc} {
-      allow read:  if isAdminOrAbove();
+      allow read: if isAdminOrAbove();
       allow write: if isSuperAdmin();
     }
 
-    // ─── user_tokens/{uid} — FCM tokens for logged-in users ────────
     match /user_tokens/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
-      // Functions read the entire collection via admin SDK (bypasses rules).
     }
 
-    // ─── device_tokens/{installationId} — guest FCM tokens ─────────
-    // Guest-safe: any client may write its own row keyed by the
-    // FirebaseInstallations id. Reads are restricted to Cloud Functions.
     match /device_tokens/{installationId} {
       allow create, update: if true;
-      allow read, delete:   if false;
+      allow read, delete: if false;
     }
 
-    // ─── scheduled_notifications/** — send-later queue (backend-only) ─
     match /scheduled_notifications/{notifId} {
-      allow read, write: if false;  // Callable-only (scheduleBroadcast, cancelScheduledBroadcast, dispatcher).
+      allow read, write: if false;
     }
 
-    // ─── notification_cooldowns/{city} — P9 trigger dedup (functions-only) ─
+    match /admin_rate_limits/{doc} {
+      allow read, write: if false;
+    }
+
     match /notification_cooldowns/{city} {
       allow read, write: if false;
     }
 
-    // ─── system_config/** — server-side config (functions-only) ────
     match /system_config/{doc} {
       allow read, write: if false;
     }
 
-    // ─── role_audit/** — append-only audit trail ───────────────────
     match /role_audit/{entryId} {
-      allow read:  if isAdminOrAbove();
-      allow write: if false;  // Cloud Functions only.
+      allow read: if isAdminOrAbove();
+      allow write: if false;
     }
 
-    // ─── jamaat_times/** — admin-only write, identity pinned to admin panel ─
-    // Read stays public (times are shown on the home/widget screens without
-    // auth). Writes require admin/superadmin AND must stamp
-    //   updatedBy    == request.auth.uid    (P9 trigger reads this)
-    //   writeSource  == 'admin_panel'       (blocks client-spoofed strings)
-    // JamaatService.saveJamaatTimes stamps both fields on every save.
     match /jamaat_times/{city}/daily_times/{date} {
-      allow read:  if true;
+      allow read: if true;
       allow write: if isAdminOrAbove()
                    && request.resource.data.updatedBy == request.auth.uid
                    && request.resource.data.writeSource == 'admin_panel';
     }
     match /jamaat_times/{city} {
-      allow read:  if true;
+      allow read: if true;
       allow write: if isAdminOrAbove();
     }
 
-    // ─── deny-by-default catch-all ─────────────────────────────────
-    // Any collection not explicitly matched above is denied. Prevents
-    // accidental exposure when a new collection is added server-side
-    // without a corresponding rule block.
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+
