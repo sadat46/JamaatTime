@@ -3,11 +3,8 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { db } from '../lib/firebase';
 import { log } from '../lib/logger';
-import {
-  sendBroadcast,
-  BroadcastTargetKind,
-  BroadcastType,
-} from '../broadcast/sendBroadcast';
+import { sendBroadcast, BroadcastTargetKind } from '../broadcast/sendBroadcast';
+import { loadBroadcastDraft, markNoticeExpired } from '../notice/noticeContract';
 
 // Pub/Sub-scheduled dispatcher. Runs every 5 minutes, claims any due
 // scheduled_notifications row atomically, and hands the draft to the shared
@@ -17,19 +14,6 @@ import {
 // notifications/{id} doc as 'failed', visible in P10 history for retry).
 
 const BATCH_LIMIT = 100;
-
-interface NotifDoc {
-  type?: BroadcastType;
-  title?: string;
-  body?: string;
-  imageUrl?: string | null;
-  target?: { kind?: BroadcastTargetKind };
-  deepLink?: string | null;
-  createdBy?: string;
-  scheduledFor?: Timestamp;
-  status?: string;
-  failureReason?: string | null;
-}
 
 export const dispatchScheduledNotifications = onSchedule(
   { schedule: 'every 5 minutes', region: 'us-central1' },
@@ -71,28 +55,25 @@ export const dispatchScheduledNotifications = onSchedule(
       }
 
       const notifRef = db.collection('notifications').doc(notifId);
-      const notifSnap = await notifRef.get();
-      if (!notifSnap.exists) {
+      const draft = await loadBroadcastDraft(notifId);
+      if (!draft) {
         log.warn('scheduled_draft_missing', { notifId });
         skipped++;
         continue;
       }
-      const draft = notifSnap.data() as NotifDoc;
-      if (draft.status === 'cancelled') {
+      const currentSnap = await notifRef.get();
+      const currentStatus = currentSnap.data()?.status as string | undefined;
+      if (currentStatus === 'cancelled') {
         // Cancelled after we claimed; clean up the scheduled row and move on.
         await schedDoc.ref.delete();
         skipped++;
         continue;
       }
-      if (
-        !draft.type ||
-        !draft.title ||
-        !draft.body ||
-        !draft.target?.kind ||
-        !draft.createdBy
-      ) {
-        log.error('scheduled_draft_incomplete', { notifId });
-        failed++;
+
+      if (draft.expiresAt && draft.expiresAt.toMillis() < now.toMillis()) {
+        await markNoticeExpired({ notifId, actor: 'dispatchScheduledNotifications' });
+        await schedDoc.ref.delete();
+        skipped++;
         continue;
       }
 
@@ -104,22 +85,19 @@ export const dispatchScheduledNotifications = onSchedule(
             title: draft.title,
             body: draft.body,
             imageUrl: draft.imageUrl ?? null,
-            target: { kind: draft.target.kind },
+            target: {
+              kind: draft.target.kind as BroadcastTargetKind,
+              value: draft.target.value,
+            },
             deepLink: draft.deepLink ?? null,
-            triggerSource: 'manual',
+            triggerSource: draft.triggerSource,
             createdBy: draft.createdBy,
             scheduledFor: draft.scheduledFor ?? null,
+            idempotencyKey: draft.idempotencyKey ?? `schedule:${notifId}`,
+            imageFallbackReason: preFallbackReason,
           },
           { notifId },
         );
-
-        if (preFallbackReason) {
-          await notifRef.update({
-            status: 'fallback_text',
-            failureReason: preFallbackReason,
-            fallbackAt: FieldValue.serverTimestamp(),
-          });
-        }
 
         await schedDoc.ref.delete();
         dispatched++;

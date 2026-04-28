@@ -424,19 +424,23 @@ export async function publishNotice(params: {
   fcmResponse: Record<string, unknown>;
   actor: string;
   imageFallback?: boolean;
+  failureReason?: string | null;
+  failureCode?: string | null;
 }): Promise<void> {
   const notifRef = db.collection('notifications').doc(params.notifId);
   const metaRef = notifRef.collection('admin_meta').doc('meta');
   await db.runTransaction(async (tx) => {
-    tx.update(notifRef, {
+    const rootUpdate: Record<string, unknown> = {
       status: params.imageFallback ? 'fallback_text' : 'sent',
       publicVisible: true,
       imageFallback: params.imageFallback === true,
       sentAt: FieldValue.serverTimestamp(),
       publishedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    });
-    tx.set(metaRef, {
+    };
+    if (params.imageFallback) rootUpdate.imageUrl = null;
+
+    const metaUpdate: Record<string, unknown> = {
       fcmResponse: params.fcmResponse,
       fcmMessageId: params.messageId,
       editHistory: FieldValue.arrayUnion({
@@ -444,7 +448,12 @@ export async function publishNotice(params: {
         action: params.imageFallback ? 'notice_publish_fallback_text' : 'notice_publish_sent',
         at: Timestamp.now(),
       }),
-    }, { merge: true });
+    };
+    if (params.failureReason) metaUpdate.failureReason = params.failureReason;
+    if (params.failureCode) metaUpdate.failureCode = params.failureCode;
+
+    tx.update(notifRef, rootUpdate);
+    tx.set(metaRef, metaUpdate, { merge: true });
   });
 }
 
@@ -581,4 +590,3 @@ export function onlyPublicNoticeKeys(data: Record<string, unknown>): boolean {
   const allowed = new Set<string>(PUBLIC_NOTICE_KEYS);
   return Object.keys(data).every((key) => allowed.has(key));
 }
-

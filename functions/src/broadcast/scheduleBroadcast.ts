@@ -8,6 +8,10 @@ import { log } from '../lib/logger';
 import { BroadcastTargetKind, BroadcastType } from './sendBroadcast';
 import { validateImageUrl } from './validateImage';
 import { assertManualBroadcastBudget } from '../lib/rateLimit';
+import {
+  publicPayloadForStatus,
+  validatePublicPayload,
+} from '../notice/noticeContract';
 
 // Writes a queued broadcast in one transaction:
 //   notifications/{id}                — status='queued', full payload
@@ -39,8 +43,8 @@ export const scheduleBroadcast = onCall(
     const data = (request.data ?? {}) as Record<string, unknown>;
 
     const type = requireEnum(data.type, 'type', TYPES) as BroadcastType;
-    const title = requireString(data.title, 'title', { max: 65 });
-    const body = requireString(data.body, 'body', { max: 240 });
+    const title = requireString(data.title, 'title', { max: 120 });
+    const body = requireString(data.body, 'body', { max: 2000 });
     const deepLink = optionalString(data.deepLink, 'deepLink', { max: 500 });
     const rawImageUrl = optionalString(data.imageUrl, 'imageUrl', { max: 2000 });
 
@@ -107,33 +111,43 @@ export const scheduleBroadcast = onCall(
     const notifRef = db.collection('notifications').doc();
     const notifId = notifRef.id;
     const schedRef = db.collection('scheduled_notifications').doc(notifId);
+    const publicPayload = validatePublicPayload({
+      notifId,
+      title,
+      body,
+      imageUrl: effectiveImageUrl,
+      deepLink,
+      type: 'announcement',
+      triggerSource: 'manual',
+      scheduledFor: fireAt,
+      imageFallback: Boolean(fallbackReason),
+    });
 
-    await db.runTransaction(async (tx) => {
-      tx.set(notifRef, {
-        type: effectiveType,
-        title,
-        body,
-        imageUrl: effectiveImageUrl,
-        target: { kind: targetKind },
-        deepLink: deepLink ?? null,
-        triggerSource: 'manual',
+    const batch = db.batch();
+    batch.set(notifRef, publicPayloadForStatus(publicPayload, 'queued'));
+    batch.set(notifRef.collection('admin_meta').doc('meta'), {
         createdBy: me.uid,
-        createdAt: FieldValue.serverTimestamp(),
-        scheduledFor: fireAt,
-        status: 'queued',
+        target: { kind: targetKind },
         sendMode: 'topic',
         failureReason: fallbackReason,
         fcmResponse: null,
         dedupKey: null,
-      });
-      tx.set(schedRef, {
-        payloadRef: `notifications/${notifId}`,
-        fireAt,
-        claimed: false,
-        createdBy: me.uid,
-        createdAt: FieldValue.serverTimestamp(),
-      });
+        idempotencyKey: `schedule:${notifId}`,
+        broadcastType: effectiveType,
+        editHistory: FieldValue.arrayUnion({
+          actor: me.uid,
+          action: 'notice_queued',
+          at: Timestamp.now(),
+        }),
+      }, { merge: true });
+    batch.set(schedRef, {
+      payloadRef: `notifications/${notifId}`,
+      fireAt,
+      claimed: false,
+      createdBy: me.uid,
+      createdAt: FieldValue.serverTimestamp(),
     });
+    await batch.commit();
 
     log.info('broadcast_scheduled', {
       notifId,

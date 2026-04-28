@@ -1,7 +1,5 @@
 import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
-import { FieldValue } from 'firebase-admin/firestore';
 
-import { db } from '../lib/firebase';
 import { assertSuperAdmin } from '../lib/auth';
 import { requireString, requireEnum, optionalString } from '../lib/validate';
 import { log } from '../lib/logger';
@@ -11,7 +9,7 @@ import { assertManualBroadcastBudget } from '../lib/rateLimit';
 
 // P4: text-only manual broadcast.
 // P5: extended to accept type='image' + imageUrl with HEAD validation and
-// text fallback (reason recorded in notifications.failureReason).
+// text fallback (private reason recorded in admin_meta/meta.failureReason).
 
 const TARGETS = [
   'all_users',
@@ -30,8 +28,8 @@ export const broadcastNotification = onCall(
     const data = (request.data ?? {}) as Record<string, unknown>;
 
     const type = requireEnum(data.type, 'type', TYPES) as BroadcastType;
-    const title = requireString(data.title, 'title', { max: 65 });
-    const body = requireString(data.body, 'body', { max: 240 });
+    const title = requireString(data.title, 'title', { max: 120 });
+    const body = requireString(data.body, 'body', { max: 2000 });
     const deepLink = optionalString(data.deepLink, 'deepLink', { max: 500 });
     const rawImageUrl = optionalString(data.imageUrl, 'imageUrl', { max: 2000 });
 
@@ -82,15 +80,8 @@ export const broadcastNotification = onCall(
       deepLink,
       triggerSource: 'manual',
       createdBy: me.uid,
+      imageFallbackReason: fallbackReason,
     });
-
-    if (fallbackReason) {
-      await db.collection('notifications').doc(result.notifId).update({
-        status: 'fallback_text',
-        failureReason: fallbackReason,
-        fallbackAt: FieldValue.serverTimestamp(),
-      });
-    }
 
     return {
       notifId: result.notifId,

@@ -1,8 +1,17 @@
 import { getMessaging } from 'firebase-admin/messaging';
-import { FieldValue } from 'firebase-admin/firestore';
 
 import { db } from '../lib/firebase';
 import { log } from '../lib/logger';
+import {
+  adminMetaRef,
+  markNoticeFailed,
+  NoticePriority,
+  NoticeTriggerSource,
+  publishNotice,
+  validatePublicPayload,
+  writeAdminMeta,
+  writeNoticeDraft,
+} from '../notice/noticeContract';
 
 // Internal helper shared by every broadcast code path:
 //   - P4: broadcastNotification (text)
@@ -28,10 +37,14 @@ export interface BroadcastPayload {
   imageUrl?: string | null;
   target: { kind: BroadcastTargetKind; value?: unknown };
   deepLink?: string | null;
-  triggerSource: 'manual' | 'auto_jamaat_change';
+  triggerSource: 'manual' | 'auto_jamaat_change' | NoticeTriggerSource;
   createdBy: string; // uid or "system"
   scheduledFor?: FirebaseFirestore.Timestamp | null;
+  expiresAt?: FirebaseFirestore.Timestamp | null;
   dedupKey?: string;
+  idempotencyKey?: string;
+  priority?: NoticePriority;
+  imageFallbackReason?: string | null;
 }
 
 export interface BroadcastResult {
@@ -42,19 +55,33 @@ export interface BroadcastResult {
 }
 
 // Builds the FCM message for a given payload.
-function buildFcmMessage(notifId: string, p: BroadcastPayload) {
+function buildFcmMessage(
+  notifId: string,
+  p: BroadcastPayload,
+  opts: { imageUrl?: string | null; schemaVersion: number; noticeType: string },
+) {
   const data: Record<string, string> = {
     notifId,
     notification_id: notifId,
     title: p.title,
     body: p.body,
     triggerSource: p.triggerSource,
+    type: opts.noticeType,
+    priority: p.priority ?? 'normal',
+    schemaVersion: String(opts.schemaVersion),
+    payload: JSON.stringify({
+      notifId,
+      deepLink: p.deepLink ?? null,
+      type: opts.noticeType,
+      priority: p.priority ?? 'normal',
+      schemaVersion: opts.schemaVersion,
+    }),
   };
   if (p.deepLink) data.deepLink = p.deepLink;
-  if (p.imageUrl) data.imageUrl = p.imageUrl;
+  if (opts.imageUrl) data.imageUrl = opts.imageUrl;
 
   const androidNotif: Record<string, unknown> = {};
-  if (p.imageUrl) androidNotif.imageUrl = p.imageUrl;
+  if (opts.imageUrl) androidNotif.imageUrl = opts.imageUrl;
 
   return {
     topic: 'all_users',
@@ -64,10 +91,27 @@ function buildFcmMessage(notifId: string, p: BroadcastPayload) {
       priority: 'high' as const,
       notification: {
         ...androidNotif,
-        channelId: 'broadcast_channel',
+        channelId: 'notice_board',
       },
     },
   };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function sendWithSingleRetry(message: ReturnType<typeof buildFcmMessage>) {
+  try {
+    return await getMessaging().send(message);
+  } catch (err) {
+    await delay(500);
+    try {
+      return await getMessaging().send(message);
+    } catch {
+      throw err;
+    }
+  }
 }
 
 // Resolves FCM target to a topic string. Only 'all_users' is wired in P4;
@@ -87,41 +131,66 @@ export async function sendBroadcast(
   const notifId = notifRef.id;
 
   const target = resolveTopic(payload.target.kind);
+  const publicPayload = validatePublicPayload({
+    notifId,
+    title: payload.title,
+    body: payload.body,
+    imageUrl: payload.imageFallbackReason ? null : payload.imageUrl,
+    deepLink: payload.deepLink,
+    type: payload.triggerSource === 'auto_jamaat_change'
+      ? 'jamaat_time_change'
+      : 'announcement',
+    triggerSource: payload.triggerSource,
+    scheduledFor: payload.scheduledFor ?? null,
+    expiresAt: payload.expiresAt ?? null,
+    priority: payload.priority ?? 'normal',
+    imageFallback: Boolean(payload.imageFallbackReason),
+  });
+  const idempotencyKey =
+    payload.idempotencyKey ?? payload.dedupKey ?? `broadcast:${notifId}`;
 
-  await notifRef.set(
-    {
-      type: payload.type,
-      title: payload.title,
-      body: payload.body,
-      imageUrl: payload.imageUrl ?? null,
-      target: payload.target,
-      deepLink: payload.deepLink ?? null,
-      triggerSource: payload.triggerSource,
+  await writeNoticeDraft({
+    notifRef,
+    payload: publicPayload,
+    status: 'sending',
+    adminMeta: {
       createdBy: payload.createdBy,
-      createdAt: FieldValue.serverTimestamp(),
-      scheduledFor: payload.scheduledFor ?? null,
-      status: 'sending',
+      target: payload.target,
       sendMode: 'topic',
-      failureReason: null,
+      failureReason: payload.imageFallbackReason ?? null,
       fcmResponse: null,
       dedupKey: payload.dedupKey ?? null,
+      idempotencyKey,
+      broadcastType: payload.type,
     },
-    { merge: true },
-  );
+  });
 
   try {
-    const message = { ...buildFcmMessage(notifId, payload), topic: target };
-    const messageId = await getMessaging().send(message);
+    const message = {
+      ...buildFcmMessage(notifId, payload, {
+        imageUrl: publicPayload.imageUrl,
+        schemaVersion: publicPayload.schemaVersion,
+        noticeType: publicPayload.type,
+      }),
+      topic: target,
+    };
+    const messageId = payload.imageUrl
+      ? await sendWithSingleRetry(message)
+      : await getMessaging().send(message);
 
-    await notifRef.update({
-      status: 'sent',
-      fcmResponse: {
+    const fcmResponse = {
         sendMode: 'topic',
         messageId,
         deliveryReceiptTracked: false,
         perTokenErrorsTracked: false,
-      },
-      sentAt: FieldValue.serverTimestamp(),
+      };
+    await publishNotice({
+      notifId,
+      messageId,
+      fcmResponse,
+      actor: payload.createdBy,
+      imageFallback: Boolean(payload.imageFallbackReason),
+      failureReason: payload.imageFallbackReason ?? null,
     });
 
     log.info('broadcast_sent', {
@@ -130,20 +199,84 @@ export async function sendBroadcast(
       type: payload.type,
       triggerSource: payload.triggerSource,
       createdBy: payload.createdBy,
+      publicVisible: true,
     });
 
-    return { notifId, messageId, sendMode: 'topic', status: 'sent' };
+    return {
+      notifId,
+      messageId,
+      sendMode: 'topic',
+      status: payload.imageFallbackReason ? 'fallback_text' : 'sent',
+    };
   } catch (err) {
     const reason = (err as Error).message ?? 'unknown';
-    await notifRef.update({
-      status: 'failed',
-      failureReason: reason,
+    if (payload.imageUrl && !payload.imageFallbackReason) {
+      try {
+        const fallbackPayload: BroadcastPayload = {
+          ...payload,
+          type: 'text',
+          imageUrl: null,
+          imageFallbackReason: `image_send_failed:${reason}`,
+        };
+        const fallbackMessage = {
+          ...buildFcmMessage(notifId, fallbackPayload, {
+            imageUrl: null,
+            schemaVersion: publicPayload.schemaVersion,
+            noticeType: publicPayload.type,
+          }),
+          topic: target,
+        };
+        const messageId = await getMessaging().send(fallbackMessage);
+        const fcmResponse = {
+          sendMode: 'topic',
+          messageId,
+          deliveryReceiptTracked: false,
+          perTokenErrorsTracked: false,
+        };
+        await publishNotice({
+          notifId,
+          messageId,
+          fcmResponse,
+          actor: payload.createdBy,
+          imageFallback: true,
+          failureReason: `image_send_failed:${reason}`,
+        });
+        await writeAdminMeta(notifId, {
+          broadcastType: 'text',
+        });
+        log.warn('broadcast_image_send_fallback', {
+          notifId,
+          target,
+          reason,
+          createdBy: payload.createdBy,
+        });
+        return { notifId, messageId, sendMode: 'topic', status: 'fallback_text' };
+      } catch (fallbackErr) {
+        await markNoticeFailed({
+          notifId,
+          reason: (fallbackErr as Error).message ?? reason,
+          actor: payload.createdBy,
+        });
+        log.error('broadcast_failed_after_image_fallback', {
+          notifId,
+          target,
+          reason: (fallbackErr as Error).message,
+          createdBy: payload.createdBy,
+        });
+        throw fallbackErr;
+      }
+    }
+    await markNoticeFailed({
+      notifId,
+      reason,
+      actor: payload.createdBy,
     });
     log.error('broadcast_failed', {
       notifId,
       target,
       reason,
       createdBy: payload.createdBy,
+      metaPath: adminMetaRef(notifId).path,
     });
     throw err;
   }

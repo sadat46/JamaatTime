@@ -1,5 +1,5 @@
 import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { db } from '../lib/firebase';
 import { assertSuperAdmin } from '../lib/auth';
@@ -21,8 +21,27 @@ export const cancelScheduledBroadcast = onCall(
 
     const notifRef = db.collection('notifications').doc(notifId);
     const schedRef = db.collection('scheduled_notifications').doc(notifId);
+    const metaRef = notifRef.collection('admin_meta').doc('meta');
+    let finalStatus = 'cancelled';
 
     await db.runTransaction(async (tx) => {
+      const notifSnap = await tx.get(notifRef);
+      if (!notifSnap.exists) {
+        throw new HttpsError('not-found', `notifications/${notifId} missing.`);
+      }
+      const status = notifSnap.data()?.status as string | undefined;
+      if (status === 'sent' || status === 'fallback_text') {
+        tx.set(metaRef, {
+          editHistory: FieldValue.arrayUnion({
+            actor: me.uid,
+            action: 'cancel_noop_already_sent',
+            at: Timestamp.now(),
+          }),
+        }, { merge: true });
+        finalStatus = status;
+        return;
+      }
+
       const schedSnap = await tx.get(schedRef);
       if (!schedSnap.exists) {
         throw new HttpsError(
@@ -36,12 +55,6 @@ export const cancelScheduledBroadcast = onCall(
           'broadcast already claimed by dispatcher; cannot cancel.',
         );
       }
-
-      const notifSnap = await tx.get(notifRef);
-      if (!notifSnap.exists) {
-        throw new HttpsError('not-found', `notifications/${notifId} missing.`);
-      }
-      const status = notifSnap.data()?.status as string | undefined;
       if (status !== 'queued') {
         throw new HttpsError(
           'failed-precondition',
@@ -51,13 +64,22 @@ export const cancelScheduledBroadcast = onCall(
 
       tx.update(notifRef, {
         status: 'cancelled',
+        publicVisible: false,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      tx.set(metaRef, {
         cancelledAt: FieldValue.serverTimestamp(),
         cancelledBy: me.uid,
-      });
+        editHistory: FieldValue.arrayUnion({
+          actor: me.uid,
+          action: 'notice_cancelled',
+          at: Timestamp.now(),
+        }),
+      }, { merge: true });
       tx.delete(schedRef);
     });
 
-    log.info('broadcast_cancelled', { notifId, cancelledBy: me.uid });
-    return { notifId, status: 'cancelled' };
+    log.info('broadcast_cancelled', { notifId, cancelledBy: me.uid, finalStatus });
+    return { notifId, status: finalStatus };
   },
 );
