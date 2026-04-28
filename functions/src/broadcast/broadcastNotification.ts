@@ -32,6 +32,9 @@ export const broadcastNotification = onCall(
     const body = requireString(data.body, 'body', { max: 2000 });
     const deepLink = optionalString(data.deepLink, 'deepLink', { max: 500 });
     const rawImageUrl = optionalString(data.imageUrl, 'imageUrl', { max: 2000 });
+    const idempotencyKey = optionalString(data.idempotencyKey, 'idempotencyKey', {
+      max: 200,
+    });
 
     const targetObj = (data.target ?? {}) as { kind?: unknown };
     const targetKind = requireEnum(
@@ -81,6 +84,7 @@ export const broadcastNotification = onCall(
       triggerSource: 'manual',
       createdBy: me.uid,
       imageFallbackReason: fallbackReason,
+      idempotencyKey: idempotencyKey ?? undefined,
     });
 
     return {
