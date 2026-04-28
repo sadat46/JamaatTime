@@ -185,18 +185,21 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_fromCache)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.tertiaryContainer,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                context.tr(
-                  bn: 'Showing cached notices. Pull to refresh.',
-                  en: 'Showing cached notices. Pull to refresh.',
+            Semantics(
+              liveRegion: true,
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  context.tr(
+                    bn: 'Showing cached notices. Pull to refresh.',
+                    en: 'Showing cached notices. Pull to refresh.',
+                  ),
                 ),
               ),
             ),
@@ -280,105 +283,119 @@ class _NoticeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final thumbCacheSize = (86 * dpr).round();
     final published = notice.publishedAt ?? notice.sentAt ?? notice.createdAt;
     final title = notice.localizedTitle(locale);
     final body = notice.localizedBody(locale);
-    return Semantics(
-      button: true,
-      label: title,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: notice.pinned ? 3 : 1,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onShare,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (notice.imageUrl != null && notice.imageUrl!.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.network(
-                      notice.imageUrl!,
-                      width: 86,
-                      height: 86,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const _ThumbFallback(),
+    return RepaintBoundary(
+      child: Semantics(
+        button: true,
+        label: title,
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          elevation: notice.pinned ? 3 : 1,
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: onShare,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (notice.imageUrl != null && notice.imageUrl!.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.network(
+                        notice.imageUrl!,
+                        width: 86,
+                        height: 86,
+                        cacheWidth: thumbCacheSize,
+                        cacheHeight: thumbCacheSize,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const _ThumbFallback(),
+                      ),
                     ),
-                  ),
-                if (notice.imageUrl != null && notice.imageUrl!.isNotEmpty)
-                  const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          if (notice.priority == 'high' ||
-                              notice.priority == 'critical')
-                            _MiniBadge(label: notice.priority),
-                          if (notice.pinned) const _MiniBadge(label: 'pinned'),
-                        ],
-                      ),
-                      if (notice.priority == 'high' ||
-                          notice.priority == 'critical' ||
-                          notice.pinned)
-                        const SizedBox(height: 6),
-                      Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        body,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Icon(
-                            _sourceIcon(notice.triggerSource),
-                            size: 15,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _sourceLabel(notice.triggerSource),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (published != null) ...[
-                            const Text('  |  '),
-                            Tooltip(
-                              message: DateFormat.yMMMMEEEEd(
-                                locale.toLanguageTag(),
-                              ).add_jm().format(published.toLocal()),
-                              child: Text(
-                                _relativeTime(context, published),
-                                style: Theme.of(context).textTheme.bodySmall,
+                  if (notice.imageUrl != null && notice.imageUrl!.isNotEmpty)
+                    const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            if (notice.priority == 'high' ||
+                                notice.priority == 'critical')
+                              _MiniBadge(label: notice.priority),
+                            if (notice.pinned)
+                              const _MiniBadge(label: 'pinned'),
+                          ],
+                        ),
+                        if (notice.priority == 'high' ||
+                            notice.priority == 'critical' ||
+                            notice.pinned)
+                          const SizedBox(height: 6),
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          body,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Icon(
+                              _sourceIcon(notice.triggerSource),
+                              size: 15,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _sourceLabel(notice.triggerSource),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            if (published != null) ...[
+                              const Text('  |  '),
+                              Tooltip(
+                                message: DateFormat.yMMMMEEEEd(
+                                  locale.toLanguageTag(),
+                                ).add_jm().format(published.toLocal()),
+                                child: Text(
+                                  _relativeTime(context, published),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                            const Spacer(),
+                            Semantics(
+                              label: 'Share notice',
+                              button: true,
+                              child: IconButton(
+                                tooltip: context.tr(bn: 'Share', en: 'Share'),
+                                onPressed: onShare,
+                                icon: const Icon(
+                                  Icons.share_outlined,
+                                  size: 20,
+                                ),
                               ),
                             ),
                           ],
-                          const Spacer(),
-                          IconButton(
-                            tooltip: context.tr(bn: 'Share', en: 'Share'),
-                            onPressed: onShare,
-                            icon: const Icon(Icons.share_outlined, size: 20),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

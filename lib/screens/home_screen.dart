@@ -1204,6 +1204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       builder: (context, unreadSnap) {
                         final unread = unreadSnap.data == true;
                         return Semantics(
+                          liveRegion: unread,
                           label: context.tr(
                             bn: unread
                                 ? 'Notice Board, new notices'

@@ -140,6 +140,8 @@ class _NoticeDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final viewportWidth = MediaQuery.sizeOf(context).width;
     final title = notice.localizedTitle(locale);
     final body = notice.localizedBody(locale);
     final published = notice.publishedAt ?? notice.sentAt ?? notice.createdAt;
@@ -159,6 +161,7 @@ class _NoticeDetailBody extends StatelessWidget {
                   child: Image.network(
                     notice.imageUrl!,
                     fit: BoxFit.cover,
+                    cacheWidth: (viewportWidth * dpr).round(),
                     errorBuilder: (_, __, ___) => const _ImageFallback(),
                     loadingBuilder: (context, child, progress) {
                       if (progress == null) return child;
