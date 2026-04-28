@@ -86,10 +86,15 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         'fromCache': page.fromCache,
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e);
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loading = false;
+        });
+      }
+      return;
     }
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _loadNextPage() async {
@@ -134,16 +139,19 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             SliverToBoxAdapter(child: _buildHeader(context)),
             if (_loading)
               const SliverFillRemaining(
+                key: ValueKey('notice-board-loading'),
                 hasScrollBody: false,
                 child: _NoticeSkeletonList(),
               )
             else if (_error != null)
               SliverFillRemaining(
+                key: const ValueKey('notice-board-error'),
                 hasScrollBody: false,
                 child: _ErrorState(error: _error, onRetry: _loadFirstPage),
               )
             else if (filtered.isEmpty)
               SliverFillRemaining(
+                key: const ValueKey('notice-board-empty'),
                 hasScrollBody: false,
                 child: _EmptyState(fromCache: _fromCache),
               )
