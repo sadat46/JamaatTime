@@ -91,7 +91,7 @@ export const createNotificationImageUploadUrl = onCall(
     const publicBaseUrl = secretValue(R2_PUBLIC_BASE_URL, 'R2_PUBLIC_BASE_URL');
 
     const ext = ALLOWED_CONTENT_TYPES[contentType];
-    const key = `notification_images/${me.uid}/${Date.now()}-${randomUUID()}.${ext}`;
+    const key = `notice_images/drafts/${me.uid}/${Date.now()}-${randomUUID()}.${ext}`;
     const s3 = new S3Client({
       region: 'auto',
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
