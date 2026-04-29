@@ -5,12 +5,22 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.view.WindowManager
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity() {
     private val channelName = "jamaat_time/screen_awake"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "widget_maintenance",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<WidgetMaintenanceWorker>(15, TimeUnit.MINUTES).build()
+        )
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -33,5 +43,6 @@ class MainActivity : FlutterActivity() {
         }
 
         FocusGuardChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        BatteryOptimizationChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
     }
 }

@@ -18,46 +18,64 @@ import java.util.Calendar;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
-    private static final int ALARM_REQUEST_CODE = 2;
-    private static final int SELF_HEAL_REQUEST_CODE = 3;
+
+    // Legacy request codes — kept only to cancel stale PendingIntents on upgrade.
+    private static final int ALARM_REQUEST_CODE      = 2;
+    private static final int SELF_HEAL_REQUEST_CODE  = 3;
+
+    // New self-targeted boundary alarms (Layer 1).
+    private static final String ACTION_BOUNDARY_TICK = "com.sadat.jamaattime.action.BOUNDARY_TICK";
+    private static final String EXTRA_TICK_KIND      = "com.sadat.jamaattime.extra.TICK_KIND";
+    private static final int    REQ_PRAYER_BOUNDARY  = 10;
+    private static final int    REQ_JAMAAT_BOUNDARY  = 11;
+    private static final int    REQ_JAMAAT_OVER      = 12;
+    // Distinct slots — must NOT share request codes; Intent.filterEquals ignores extras,
+    // so same code + same action = same PendingIntent, causing later set*() to cancel earlier ones.
+    private static final int    REQ_MIDNIGHT         = 13;
+    private static final int    REQ_PRAYER_EXPIRE_TICK  = 14;
+    private static final int    REQ_JAMAAT_EXPIRE_TICK  = 15;
+
     private static final String HOME_WIDGET_BACKGROUND_ACTION =
         "es.antonborri.home_widget.action.BACKGROUND";
     private static final String HOME_WIDGET_BACKGROUND_RECEIVER =
         "es.antonborri.home_widget.HomeWidgetBackgroundReceiver";
     private static final String BOUNDARY_URI = "homewidget://boundary";
-    private static final String REFRESH_URI = "homewidget://refresh";
+    private static final String REFRESH_URI  = "homewidget://refresh";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         try {
             // Must match home_widget plugin's PREFERENCES constant (HomeWidgetPlugin.kt)
             SharedPreferences prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE);
-            String prayerName = prefs.getString("prayer_name", "-");
-            String prayerTime = prefs.getString("prayer_time", "-");
+            String prayerName    = prefs.getString("prayer_name", "-");
+            String prayerTime    = prefs.getString("prayer_time", "-");
             String remainingLabel = prefs.getString("remaining_label", "Remaining Time");
-            long nextEpoch = readEpochMillis(prefs, "next_prayer_epoch_millis");
-            boolean running = prefs.getBoolean("countdown_running", false);
-            String jamaatLabel = prefs.getString("jamaat_label", "Jamaat N/A");
+            long nextEpoch       = readEpochMillis(prefs, "next_prayer_epoch_millis");
+            boolean running      = prefs.getBoolean("countdown_running", false);
+            String jamaatLabel   = prefs.getString("jamaat_label", "Jamaat N/A");
             String jamaatValueText = prefs.getString("jamaat_value_text", "");
-            long jamaatEpoch = readEpochMillis(prefs, "jamaat_epoch_millis");
+            long jamaatEpoch     = readEpochMillis(prefs, "jamaat_epoch_millis");
             boolean jamaatRunning = prefs.getBoolean("jamaat_countdown_running", false);
             boolean jamaatTimeStyle = prefs.getBoolean("jamaat_time_style", false);
+            long jamaatOverEpoch = readEpochMillis(prefs, "jamaat_over_epoch_millis");
             // 4 dynamic prayer row slots (current prayer excluded by Flutter side)
             String rowLabel1 = prefs.getString("row_label_1", "-");
-            String rowTime1 = prefs.getString("row_time_1", "-");
+            String rowTime1  = prefs.getString("row_time_1", "-");
             String rowLabel2 = prefs.getString("row_label_2", "-");
-            String rowTime2 = prefs.getString("row_time_2", "-");
+            String rowTime2  = prefs.getString("row_time_2", "-");
             String rowLabel3 = prefs.getString("row_label_3", "-");
-            String rowTime3 = prefs.getString("row_time_3", "-");
+            String rowTime3  = prefs.getString("row_time_3", "-");
             String rowLabel4 = prefs.getString("row_label_4", "-");
-            String rowTime4 = prefs.getString("row_time_4", "-");
+            String rowTime4  = prefs.getString("row_time_4", "-");
             String islamicDate = prefs.getString("islamic_date", "-");
-            String location = prefs.getString("location", "-");
+            String location    = prefs.getString("location", "-");
 
             Log.d(TAG, "Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
             long nowMillis = System.currentTimeMillis();
-            boolean prayerStale = running && nextEpoch > 0L && nextEpoch <= nowMillis;
-            boolean jamaatStale = jamaatRunning && jamaatEpoch > 0L && jamaatEpoch <= nowMillis;
+
+            // Epoch-based staleness — not flag-based — so the Ongoing→Over transition is caught.
+            boolean prayerStale   = nextEpoch    > 0L && nextEpoch    + 1000L <= nowMillis;
+            boolean jamaatStale   = jamaatEpoch  > 0L && jamaatEpoch  + 1000L <= nowMillis;
             boolean needsSelfHeal = prayerStale || jamaatStale;
 
             for (int appWidgetId : appWidgetIds) {
@@ -74,6 +92,14 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 } else {
                     views.setChronometer(R.id.remaining_time, 0, null, false);
                     views.setTextViewText(R.id.remaining_time, "-");
+                    // Layer 2: if a known boundary is in the past, re-tick soon so we don't
+                    // stay on "-" while waiting for Dart to finish recomputing.
+                    if (nextEpoch > 0L) {
+                        scheduleAlarmClock(context,
+                            nowMillis + 1500L,
+                            buildSelfTickIntent(context, REQ_PRAYER_EXPIRE_TICK, "prayer-expire"),
+                            "prayer-expire");
+                    }
                 }
 
                 if (jamaatRunning && jamaatEpoch > nowMillis) {
@@ -95,6 +121,13 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                     views.setViewVisibility(R.id.jamaat_time, View.GONE);
                     views.setChronometer(R.id.jamaat_time, 0, null, false);
                     views.setTextViewText(R.id.jamaat_time, "-");
+                    // Layer 2: similarly re-tick if jamaat epoch is known but stale.
+                    if (jamaatEpoch > 0L) {
+                        scheduleAlarmClock(context,
+                            nowMillis + 1500L,
+                            buildSelfTickIntent(context, REQ_JAMAAT_EXPIRE_TICK, "jamaat-expire"),
+                            "jamaat-expire");
+                    }
                 }
 
                 views.setTextViewText(R.id.row_label_1, rowLabel1);
@@ -132,19 +165,120 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             }
 
             if (needsSelfHeal) {
-                // Self-heal stale epochs first so Dart can rewrite current/next periods,
-                // then continue normal boundary scheduling below.
+                // Self-heal: ask Dart to rewrite stale prefs; re-render follows via onUpdate.
                 triggerDartRefresh(context);
             }
-            long nextBoundaryEpoch = getNextBoundaryEpoch(
-                nowMillis, running, nextEpoch, jamaatRunning, jamaatEpoch);
-            if (nextBoundaryEpoch > 0L) {
-                scheduleBoundaryAlarm(context, nextBoundaryEpoch);
-            }
+
+            // Schedule independent alarms for each upcoming boundary.
+            scheduleAllAlarms(context, nowMillis, nextEpoch, jamaatEpoch, jamaatOverEpoch);
+
         } catch (Exception e) {
             Log.e(TAG, "Error updating widget", e);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Alarm helpers (Layer 1)
+    // -------------------------------------------------------------------------
+
+    private PendingIntent buildSelfTickIntent(Context ctx, int requestCode, String kind) {
+        Intent i = new Intent(ctx, PrayerWidgetProvider.class)
+            .setAction(ACTION_BOUNDARY_TICK)
+            .putExtra(EXTRA_TICK_KIND, kind);
+        return PendingIntent.getBroadcast(
+            ctx, requestCode, i,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private void scheduleAlarmClock(Context ctx, long fireAt, PendingIntent pi, String kind) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        try {
+            // setAlarmClock is exempt from Doze and app-standby buckets (no 9-min rate limit).
+            AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(fireAt, null);
+            am.setAlarmClock(info, pi);
+            Log.d(TAG, "alarm scheduled kind=" + kind + " in " +
+                ((fireAt - System.currentTimeMillis()) / 1000) + "s via setAlarmClock");
+        } catch (SecurityException e) {
+            Log.w(TAG, "setAlarmClock denied, trying setExactAndAllowWhileIdle", e);
+            try {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
+                Log.d(TAG, "alarm scheduled kind=" + kind + " via exactIdle");
+            } catch (SecurityException e2) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
+                Log.d(TAG, "alarm scheduled kind=" + kind + " via inexactIdle");
+            }
+        }
+    }
+
+    private void scheduleAllAlarms(Context ctx, long nowMillis,
+            long prayerEpoch, long jamaatEpoch, long jamaatOverEpoch) {
+        if (prayerEpoch > nowMillis) {
+            scheduleAlarmClock(ctx, prayerEpoch + 1000L,
+                buildSelfTickIntent(ctx, REQ_PRAYER_BOUNDARY, "prayer"), "prayer");
+        }
+        if (jamaatEpoch > nowMillis) {
+            scheduleAlarmClock(ctx, jamaatEpoch + 1000L,
+                buildSelfTickIntent(ctx, REQ_JAMAAT_BOUNDARY, "jamaat"), "jamaat");
+        }
+        if (jamaatOverEpoch > nowMillis) {
+            scheduleAlarmClock(ctx, jamaatOverEpoch + 1000L,
+                buildSelfTickIntent(ctx, REQ_JAMAAT_OVER, "over"), "over");
+        }
+        // Midnight fallback — distinct slot so it cannot cancel the prayer-boundary alarm.
+        long midnight = getNextMidnightEpoch(nowMillis);
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        if (am != null && midnight > nowMillis) {
+            PendingIntent midPi = buildSelfTickIntent(ctx, REQ_MIDNIGHT, "midnight");
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, midnight, midPi);
+        }
+    }
+
+    private void cancelAllAlarms(Context context) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        am.cancel(buildSelfTickIntent(context, REQ_PRAYER_BOUNDARY,    "prayer"));
+        am.cancel(buildSelfTickIntent(context, REQ_JAMAAT_BOUNDARY,    "jamaat"));
+        am.cancel(buildSelfTickIntent(context, REQ_JAMAAT_OVER,        "over"));
+        am.cancel(buildSelfTickIntent(context, REQ_MIDNIGHT,           "midnight"));
+        am.cancel(buildSelfTickIntent(context, REQ_PRAYER_EXPIRE_TICK, "prayer-expire"));
+        am.cancel(buildSelfTickIntent(context, REQ_JAMAAT_EXPIRE_TICK, "jamaat-expire"));
+        // Legacy alarm that targeted HomeWidgetBackgroundReceiver in older builds.
+        am.cancel(buildLegacyBoundaryPendingIntent(context));
+    }
+
+    // Kept only to cancel the old ALARM_REQUEST_CODE=2 PendingIntent during upgrade.
+    private PendingIntent buildLegacyBoundaryPendingIntent(Context context) {
+        Intent intent = new Intent(HOME_WIDGET_BACKGROUND_ACTION)
+            .setComponent(new ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
+            .setData(Uri.parse(BOUNDARY_URI));
+        return PendingIntent.getBroadcast(
+            context, ALARM_REQUEST_CODE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    // -------------------------------------------------------------------------
+    // Dart refresh helper (unchanged semantics)
+    // -------------------------------------------------------------------------
+
+    private void triggerDartRefresh(Context context) {
+        Intent intent = new Intent(HOME_WIDGET_BACKGROUND_ACTION)
+            .setComponent(new ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
+            .setData(Uri.parse(BOUNDARY_URI));
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context, SELF_HEAL_REQUEST_CODE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        try {
+            pi.send();
+            Log.d(TAG, "Triggered Dart refresh");
+        } catch (PendingIntent.CanceledException e) {
+            Log.w(TAG, "Dart refresh pending intent cancelled", e);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Utility
+    // -------------------------------------------------------------------------
 
     private long readEpochMillis(SharedPreferences prefs, String key) {
         Object raw = prefs.getAll().get(key);
@@ -169,76 +303,6 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         return 0L;
     }
 
-    private PendingIntent buildBoundaryPendingIntent(Context context) {
-        Intent intent = new Intent(HOME_WIDGET_BACKGROUND_ACTION)
-            .setComponent(new ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
-            .setData(Uri.parse(BOUNDARY_URI));
-        return PendingIntent.getBroadcast(
-            context, ALARM_REQUEST_CODE, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private void scheduleBoundaryAlarm(Context context, long epochMillis) {
-        // +1s so Flutter's current/next-prayer logic has crossed the boundary before we read prefs
-        long fireAt = epochMillis + 1000L;
-        PendingIntent pi = buildBoundaryPendingIntent(context);
-        try {
-            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-            if (am == null) return;
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
-            Log.d(TAG, "Boundary alarm scheduled for " + fireAt);
-        } catch (SecurityException e) {
-            // Fallback if exact-alarm permission was revoked at runtime (API 31+).
-            // Keep allow-while-idle semantics for better boundary reliability.
-            Log.w(TAG, "Exact alarm denied, falling back to allow-while-idle", e);
-            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-            if (am == null) return;
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
-        }
-    }
-
-    private void triggerDartRefresh(Context context) {
-        Intent intent = new Intent(HOME_WIDGET_BACKGROUND_ACTION)
-            .setComponent(new ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
-            .setData(Uri.parse(BOUNDARY_URI));
-        PendingIntent pi = PendingIntent.getBroadcast(
-            context, SELF_HEAL_REQUEST_CODE, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        try {
-            pi.send();
-            Log.d(TAG, "Self-heal: triggered Dart refresh for stale prefs");
-        } catch (PendingIntent.CanceledException e) {
-            Log.w(TAG, "Self-heal pending intent cancelled", e);
-        }
-    }
-
-    private void cancelBoundaryAlarm(Context context) {
-        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (am == null) return;
-        am.cancel(buildBoundaryPendingIntent(context));
-    }
-
-    private long getNextBoundaryEpoch(
-        long nowMillis,
-        boolean prayerRunning,
-        long prayerEpoch,
-        boolean jamaatRunning,
-        long jamaatEpoch
-    ) {
-        long nextBoundary = 0L;
-        if (prayerRunning && prayerEpoch > nowMillis) {
-            nextBoundary = prayerEpoch;
-        }
-        if (jamaatRunning && jamaatEpoch > nowMillis) {
-            nextBoundary = (nextBoundary == 0L) ? jamaatEpoch : Math.min(nextBoundary, jamaatEpoch);
-        }
-        long nextMidnight = getNextMidnightEpoch(nowMillis);
-        if (nextMidnight > nowMillis) {
-            nextBoundary = (nextBoundary == 0L) ? nextMidnight : Math.min(nextBoundary, nextMidnight);
-        }
-        return nextBoundary;
-    }
-
     private long getNextMidnightEpoch(long nowMillis) {
         Calendar midnight = Calendar.getInstance();
         midnight.setTimeInMillis(nowMillis);
@@ -250,6 +314,10 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         return midnight.getTimeInMillis();
     }
 
+    // -------------------------------------------------------------------------
+    // AppWidgetProvider lifecycle
+    // -------------------------------------------------------------------------
+
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
@@ -258,6 +326,8 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             Log.d(TAG, "System broadcast received: " + action + ", requesting widget refresh");
+            // Cancel stale legacy alarm from previous app version.
+            cancelAllAlarms(context);
             triggerDartRefresh(context);
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
             int[] widgetIds = appWidgetManager.getAppWidgetIds(
@@ -265,6 +335,17 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             if (widgetIds != null && widgetIds.length > 0) {
                 onUpdate(context, appWidgetManager, widgetIds);
             }
+        } else if (ACTION_BOUNDARY_TICK.equals(action)) {
+            String kind = intent.getStringExtra(EXTRA_TICK_KIND);
+            Log.d(TAG, "BOUNDARY_TICK received kind=" + kind);
+            // Pass 1: re-render immediately from current prefs (also re-arms next alarms).
+            AppWidgetManager mgr = AppWidgetManager.getInstance(context);
+            int[] ids = mgr.getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
+            if (ids != null && ids.length > 0) {
+                onUpdate(context, mgr, ids);
+            }
+            // Pass 2: ask Dart to recompute and overwrite prefs asynchronously.
+            triggerDartRefresh(context);
         }
     }
 
@@ -272,12 +353,24 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     public void onEnabled(Context context) {
         super.onEnabled(context);
         Log.d(TAG, "Widget enabled");
+        try {
+            androidx.work.PeriodicWorkRequest req =
+                new androidx.work.PeriodicWorkRequest.Builder(
+                    WidgetMaintenanceWorker.class, 15, java.util.concurrent.TimeUnit.MINUTES
+                ).build();
+            androidx.work.WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "widget_maintenance",
+                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                req);
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to enqueue maintenance worker from onEnabled", t);
+        }
     }
 
     @Override
     public void onDisabled(Context context) {
         super.onDisabled(context);
-        cancelBoundaryAlarm(context);
+        cancelAllAlarms(context);
         Log.d(TAG, "Widget disabled");
     }
 }

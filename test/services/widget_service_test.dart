@@ -134,6 +134,10 @@ void main() {
         data.jamaatEpochMillis,
         DateTime(2026, 4, 13, 5, 20).millisecondsSinceEpoch,
       );
+      expect(
+        data.jamaatOverEpochMillis,
+        DateTime(2026, 4, 13, 5, 30).millisecondsSinceEpoch,
+      );
     });
 
     test('during jamaat: shows jamaat ongoing without countdown', () {
@@ -150,6 +154,7 @@ void main() {
       expect(data.jamaatCountdownRunning, isFalse);
       expect(data.jamaatTextUsesTimeStyle, isTrue);
       expect(data.jamaatEpochMillis, 0);
+      expect(data.jamaatOverEpochMillis, 0);
     });
 
     test('after jamaat: shows jamaat ended', () {
@@ -166,6 +171,7 @@ void main() {
       expect(data.jamaatCountdownRunning, isFalse);
       expect(data.jamaatTextUsesTimeStyle, isTrue);
       expect(data.jamaatEpochMillis, 0);
+      expect(data.jamaatOverEpochMillis, 0);
     });
 
     test('sunrise period shows next jamaat static time line', () {

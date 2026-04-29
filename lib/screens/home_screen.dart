@@ -21,6 +21,7 @@ import '../widgets/shared_ui_widgets.dart';
 import '../utils/bangla_calendar.dart';
 import '../utils/locale_digits.dart';
 import '../services/widget_service.dart';
+import '../services/battery_optimization_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
@@ -265,6 +266,58 @@ class _HomeScreenState extends State<HomeScreen> {
       await _handleNotificationSettingsChange();
       _updateHomeWidget();
     });
+
+    // Ask once for battery exemption so the home-screen widget's alarms aren't
+    // suppressed by Doze / vendor sleeping-apps lists.
+    unawaited(_maybePromptBatteryExemption());
+  }
+
+  static const String _batteryPromptShownKey = 'battery_exemption_prompt_shown';
+
+  Future<void> _maybePromptBatteryExemption() async {
+    if (!mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_batteryPromptShownKey) ?? false) return;
+    final isExempt = await BatteryOptimizationService.isIgnoring();
+    if (isExempt) {
+      await prefs.setBool(_batteryPromptShownKey, true);
+      return;
+    }
+    if (!context.mounted) return;
+    await prefs.setBool(_batteryPromptShownKey, true);
+    if (!context.mounted) return;
+    await showDialog<void>(
+      // ignore: use_build_context_synchronously
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            _tr(dialogContext, 'উইজেট সক্রিয় রাখুন', 'Keep the widget alive'),
+          ),
+          content: Text(
+            _tr(
+              dialogContext,
+              'অ্যান্ড্রয়েডের ব্যাটারি অপ্টিমাইজেশনে এই অ্যাপটি বাদ দিন, না হলে হোম স্ক্রিনের উইজেটে নামাজের সময় পরিবর্তন আপডেট হবে না।\n\nস্যামসাং ডিভাইসে: Settings → Battery → Background usage limits → Sleeping apps থেকে JamaatTime সরিয়ে দিন।',
+              'Exempt this app from Android battery optimization, otherwise the home-screen widget will not update when prayer times change.\n\nOn Samsung: also open Settings → Battery → Background usage limits and remove JamaatTime from "Sleeping apps".',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(_tr(dialogContext, 'পরে', 'Later')),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                BatteryOptimizationService.requestExemption();
+              },
+              child: Text(_tr(dialogContext, 'সেটিংস খুলুন', 'Open settings')),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _fetchJamaatTimes(
