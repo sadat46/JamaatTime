@@ -551,20 +551,49 @@ class _AdminNotificationBroadcastScreenState
     return DropdownButtonFormField<String>(
       // ignore: deprecated_member_use
       value: _targetKind,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: context.tr(bn: 'প্রাপক', en: 'Target'),
         border: const OutlineInputBorder(),
       ),
+      selectedItemBuilder: (context) => [
+        Text(
+          context.tr(bn: 'সকল ব্যবহারকারী', en: 'All users'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          '${context.tr(bn: 'প্রভাবিত এলাকা', en: 'Affected location')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          '${context.tr(bn: 'নির্দিষ্ট ব্যবহারকারী', en: 'Selected users')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          '${context.tr(bn: 'রোল-ভিত্তিক', en: 'Role-based')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
       items: [
         DropdownMenuItem(
           value: 'all_users',
-          child: Text(context.tr(bn: 'সকল ব্যবহারকারী', en: 'All users')),
+          child: Text(
+            context.tr(bn: 'সকল ব্যবহারকারী', en: 'All users'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         DropdownMenuItem(
           value: 'affected_location',
           enabled: false,
           child: Text(
             '${context.tr(bn: 'প্রভাবিত এলাকা', en: 'Affected location')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         DropdownMenuItem(
@@ -572,6 +601,8 @@ class _AdminNotificationBroadcastScreenState
           enabled: false,
           child: Text(
             '${context.tr(bn: 'নির্দিষ্ট ব্যবহারকারী', en: 'Selected users')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         DropdownMenuItem(
@@ -579,6 +610,8 @@ class _AdminNotificationBroadcastScreenState
           enabled: false,
           child: Text(
             '${context.tr(bn: 'রোল-ভিত্তিক', en: 'Role-based')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

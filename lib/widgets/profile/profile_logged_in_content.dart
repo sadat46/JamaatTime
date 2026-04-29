@@ -21,20 +21,8 @@ const profileActionBookmarksKey = ValueKey<String>(
   'profile-action-my-bookmarks',
 );
 const profileActionSettingsKey = ValueKey<String>('profile-action-settings');
-const profileActionManageUsersKey = ValueKey<String>(
-  'profile-action-manage-users',
-);
-const profileActionEditImportKey = ValueKey<String>(
-  'profile-action-edit-import',
-);
-const profileActionBroadcastKey = ValueKey<String>(
-  'profile-action-broadcast',
-);
-const profileActionAutoRulesKey = ValueKey<String>(
-  'profile-action-auto-rules',
-);
-const profileActionNotifHistoryKey = ValueKey<String>(
-  'profile-action-notif-history',
+const profileActionAdminToolsKey = ValueKey<String>(
+  'profile-action-admin-tools',
 );
 
 class ProfileLoggedInContent extends StatelessWidget {
@@ -48,11 +36,7 @@ class ProfileLoggedInContent extends StatelessWidget {
     required this.onLogout,
     required this.onBookmarksTap,
     required this.onSettingsTap,
-    required this.onManageUsersTap,
-    required this.onEditImportTap,
-    required this.onBroadcastTap,
-    required this.onAutoRulesTap,
-    required this.onNotifHistoryTap,
+    required this.onAdminToolsTap,
     required this.appInfoCard,
     this.brandGreen = const Color(0xFF388E3C),
     this.cardRadius = 18,
@@ -66,11 +50,7 @@ class ProfileLoggedInContent extends StatelessWidget {
   final VoidCallback onLogout;
   final VoidCallback onBookmarksTap;
   final VoidCallback onSettingsTap;
-  final VoidCallback onManageUsersTap;
-  final VoidCallback onEditImportTap;
-  final VoidCallback onBroadcastTap;
-  final VoidCallback onAutoRulesTap;
-  final VoidCallback onNotifHistoryTap;
+  final VoidCallback onAdminToolsTap;
   final Widget appInfoCard;
   final Color brandGreen;
   final double cardRadius;
@@ -121,17 +101,6 @@ class ProfileLoggedInContent extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
-  }
-
-  List<Widget> _tilesWithDividers(List<Widget> tiles) {
-    final children = <Widget>[];
-    for (var i = 0; i < tiles.length; i++) {
-      if (i > 0) {
-        children.add(Divider(height: 1, color: Colors.grey[200]));
-      }
-      children.add(tiles[i]);
-    }
-    return children;
   }
 
   Widget _buildSingleActionCard({required Key cardKey, required Widget child}) {
@@ -274,89 +243,30 @@ class ProfileLoggedInContent extends StatelessWidget {
               context.tr(bn: 'অ্যাডমিন টুলস', en: 'Admin Tools'),
               profileSectionAdminToolsKey,
             ),
-            Card(
-              key: profileAdminToolsCardKey,
-              elevation: 1.5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(cardRadius),
-              ),
-              child: Column(
-                children: _tilesWithDividers([
-                  if (isSuperAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionManageUsersKey,
-                      icon: Icons.admin_panel_settings,
-                      iconColor: Colors.red,
-                      title: context.tr(bn: 'ব্যবহারকারী ব্যবস্থাপনা', en: 'Manage Users'),
-                      subtitle: context.tr(
-                        bn: 'রোল, অনুমতি এবং অ্যাকাউন্ট অ্যাক্সেস',
-                        en: 'Roles, permissions, and account access',
-                      ),
-                      onTap: onManageUsersTap,
-                    ),
-                  if (isAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionEditImportKey,
-                      icon: Icons.file_upload,
-                      iconColor: Colors.orange,
-                      title: context.tr(bn: 'ডেটা সম্পাদনা/ইমপোর্ট', en: 'Edit/Import Data'),
-                      subtitle: context.tr(
-                        bn: 'সময়সূচি ইমপোর্ট ও বার্ষিক জামাত ডেটা ব্যবস্থাপনা',
-                        en: 'Import schedules and manage yearly jamaat data',
-                      ),
-                      onTap: onEditImportTap,
-                    ),
-                  if (isSuperAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionBroadcastKey,
-                      icon: Icons.campaign,
-                      iconColor: Colors.deepPurple,
-                      title: context.tr(
-                        bn: 'নোটিফিকেশন ব্রডকাস্ট',
-                        en: 'Notification Broadcast',
-                      ),
-                      subtitle: context.tr(
-                        bn: 'সব ব্যবহারকারীর কাছে টেক্সট বা ছবি পাঠান',
-                        en: 'Push text or image to every user',
-                      ),
-                      onTap: onBroadcastTap,
-                    ),
-                  if (isSuperAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionAutoRulesKey,
-                      icon: Icons.rule,
-                      iconColor: Colors.teal,
-                      title: context.tr(
-                        bn: 'অটো-নোটিফিকেশন নিয়ম',
-                        en: 'Auto Notification Rules',
-                      ),
-                      subtitle: context.tr(
-                        bn: 'জামাতের সময় পরিবর্তনের অটো-অ্যালার্ট কনফিগার করুন',
-                        en: 'Configure auto-alerts when jamaat times change',
-                      ),
-                      onTap: onAutoRulesTap,
-                    ),
-                  if (isSuperAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionNotifHistoryKey,
-                      icon: Icons.history,
-                      iconColor: Colors.indigo,
-                      title: context.tr(
-                        bn: 'নোটিফিকেশন ইতিহাস',
-                        en: 'Notification History',
-                      ),
-                      subtitle: context.tr(
-                        bn: 'পাঠানো, ব্যর্থ ও শিডিউল করা ব্রডকাস্ট দেখুন',
-                        en: 'View sent, failed, and scheduled broadcasts',
-                      ),
-                      onTap: onNotifHistoryTap,
-                    ),
-                ]),
+            _buildSingleActionCard(
+              cardKey: profileAdminToolsCardKey,
+              child: _buildActionTile(
+                tileKey: profileActionAdminToolsKey,
+                icon: Icons.admin_panel_settings,
+                iconColor: isSuperAdmin ? Colors.red : Colors.orange,
+                title: context.tr(bn: 'অ্যাডমিন টুলস', en: 'Admin Tools'),
+                subtitle: context.tr(
+                  bn: isSuperAdmin
+                      ? 'ব্যবহারকারী, ব্রডকাস্ট ও জামাত ডেটা ম্যানেজ করুন'
+                      : 'জামাত সময়সূচি ইমপোর্ট ও ম্যানেজ করুন',
+                  en: isSuperAdmin
+                      ? 'Manage users, broadcasts, and jamaat data'
+                      : 'Import and manage jamaat schedules',
+                ),
+                onTap: onAdminToolsTap,
               ),
             ),
           ],
           const SizedBox(height: 16),
-          _buildSectionLabel(context.tr(bn: 'অ্যাপ', en: 'App'), profileSectionAppKey),
+          _buildSectionLabel(
+            context.tr(bn: 'অ্যাপ', en: 'App'),
+            profileSectionAppKey,
+          ),
           appInfoCard,
         ],
       ),

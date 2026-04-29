@@ -8,11 +8,7 @@ Widget _buildSubject({
   VoidCallback? onLogout,
   VoidCallback? onBookmarksTap,
   VoidCallback? onSettingsTap,
-  VoidCallback? onManageUsersTap,
-  VoidCallback? onEditImportTap,
-  VoidCallback? onBroadcastTap,
-  VoidCallback? onAutoRulesTap,
-  VoidCallback? onNotifHistoryTap,
+  VoidCallback? onAdminToolsTap,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -25,11 +21,7 @@ Widget _buildSubject({
         onLogout: onLogout ?? () {},
         onBookmarksTap: onBookmarksTap ?? () {},
         onSettingsTap: onSettingsTap ?? () {},
-        onManageUsersTap: onManageUsersTap ?? () {},
-        onEditImportTap: onEditImportTap ?? () {},
-        onBroadcastTap: onBroadcastTap ?? () {},
-        onAutoRulesTap: onAutoRulesTap ?? () {},
-        onNotifHistoryTap: onNotifHistoryTap ?? () {},
+        onAdminToolsTap: onAdminToolsTap ?? () {},
         appInfoCard: const SizedBox(
           key: ValueKey<String>('profile-app-info-card'),
           height: 80,
@@ -69,105 +61,42 @@ void main() {
     expect(find.byKey(profileSectionAdminToolsKey), findsNothing);
   });
 
-  testWidgets('shows admin tools between main options and app for admin', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_buildSubject(isAdmin: true));
+  testWidgets(
+    'shows admin tools entry between main options and app for admin',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(isAdmin: true));
 
-    final mainOptionsDy = tester
-        .getTopLeft(find.byKey(profileSectionMainOptionsKey))
-        .dy;
-    final adminToolsDy = tester
-        .getTopLeft(find.byKey(profileSectionAdminToolsKey))
-        .dy;
-    final appDy = tester.getTopLeft(find.byKey(profileSectionAppKey)).dy;
+      final mainOptionsDy = tester
+          .getTopLeft(find.byKey(profileSectionMainOptionsKey))
+          .dy;
+      final adminToolsDy = tester
+          .getTopLeft(find.byKey(profileSectionAdminToolsKey))
+          .dy;
+      final appDy = tester.getTopLeft(find.byKey(profileSectionAppKey)).dy;
 
-    expect(mainOptionsDy, lessThan(adminToolsDy));
-    expect(adminToolsDy, lessThan(appDy));
-    expect(find.byKey(profileActionEditImportKey), findsOneWidget);
-    expect(find.byKey(profileActionManageUsersKey), findsNothing);
-  });
+      expect(mainOptionsDy, lessThan(adminToolsDy));
+      expect(adminToolsDy, lessThan(appDy));
+      expect(find.byKey(profileActionAdminToolsKey), findsOneWidget);
+    },
+  );
 
-  testWidgets('renders both admin actions for superadmin', (tester) async {
-    await tester.pumpWidget(_buildSubject(isAdmin: true, isSuperAdmin: true));
-
-    expect(find.byKey(profileActionManageUsersKey), findsOneWidget);
-    expect(find.byKey(profileActionEditImportKey), findsOneWidget);
-    expect(find.byKey(profileActionBroadcastKey), findsOneWidget);
-    expect(find.byKey(profileActionAutoRulesKey), findsOneWidget);
-    expect(find.byKey(profileActionNotifHistoryKey), findsOneWidget);
-  });
-
-  testWidgets('hides notification-history tile for non-superadmin admin',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(isAdmin: true));
-
-    expect(find.byKey(profileActionNotifHistoryKey), findsNothing);
-  });
-
-  testWidgets('invokes notification-history callback on tap', (tester) async {
+  testWidgets('invokes admin tools callback on tap', (tester) async {
     var tapCount = 0;
 
     await tester.pumpWidget(
       _buildSubject(
-        isSuperAdmin: true,
-        onNotifHistoryTap: () {
+        isAdmin: true,
+        onAdminToolsTap: () {
           tapCount++;
         },
       ),
     );
 
-    await tester.ensureVisible(find.byKey(profileActionNotifHistoryKey));
-    await tester.tap(find.byKey(profileActionNotifHistoryKey));
+    await tester.ensureVisible(find.byKey(profileActionAdminToolsKey));
+    await tester.tap(find.byKey(profileActionAdminToolsKey));
     await tester.pump();
 
     expect(tapCount, 1);
-  });
-
-  testWidgets('hides broadcast tile for non-superadmin admin', (tester) async {
-    await tester.pumpWidget(_buildSubject(isAdmin: true));
-
-    expect(find.byKey(profileActionEditImportKey), findsOneWidget);
-    expect(find.byKey(profileActionBroadcastKey), findsNothing);
-    expect(find.byKey(profileActionAutoRulesKey), findsNothing);
-  });
-
-  testWidgets('invokes auto-rules callback on tap', (tester) async {
-    var autoRulesTapCount = 0;
-
-    await tester.pumpWidget(
-      _buildSubject(
-        isSuperAdmin: true,
-        onAutoRulesTap: () {
-          autoRulesTapCount++;
-        },
-      ),
-    );
-
-    await tester.ensureVisible(find.byKey(profileActionAutoRulesKey));
-    await tester.tap(find.byKey(profileActionAutoRulesKey));
-    await tester.pump();
-
-    expect(autoRulesTapCount, 1);
-  });
-
-  testWidgets('invokes broadcast callback on tap', (tester) async {
-    var broadcastTapCount = 0;
-
-    await tester.pumpWidget(
-      _buildSubject(
-        isSuperAdmin: true,
-        onBroadcastTap: () {
-          broadcastTapCount++;
-        },
-      ),
-    );
-
-    await tester.ensureVisible(find.byKey(profileActionBroadcastKey));
-    await tester.tap(find.byKey(profileActionBroadcastKey));
-    await tester.pump();
-
-    expect(broadcastTapCount, 1);
   });
 
   testWidgets('invokes main option callbacks on tap', (tester) async {

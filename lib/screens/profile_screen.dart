@@ -8,13 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
 import '../widgets/profile/profile_logged_in_content.dart';
-import 'admin_auto_rules_screen.dart';
-import 'admin_jamaat_panel.dart';
-import 'admin_notification_broadcast_screen.dart';
-import 'admin_notification_history_screen.dart';
+import 'admin_tools_screen.dart';
 import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
-import 'user_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -492,34 +488,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           MaterialPageRoute(builder: (context) => const SettingsScreen()),
         );
       },
-      onManageUsersTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
-        );
-      },
-      onEditImportTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const AdminJamaatPanel()),
-        );
-      },
-      onBroadcastTap: () {
+      onAdminToolsTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => const AdminNotificationBroadcastScreen(),
-          ),
-        );
-      },
-      onAutoRulesTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const AdminAutoRulesScreen(),
-          ),
-        );
-      },
-      onNotifHistoryTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const AdminNotificationHistoryScreen(),
+            builder: (context) => AdminToolsScreen(
+              isAdmin: _isAdmin,
+              isSuperAdmin: _isSuperAdmin,
+              brandGreen: _brandGreen,
+              cardRadius: _cardRadius,
+            ),
           ),
         );
       },

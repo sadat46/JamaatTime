@@ -517,6 +517,7 @@ class _AdminNotificationHistoryScreenState
       child: DropdownButtonFormField<T>(
         initialValue: value,
         isDense: true,
+        isExpanded: true,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),

@@ -31,8 +31,9 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final TextEditingController _minChangeCtrl = TextEditingController(text: '1');
-  final TextEditingController _cooldownCtrl =
-      TextEditingController(text: '300');
+  final TextEditingController _cooldownCtrl = TextEditingController(
+    text: '300',
+  );
   final TextEditingController _imageUrlCtrl = TextEditingController();
 
   bool _autoNotifyOn = false;
@@ -74,7 +75,9 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
             _autoTarget = target;
           }
           final minChange = data['minChangeMinutes'];
-          if (minChange is num) _minChangeCtrl.text = minChange.toInt().toString();
+          if (minChange is num) {
+            _minChangeCtrl.text = minChange.toInt().toString();
+          }
           final cooldown = data['cooldownSeconds'];
           if (cooldown is num) _cooldownCtrl.text = cooldown.toInt().toString();
           final url = data['defaultImageUrl'];
@@ -108,9 +111,9 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
       if (picked == null || picked.files.isEmpty) return;
       final f = picked.files.first;
       final ext = (f.extension ?? 'jpg').toLowerCase();
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('notification_images/auto_default_$ext.$ext');
+      final ref = FirebaseStorage.instance.ref().child(
+        'notification_images/auto_default_$ext.$ext',
+      );
       final metadata = SettableMetadata(contentType: 'image/$ext');
       if (f.bytes != null) {
         await ref.putData(f.bytes!, metadata);
@@ -146,25 +149,31 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
     final minChange = int.tryParse(_minChangeCtrl.text.trim());
     final cooldown = int.tryParse(_cooldownCtrl.text.trim());
     if (minChange == null || minChange < 0) {
-      _snack(context.tr(
-        bn: 'minChangeMinutes একটি অ-ঋণাত্মক পূর্ণ সংখ্যা হতে হবে',
-        en: 'minChangeMinutes must be a non-negative integer',
-      ));
+      _snack(
+        context.tr(
+          bn: 'minChangeMinutes একটি অ-ঋণাত্মক পূর্ণ সংখ্যা হতে হবে',
+          en: 'minChangeMinutes must be a non-negative integer',
+        ),
+      );
       return;
     }
     if (cooldown == null || cooldown < 0) {
-      _snack(context.tr(
-        bn: 'cooldownSeconds একটি অ-ঋণাত্মক পূর্ণ সংখ্যা হতে হবে',
-        en: 'cooldownSeconds must be a non-negative integer',
-      ));
+      _snack(
+        context.tr(
+          bn: 'cooldownSeconds একটি অ-ঋণাত্মক পূর্ণ সংখ্যা হতে হবে',
+          en: 'cooldownSeconds must be a non-negative integer',
+        ),
+      );
       return;
     }
     final imageUrl = _effectiveImageUrl;
     if (_autoMode != 'text' && _autoMode != 'off' && imageUrl == null) {
-      _snack(context.tr(
-        bn: 'মোড = image/both হলে ডিফল্ট ছবি লাগবে',
-        en: 'Default image required when mode is image or both',
-      ));
+      _snack(
+        context.tr(
+          bn: 'মোড = image/both হলে ডিফল্ট ছবি লাগবে',
+          en: 'Default image required when mode is image or both',
+        ),
+      );
       return;
     }
 
@@ -190,7 +199,9 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -285,15 +296,30 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
               DropdownButtonFormField<String>(
                 // ignore: deprecated_member_use
                 value: _autoTarget,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: context.tr(bn: 'প্রাপক', en: 'Target'),
                   border: const OutlineInputBorder(),
                 ),
+                selectedItemBuilder: (context) => [
+                  Text(
+                    context.tr(bn: 'সকল ব্যবহারকারী', en: 'All users'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '${context.tr(bn: 'প্রভাবিত এলাকা', en: 'Affected location')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 items: [
                   DropdownMenuItem(
                     value: 'all_users',
                     child: Text(
                       context.tr(bn: 'সকল ব্যবহারকারী', en: 'All users'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   DropdownMenuItem(
@@ -301,6 +327,8 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
                     enabled: false,
                     child: Text(
                       '${context.tr(bn: 'প্রভাবিত এলাকা', en: 'Affected location')} — ${context.tr(bn: 'শীঘ্রই', en: 'coming soon')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -363,7 +391,8 @@ class _AdminAutoRulesScreenState extends State<AdminAutoRulesScreen> {
                   ),
                 ],
                 selected: {_imageSource},
-                onSelectionChanged: (s) => setState(() => _imageSource = s.first),
+                onSelectionChanged: (s) =>
+                    setState(() => _imageSource = s.first),
               ),
               const SizedBox(height: 8),
               if (_imageSource == _ImageSource.upload)
