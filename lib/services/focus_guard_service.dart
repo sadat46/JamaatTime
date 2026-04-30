@@ -54,33 +54,19 @@ class FocusGuardService {
 
   Future<Map<String, bool>> getPermissionStatus() async {
     try {
-      final accessibility = await _channel.invokeMethod<bool>(
-            'isAccessibilityEnabled',
-          ) ??
-          false;
-      final overlay =
-          await _channel.invokeMethod<bool>('isOverlayEnabled') ?? false;
-      return {'accessibility': accessibility, 'overlay': overlay};
+      final accessibility =
+          await _channel.invokeMethod<bool>('isAccessibilityEnabled') ?? false;
+      return {'accessibility': accessibility};
     } on MissingPluginException {
-      return {'accessibility': false, 'overlay': false};
+      return {'accessibility': false};
     } on PlatformException {
-      return {'accessibility': false, 'overlay': false};
+      return {'accessibility': false};
     }
   }
 
   Future<void> openAccessibilitySettings() async {
     try {
       await _channel.invokeMethod<void>('openAccessibilitySettings');
-    } on MissingPluginException {
-      // No-op.
-    } on PlatformException {
-      // No-op.
-    }
-  }
-
-  Future<void> openOverlaySettings() async {
-    try {
-      await _channel.invokeMethod<void>('openOverlaySettings');
     } on MissingPluginException {
       // No-op.
     } on PlatformException {

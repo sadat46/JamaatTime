@@ -4,8 +4,6 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -159,25 +157,14 @@ class FocusGuardAccessibilityService : AccessibilityService() {
 
     private fun showOverlay(tempAllowMinutes: Int, quickAllowEnabled: Boolean) {
         if (overlayView != null) return
-        if (!Settings.canDrawOverlays(this)) {
-            Log.w(TAG, "Overlay permission not granted — skipping overlay")
-            return
-        }
 
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         windowManager = wm
 
-        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-        }
-
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            layoutType,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
         )

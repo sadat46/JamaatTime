@@ -18,7 +18,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
 
   FocusGuardSettings _settings = const FocusGuardSettings();
   bool _accessibilityEnabled = false;
-  bool _overlayEnabled = false;
   bool _loading = true;
 
   static const List<int> _tempAllowOptions = [5, 10, 15];
@@ -50,7 +49,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     setState(() {
       _settings = settings;
       _accessibilityEnabled = perms['accessibility'] ?? false;
-      _overlayEnabled = perms['overlay'] ?? false;
       _loading = false;
     });
   }
@@ -60,7 +58,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     if (!mounted) return;
     setState(() {
       _accessibilityEnabled = perms['accessibility'] ?? false;
-      _overlayEnabled = perms['overlay'] ?? false;
     });
   }
 
@@ -122,19 +119,9 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                 _permissionCard(
                   icon: Icons.accessibility_new,
                   title: 'Accessibility Service',
-                  subtitle:
-                      'Required to detect when YouTube Shorts is opened.',
+                  subtitle: 'Required to detect when YouTube Shorts is opened.',
                   granted: _accessibilityEnabled,
                   onSetup: _service.openAccessibilitySettings,
-                ),
-                const SizedBox(height: 10),
-                _permissionCard(
-                  icon: Icons.layers,
-                  title: 'Display over other apps',
-                  subtitle:
-                      'Required to show the focus reminder overlay.',
-                  granted: _overlayEnabled,
-                  onSetup: _service.openOverlaySettings,
                 ),
                 const SizedBox(height: 18),
                 _masterToggleCard(),
@@ -262,8 +249,9 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
           children: [
             SwitchListTile(
               value: youtubeOn,
-              onChanged:
-                  _settings.enabled ? (v) => _handleYouTubeToggle(v) : null,
+              onChanged: _settings.enabled
+                  ? (v) => _handleYouTubeToggle(v)
+                  : null,
               activeThumbColor: AppConstants.brandGreen,
               secondary: const Icon(Icons.smart_display, color: Colors.red),
               title: const Text(
@@ -337,8 +325,9 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
           children: [
             SwitchListTile(
               value: quickAllowOn,
-              onChanged:
-                  _settings.enabled ? (v) => _handleQuickAllowToggle(v) : null,
+              onChanged: _settings.enabled
+                  ? (v) => _handleQuickAllowToggle(v)
+                  : null,
               activeThumbColor: AppConstants.brandGreen,
               title: const Text(
                 'Allow quick bypass',
@@ -356,10 +345,8 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                 child: SegmentedButton<int>(
                   segments: _tempAllowOptions
                       .map(
-                        (m) => ButtonSegment<int>(
-                          value: m,
-                          label: Text('$m min'),
-                        ),
+                        (m) =>
+                            ButtonSegment<int>(value: m, label: Text('$m min')),
                       )
                       .toList(),
                   selected: {_settings.tempAllowMinutes},
