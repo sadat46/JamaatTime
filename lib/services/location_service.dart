@@ -30,14 +30,20 @@ class LocationService {
       throw Exception('Location permission denied.');
     }
     return await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 10),
+      ),
     );
   }
 
   /// Gets the place name (locality) from latitude and longitude.
   Future<String?> getPlaceName(double latitude, double longitude) async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
         // Build a more complete address string
@@ -47,7 +53,7 @@ class LocationService {
           place.locality,
           place.subAdministrativeArea,
           place.administrativeArea,
-          place.country
+          place.country,
         ].where((e) => e != null && e.isNotEmpty).join(', ');
       }
       return null;
@@ -60,4 +66,4 @@ class LocationService {
   Future<void> openLocationSettings() async {
     await Geolocator.openLocationSettings();
   }
-} 
+}

@@ -128,8 +128,13 @@ class _ForbiddenVisualSpec {
 /// with a pulsing border on the active window.
 class ForbiddenTimesWidget extends StatefulWidget {
   final PrayerTimes? prayerTimes;
+  final bool isActive;
 
-  const ForbiddenTimesWidget({super.key, required this.prayerTimes});
+  const ForbiddenTimesWidget({
+    super.key,
+    required this.prayerTimes,
+    this.isActive = true,
+  });
 
   @override
   State<ForbiddenTimesWidget> createState() => _ForbiddenTimesWidgetState();
@@ -148,15 +153,55 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
     _pulseAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Refresh every minute so isActive stays current
+    _syncRefreshTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant ForbiddenTimesWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive ||
+        oldWidget.prayerTimes != widget.prayerTimes) {
+      _syncRefreshTimer();
+      if (!widget.isActive) {
+        _setPulseActive(false);
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  void _syncRefreshTimer() {
+    if (!widget.isActive) {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+      return;
+    }
+    if (_refreshTimer?.isActive ?? false) {
+      return;
+    }
+    // Refresh every minute so active windows stay current.
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && widget.isActive) setState(() {});
     });
+  }
+
+  void _setPulseActive(bool enabled) {
+    if (enabled) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+      return;
+    }
+    if (_pulseController.isAnimating) {
+      _pulseController.stop();
+    }
+    _pulseController.reset();
   }
 
   @override
@@ -200,6 +245,14 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     final now = DateTime.now();
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final hasActiveWindow = forbiddenWindows.any((window) {
+      return window.isActive(now);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _setPulseActive(widget.isActive && hasActiveWindow && !reduceMotion);
+      }
+    });
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -320,7 +373,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     required _ForbiddenVisualSpec spec,
     required bool reduceMotion,
   }) {
-    if (isActive && !reduceMotion) {
+    if (widget.isActive && isActive && !reduceMotion) {
       return AnimatedBuilder(
         animation: _pulseAnimation,
         builder: (context, child) {

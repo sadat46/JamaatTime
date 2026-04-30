@@ -4,6 +4,8 @@ class NoticeTelemetry {
   const NoticeTelemetry._();
 
   static void event(String name, [Map<String, Object?> params = const {}]) {
-    debugPrint('notice_analytics $name $params');
+    if (kDebugMode) {
+      debugPrint('notice_analytics $name $params');
+    }
   }
 }

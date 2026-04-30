@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../core/constants.dart';
+import '../core/app_theme_tokens.dart';
 import '../core/locale_text.dart';
 import '../services/screen_awake_service.dart';
 import '../utils/locale_digits.dart';
@@ -124,26 +124,26 @@ class _SahriIftarVisualSpec {
   });
 
   static const _SahriIftarVisualSpec _sahriLight = _SahriIftarVisualSpec(
-    panelColors: [Color(0xFFEFF8F1), Color(0xFFDFF0E4)],
-    ambientColors: [Color(0xFFF5FBF6), Color(0xFFEAF6EE)],
-    accent: AppConstants.brandGreenDark,
-    primaryText: Color(0xFF1F2E24),
-    secondaryText: Color(0xFF516659),
-    border: Color(0x85FFFFFF),
+    panelColors: [AppColors.cardBackground, AppColors.primarySoft],
+    ambientColors: [AppColors.primarySoft2, AppColors.primarySoft],
+    accent: AppColors.primaryDark,
+    primaryText: AppColors.textPrimary,
+    secondaryText: AppColors.textSecondary,
+    border: AppColors.borderLight,
     glassTint: Color(0x26FFFFFF),
-    glow: Color(0x33145A32),
+    glow: Color(0x14145A32),
     ringTrack: Color(0x24145A32),
   );
 
   static const _SahriIftarVisualSpec _iftarLight = _SahriIftarVisualSpec(
-    panelColors: [Color(0xFFEAF5EC), Color(0xFFD6EAD9)],
-    ambientColors: [Color(0xFFF2FAF4), Color(0xFFE6F3E9)],
-    accent: AppConstants.brandGreen,
-    primaryText: Color(0xFF1E2C22),
-    secondaryText: Color(0xFF4F6458),
-    border: Color(0x7AFFFFFF),
+    panelColors: [AppColors.cardBackground, AppColors.primarySoft],
+    ambientColors: [AppColors.primarySoft2, AppColors.primarySoft],
+    accent: AppColors.primaryGreen,
+    primaryText: AppColors.textPrimary,
+    secondaryText: AppColors.textSecondary,
+    border: AppColors.borderLight,
     glassTint: Color(0x24FFFFFF),
-    glow: Color(0x33388E3C),
+    glow: Color(0x14388E3C),
     ringTrack: Color(0x26388E3C),
   );
 
@@ -200,12 +200,14 @@ class SahriIftarWidget extends StatefulWidget {
   final DateTime? fajrTime;
   final DateTime? maghribTime;
   final bool showTitle;
+  final bool isActive;
 
   const SahriIftarWidget({
     super.key,
     required this.fajrTime,
     required this.maghribTime,
     this.showTitle = false,
+    this.isActive = true,
   });
 
   @override
@@ -224,7 +226,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
   void initState() {
     super.initState();
     _calculateCountdowns();
-    _startTimer();
+    _syncTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -242,9 +244,27 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
         oldWidget.maghribTime != widget.maghribTime) {
       _calculateCountdowns();
     }
+    if (oldWidget.isActive != widget.isActive) {
+      _syncTimer();
+      if (widget.isActive) {
+        _calculateCountdowns();
+      }
+    }
+  }
+
+  void _syncTimer() {
+    if (!widget.isActive) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    _startTimer();
   }
 
   void _startTimer() {
+    if (_timer?.isActive ?? false) {
+      return;
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         _calculateCountdowns();
@@ -319,13 +339,10 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8.0),
             child: Text(
-              context.tr(
-                bn: 'সাহরি ও ইফতার সময়',
-                en: 'Sahri & Iftar Times',
-              ),
+              context.tr(bn: 'সাহরি ও ইফতার সময়', en: 'Sahri & Iftar Times'),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppConstants.brandGreenDark,
-                fontWeight: FontWeight.bold,
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -334,10 +351,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           child: _SahriIftarCard(
             key: const Key('sahri-card'),
             type: SahriIftarType.sahri,
-            title: context.tr(
-              bn: 'সাহরি শেষ',
-              en: 'Sahri Ends',
-            ),
+            title: context.tr(bn: 'সাহরি শেষ', en: 'Sahri Ends'),
             timeText: fajrTimeStr,
             countdownText: sahriCountdownText,
             onTap: () => _openFullscreen(SahriIftarType.sahri),
@@ -350,10 +364,7 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           child: _SahriIftarCard(
             key: const Key('iftar-card'),
             type: SahriIftarType.iftar,
-            title: context.tr(
-              bn: 'ইফতার শুরু',
-              en: 'Iftar Begins',
-            ),
+            title: context.tr(bn: 'ইফতার শুরু', en: 'Iftar Begins'),
             timeText: maghribTimeStr,
             countdownText: iftarCountdownText,
             onTap: () => _openFullscreen(SahriIftarType.iftar),
@@ -459,26 +470,27 @@ class _SahriIftarCard extends StatelessWidget {
         : const Color(0xFF2A77D4);
     final List<Color> featureBadgeColors = isDarkMode
         ? const [Color(0xFF1C3553), Color(0xFF1A2C44)]
-        : const [Color(0xFFDDF0FF), Color(0xFFBFDFFF)];
+        : const [Color(0xFFEAF6FF), Color(0xFFD6ECFF)];
     final LinearGradient cardGradient = isDarkMode
         ? spec.panelGradient
-        : LinearGradient(
+        : const LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              Colors.white,
-              Colors.white,
-              isSahri ? const Color(0xFFC6EBC8) : const Color(0xFFB8E4BB),
+              AppColors.cardBackground,
+              AppColors.primarySoft2,
+              Color(0xFFE2F3E7),
             ],
-            stops: const [0.0, 0.68, 1.0],
+            stops: [0.0, 0.62, 1.0],
           );
 
     final TextStyle countdownStyle =
         Theme.of(context).textTheme.headlineSmall?.copyWith(
           color: spec.accent,
+          fontSize: 30,
           fontWeight: FontWeight.w800,
           fontFeatures: const [FontFeature.tabularFigures()],
-          letterSpacing: 1.0,
+          letterSpacing: 0,
           height: 1,
         ) ??
         TextStyle(
@@ -486,7 +498,7 @@ class _SahriIftarCard extends StatelessWidget {
           fontSize: 30,
           fontWeight: FontWeight.w800,
           fontFeatures: const [FontFeature.tabularFigures()],
-          letterSpacing: 1,
+          letterSpacing: 0,
           height: 1,
         );
 
@@ -498,31 +510,31 @@ class _SahriIftarCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           onTap: onTap,
           child: SizedBox(
             height: cardHeight,
             child: Ink(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppRadius.card),
                 gradient: cardGradient,
                 border: Border.all(color: spec.border),
                 boxShadow: [
                   BoxShadow(
                     color: spec.glow,
-                    blurRadius: 18,
-                    spreadRadius: 0.3,
-                    offset: const Offset(0, 8),
+                    blurRadius: 12,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 5),
                   ),
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 7,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppRadius.card),
                 child: Stack(
                   children: [
                     Positioned(
@@ -533,7 +545,7 @@ class _SahriIftarCard extends StatelessWidget {
                         height: 82,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: spec.accent.withValues(alpha: 0.09),
+                          color: spec.accent.withValues(alpha: 0.06),
                         ),
                       ),
                     ),
@@ -545,7 +557,7 @@ class _SahriIftarCard extends StatelessWidget {
                         height: 58,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.12),
+                          color: Colors.white.withValues(alpha: 0.10),
                         ),
                       ),
                     ),
@@ -575,10 +587,10 @@ class _SahriIftarCard extends StatelessWidget {
                                   boxShadow: [
                                     BoxShadow(
                                       color: featureIconAccent.withValues(
-                                        alpha: 0.30,
+                                        alpha: 0.16,
                                       ),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 5),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
@@ -608,6 +620,8 @@ class _SahriIftarCard extends StatelessWidget {
                                                 ?.copyWith(
                                                   color: spec.primaryText,
                                                   fontWeight: FontWeight.w800,
+                                                  fontSize: 16,
+                                                  height: 1.15,
                                                 ),
                                           ),
                                         ),
@@ -666,9 +680,18 @@ class _SahriIftarCard extends StatelessWidget {
                                 child: Text(
                                   inGrace
                                       ? (isSahri
-                                            ? context.tr(bn: 'সাহরির সময় শেষ', en: 'Sehri time finished')
-                                            : context.tr(bn: 'ইফতারের সময় শুরু', en: 'Iftar time started'))
-                                      : context.tr(bn: 'বাকি সময়', en: 'Remaining Time'),
+                                            ? context.tr(
+                                                bn: 'সাহরির সময় শেষ',
+                                                en: 'Sehri time finished',
+                                              )
+                                            : context.tr(
+                                                bn: 'ইফতারের সময় শুরু',
+                                                en: 'Iftar time started',
+                                              ))
+                                      : context.tr(
+                                          bn: 'বাকি সময়',
+                                          en: 'Remaining Time',
+                                        ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodySmall
@@ -1041,9 +1064,18 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
                                                     Text(
                                                       _inGrace
                                                           ? (_isSahri
-                                                                ? context.tr(bn: 'সাহরির সময় শেষ', en: 'Sehri time finished')
-                                                                : context.tr(bn: 'ইফতারের সময় শুরু', en: 'Iftar time started'))
-                                                          : context.tr(bn: 'বাকি সময়', en: 'Remaining Time'),
+                                                                ? context.tr(
+                                                                    bn: 'সাহরির সময় শেষ',
+                                                                    en: 'Sehri time finished',
+                                                                  )
+                                                                : context.tr(
+                                                                    bn: 'ইফতারের সময় শুরু',
+                                                                    en: 'Iftar time started',
+                                                                  ))
+                                                          : context.tr(
+                                                              bn: 'বাকি সময়',
+                                                              en: 'Remaining Time',
+                                                            ),
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodySmall

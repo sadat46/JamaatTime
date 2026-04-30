@@ -22,7 +22,6 @@ import '../widgets/shared_ui_widgets.dart';
 import '../utils/bangla_calendar.dart';
 import '../utils/locale_digits.dart';
 import '../services/widget_service.dart';
-import '../services/battery_optimization_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
@@ -70,13 +69,15 @@ class PrayerRowData {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isActive;
+
+  const HomeScreen({super.key, this.isActive = true});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _timer;
   DateTime _now = DateTime.now();
   Coordinates? _coords;
@@ -106,7 +107,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isFetchingPlaceName = false;
 
   // Add notification scheduling control
-  bool _notificationsScheduled = false;
+  String? _lastNotificationScheduleKey;
+  String? _notificationScheduleInFlightKey;
+  int _notificationScheduleVersion = 0;
   DateTime _lastScheduledDate = DateTime.now().subtract(
     const Duration(days: 1),
   );
@@ -121,6 +124,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Stream subscription for settings changes (must be cancelled in dispose)
   StreamSubscription<void>? _settingsSubscription;
+  bool _appLifecycleActive = true;
+  Future<bool>? _noticeUnreadFuture;
+  String? _noticeUnreadCacheKey;
 
   bool get _isEnglishCurrent =>
       AppLocaleController.instance.current.languageCode == 'en';
@@ -140,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
     NoticeTelemetry.event('bell_open', {'latestNotifId': latest?.id});
     if (latest != null) {
       await _noticeReadState.markAllSeen([latest]);
+      _resetNoticeUnreadCache();
     }
     if (!mounted) return;
     await Navigator.of(context).push(
@@ -150,7 +157,22 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    _resetNoticeUnreadCache();
     if (mounted) setState(() {});
+  }
+
+  Future<bool> _noticeUnreadFor(NoticeModel? latest) {
+    final cacheKey = latest?.id ?? '__none__';
+    if (_noticeUnreadCacheKey != cacheKey || _noticeUnreadFuture == null) {
+      _noticeUnreadCacheKey = cacheKey;
+      _noticeUnreadFuture = _noticeReadState.hasUnreadLatest(latest);
+    }
+    return _noticeUnreadFuture!;
+  }
+
+  void _resetNoticeUnreadCache() {
+    _noticeUnreadCacheKey = null;
+    _noticeUnreadFuture = null;
   }
 
   Widget _buildNoticeAction(BuildContext context) {
@@ -163,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snapshot) {
         final latest = snapshot.data;
         return FutureBuilder<bool>(
-          future: _noticeReadState.hasUnreadLatest(latest),
+          future: _noticeUnreadFor(latest),
           builder: (context, unreadSnap) {
             final unread = unreadSnap.data == true;
             return Semantics(
@@ -326,6 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           selectedDate: selectedDate,
                           coordinates: _coords,
                           calculationParams: params,
+                          isActive: _shouldRunHomeTimer,
                           textStyle: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -403,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           : Madhab.shafi;
                                     }
 
-                                    _notificationsScheduled = false;
+                                    _lastNotificationScheduleKey = null;
 
                                     _coords = Coordinates(
                                       _locationConfig!.latitude,
@@ -448,6 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   LiveClockWidget(
+                                    isActive: _shouldRunHomeTimer,
                                     textStyle: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
@@ -616,8 +640,92 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    _appLifecycleActive =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
+    WidgetsBinding.instance.addObserver(this);
     // Timezone initialization moved to main.dart for faster startup
     _initializeApp();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      _syncHomeTimer();
+      if (_shouldRunHomeTimer) {
+        _handleHomeMinuteTick();
+      }
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final wasActive = _appLifecycleActive;
+    _appLifecycleActive = state == AppLifecycleState.resumed;
+    if (wasActive != _appLifecycleActive) {
+      _syncHomeTimer();
+      if (_shouldRunHomeTimer) {
+        _handleHomeMinuteTick();
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  bool get _shouldRunHomeTimer => widget.isActive && _appLifecycleActive;
+
+  void _syncHomeTimer() {
+    if (!_shouldRunHomeTimer) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    if (_timer?.isActive ?? false) {
+      return;
+    }
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (_shouldRunHomeTimer) {
+        _handleHomeMinuteTick();
+      }
+    });
+  }
+
+  void _handleHomeMinuteTick() {
+    final newNow = DateTime.now();
+    final oldDay = DateTime(_now.year, _now.month, _now.day);
+    final newDay = DateTime(newNow.year, newNow.month, newNow.day);
+
+    // Check if day changed - need to recalculate prayer times
+    if (newDay.isAfter(oldDay)) {
+      _now = newNow;
+      selectedDate = newNow;
+      _updatePrayerTimes();
+      if (selectedCity != null && _locationConfig != null) {
+        if (_locationConfig!.jamaatSource == JamaatSource.server) {
+          _fetchJamaatTimes(selectedCity!);
+        } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+          _calculateLocalJamaatTimes();
+        }
+      }
+    } else if (times.isNotEmpty) {
+      // Same day: detect prayer boundary crossing so the table highlight
+      // and home-widget update without waiting for the next day.
+      final newPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+        times: times,
+        now: newNow,
+      );
+      if (newPeriod != _lastCurrentPeriod) {
+        _now = newNow;
+        if (mounted) {
+          setState(_computePrayerTableData);
+        } else {
+          _computePrayerTableData();
+        }
+      }
+    }
+    _now = newNow;
   }
 
   Future<void> _initializeApp() async {
@@ -680,44 +788,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _updatePrayerTimes();
     await _scheduleNotificationsIfNeeded();
 
-    // Timer for background tasks only (checking day change, etc.)
-    // Clock and countdown widgets now have their own timers
-    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      final newNow = DateTime.now();
-      final oldDay = DateTime(_now.year, _now.month, _now.day);
-      final newDay = DateTime(newNow.year, newNow.month, newNow.day);
-
-      // Check if day changed - need to recalculate prayer times
-      if (newDay.isAfter(oldDay)) {
-        _now = newNow;
-        selectedDate = newNow;
-        _updatePrayerTimes();
-        if (selectedCity != null && _locationConfig != null) {
-          if (_locationConfig!.jamaatSource == JamaatSource.server) {
-            _fetchJamaatTimes(selectedCity!);
-          } else if (_locationConfig!.jamaatSource ==
-              JamaatSource.localOffset) {
-            _calculateLocalJamaatTimes();
-          }
-        }
-      } else if (times.isNotEmpty) {
-        // Same day: detect prayer boundary crossing so the table highlight
-        // and home-widget update without waiting for the next day.
-        final newPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
-          times: times,
-          now: newNow,
-        );
-        if (newPeriod != _lastCurrentPeriod) {
-          _now = newNow;
-          if (mounted) {
-            setState(_computePrayerTableData);
-          } else {
-            _computePrayerTableData();
-          }
-        }
-      }
-      _now = newNow;
-    });
+    // Home-only minute maintenance. Hidden IndexedStack tabs do not keep this
+    // timer alive.
+    _syncHomeTimer();
 
     // Single listener for all settings changes (combining madhab and notification settings)
     _settingsSubscription = _settingsService.onSettingsChanged.listen((
@@ -728,58 +801,6 @@ class _HomeScreenState extends State<HomeScreen> {
       await _handleNotificationSettingsChange();
       _updateHomeWidget();
     });
-
-    // Ask once for battery exemption so the home-screen widget's alarms aren't
-    // suppressed by Doze / vendor sleeping-apps lists.
-    unawaited(_maybePromptBatteryExemption());
-  }
-
-  static const String _batteryPromptShownKey = 'battery_exemption_prompt_shown';
-
-  Future<void> _maybePromptBatteryExemption() async {
-    if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_batteryPromptShownKey) ?? false) return;
-    final isExempt = await BatteryOptimizationService.isIgnoring();
-    if (isExempt) {
-      await prefs.setBool(_batteryPromptShownKey, true);
-      return;
-    }
-    if (!context.mounted) return;
-    await prefs.setBool(_batteryPromptShownKey, true);
-    if (!context.mounted) return;
-    await showDialog<void>(
-      // ignore: use_build_context_synchronously
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            _tr(dialogContext, 'উইজেট সক্রিয় রাখুন', 'Keep the widget alive'),
-          ),
-          content: Text(
-            _tr(
-              dialogContext,
-              'অ্যান্ড্রয়েডের ব্যাটারি অপ্টিমাইজেশনে এই অ্যাপটি বাদ দিন, না হলে হোম স্ক্রিনের উইজেটে নামাজের সময় পরিবর্তন আপডেট হবে না।\n\nস্যামসাং ডিভাইসে: Settings → Battery → Background usage limits → Sleeping apps থেকে JamaatTime সরিয়ে দিন।',
-              'Exempt this app from Android battery optimization, otherwise the home-screen widget will not update when prayer times change.\n\nOn Samsung: also open Settings → Battery → Background usage limits and remove JamaatTime from "Sleeping apps".',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(_tr(dialogContext, 'পরে', 'Later')),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                BatteryOptimizationService.requestExemption();
-              },
-              child: Text(_tr(dialogContext, 'সেটিংস খুলুন', 'Open settings')),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _fetchJamaatTimes(
@@ -824,8 +845,8 @@ class _HomeScreenState extends State<HomeScreen> {
         // Trigger UI update
         setState(() {});
 
-        // Reset notification scheduling flag when jamaat times change
-        _notificationsScheduled = false;
+        // Reset notification scheduling key when jamaat times change.
+        _lastNotificationScheduleKey = null;
         await _scheduleNotificationsIfNeeded();
       } else {
         jamaatTimes = null;
@@ -884,7 +905,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     _computePrayerTableData();
-    _scheduleNotificationsIfNeeded();
+    _lastNotificationScheduleKey = null;
+    unawaited(_scheduleNotificationsIfNeeded());
   }
 
   void _updatePrayerTimes() {
@@ -935,9 +957,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       jamaatTimes = updatedJamaatTimes;
 
-      // Reschedule notifications with updated times
-      _notificationsScheduled = false;
-      _scheduleNotificationsIfNeeded();
+      // Reschedule notifications with updated times.
+      _lastNotificationScheduleKey = null;
+      unawaited(_scheduleNotificationsIfNeeded());
     }
 
     // Pre-compute table data after prayer times update
@@ -962,25 +984,66 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Schedule notifications if:
-    // 1. Not scheduled yet today, OR
-    // 2. Last scheduled date is different from today
-    if (!_notificationsScheduled || _lastScheduledDate.isBefore(today)) {
-      try {
-        await _notificationService.scheduleAllNotifications(times, jamaatTimes);
-        _notificationsScheduled = true;
-        _lastScheduledDate = today;
-      } catch (e) {
-        // Handle error silently
+    final scheduleKey = _buildNotificationScheduleKey(today);
+    if (_lastNotificationScheduleKey == scheduleKey &&
+        !_lastScheduledDate.isBefore(today)) {
+      return;
+    }
+    if (_notificationScheduleInFlightKey == scheduleKey) {
+      return;
+    }
+
+    _notificationScheduleInFlightKey = scheduleKey;
+    try {
+      await _notificationService.scheduleAllNotifications(times, jamaatTimes);
+      _lastNotificationScheduleKey = scheduleKey;
+      _lastScheduledDate = today;
+    } catch (e) {
+      // Handle error silently
+    } finally {
+      if (_notificationScheduleInFlightKey == scheduleKey) {
+        _notificationScheduleInFlightKey = null;
       }
     }
+  }
+
+  String _buildNotificationScheduleKey(DateTime today) {
+    final prayerPart = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']
+        .map((name) => '$name:${times[name]?.millisecondsSinceEpoch ?? 0}')
+        .join('|');
+    final jamaatEntries =
+        (jamaatTimes ?? <String, dynamic>{}).entries
+            .map((entry) => '${entry.key}:${entry.value}')
+            .toList()
+          ..sort();
+    final config = _locationConfig;
+    final configPart = config == null
+        ? 'no-config'
+        : [
+            config.country.name,
+            config.cityName,
+            config.latitude,
+            config.longitude,
+            config.timezone,
+          ].join(':');
+    return [
+      today.millisecondsSinceEpoch,
+      selectedCity ?? 'gps',
+      currentPlaceName ?? '',
+      AppLocaleController.instance.current.languageCode,
+      _notificationScheduleVersion,
+      configPart,
+      prayerPart,
+      jamaatEntries.join('|'),
+    ].join('::');
   }
 
   /// Handle notification settings changes (like sound mode)
   Future<void> _handleNotificationSettingsChange() async {
     try {
-      // Reset notification scheduling flag to force rescheduling
-      _notificationsScheduled = false;
+      // Reset notification scheduling key to force rescheduling.
+      _lastNotificationScheduleKey = null;
+      _notificationScheduleVersion++;
 
       // Reschedule notifications with new settings
       if (jamaatTimes != null) {
@@ -1031,6 +1094,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchUserLocation() async {
+    if (isFetchingPlaceName) {
+      return;
+    }
+
     // Set loading state once at the start
     _coords = null;
     isFetchingPlaceName = true;
@@ -1219,6 +1286,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _settingsSubscription?.cancel();
     super.dispose();
@@ -1866,6 +1934,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fajrTime: times['Fajr'],
                                       maghribTime: times['Maghrib'],
                                       showTitle: false,
+                                      isActive: _shouldRunHomeTimer,
                                     ),
                                   ],
                                 ),
@@ -1873,7 +1942,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 12),
 
                               // ── Forbidden Prayer Times Section ──
-                              ForbiddenTimesWidget(prayerTimes: prayerTimes),
+                              ForbiddenTimesWidget(
+                                prayerTimes: prayerTimes,
+                                isActive: _shouldRunHomeTimer,
+                              ),
                             ],
                           ),
                         ),

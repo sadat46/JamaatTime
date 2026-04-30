@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
@@ -18,6 +19,7 @@ import java.util.Calendar;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "PrayerWidgetProvider";
+    private static final int MAINTENANCE_INTERVAL_HOURS = 6;
 
     // Legacy request codes — kept only to cancel stale PendingIntents on upgrade.
     private static final int ALARM_REQUEST_CODE      = 2;
@@ -70,7 +72,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             String islamicDate = prefs.getString("islamic_date", "-");
             String location    = prefs.getString("location", "-");
 
-            Log.d(TAG, "Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
+            logDebug("Widget update - prayer: " + prayerName + ", next epoch: " + nextEpoch);
             long nowMillis = System.currentTimeMillis();
 
             // Epoch-based staleness — not flag-based — so the Ongoing→Over transition is caught.
@@ -95,7 +97,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                     // Layer 2: if a known boundary is in the past, re-tick soon so we don't
                     // stay on "-" while waiting for Dart to finish recomputing.
                     if (nextEpoch > 0L) {
-                        scheduleAlarmClock(context,
+                        scheduleBoundaryAlarm(context,
                             nowMillis + 1500L,
                             buildSelfTickIntent(context, REQ_PRAYER_EXPIRE_TICK, "prayer-expire"),
                             "prayer-expire");
@@ -123,7 +125,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(R.id.jamaat_time, "-");
                     // Layer 2: similarly re-tick if jamaat epoch is known but stale.
                     if (jamaatEpoch > 0L) {
-                        scheduleAlarmClock(context,
+                        scheduleBoundaryAlarm(context,
                             nowMillis + 1500L,
                             buildSelfTickIntent(context, REQ_JAMAAT_EXPIRE_TICK, "jamaat-expire"),
                             "jamaat-expire");
@@ -190,39 +192,35 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private void scheduleAlarmClock(Context ctx, long fireAt, PendingIntent pi, String kind) {
+    private void scheduleBoundaryAlarm(Context ctx, long fireAt, PendingIntent pi, String kind) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         try {
-            // setAlarmClock is exempt from Doze and app-standby buckets (no 9-min rate limit).
-            AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(fireAt, null);
-            am.setAlarmClock(info, pi);
-            Log.d(TAG, "alarm scheduled kind=" + kind + " in " +
-                ((fireAt - System.currentTimeMillis()) / 1000) + "s via setAlarmClock");
-        } catch (SecurityException e) {
-            Log.w(TAG, "setAlarmClock denied, trying setExactAndAllowWhileIdle", e);
-            try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
-                Log.d(TAG, "alarm scheduled kind=" + kind + " via exactIdle");
-            } catch (SecurityException e2) {
+                logDebug("alarm scheduled kind=" + kind + " via exactIdle");
+            } else {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
-                Log.d(TAG, "alarm scheduled kind=" + kind + " via inexactIdle");
+                logDebug("alarm scheduled kind=" + kind + " via inexactIdle");
             }
+        } catch (SecurityException e) {
+            Log.w(TAG, "Exact alarm denied, falling back to inexact idle alarm", e);
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
         }
     }
 
     private void scheduleAllAlarms(Context ctx, long nowMillis,
             long prayerEpoch, long jamaatEpoch, long jamaatOverEpoch) {
         if (prayerEpoch > nowMillis) {
-            scheduleAlarmClock(ctx, prayerEpoch + 1000L,
+            scheduleBoundaryAlarm(ctx, prayerEpoch + 1000L,
                 buildSelfTickIntent(ctx, REQ_PRAYER_BOUNDARY, "prayer"), "prayer");
         }
         if (jamaatEpoch > nowMillis) {
-            scheduleAlarmClock(ctx, jamaatEpoch + 1000L,
+            scheduleBoundaryAlarm(ctx, jamaatEpoch + 1000L,
                 buildSelfTickIntent(ctx, REQ_JAMAAT_BOUNDARY, "jamaat"), "jamaat");
         }
         if (jamaatOverEpoch > nowMillis) {
-            scheduleAlarmClock(ctx, jamaatOverEpoch + 1000L,
+            scheduleBoundaryAlarm(ctx, jamaatOverEpoch + 1000L,
                 buildSelfTickIntent(ctx, REQ_JAMAAT_OVER, "over"), "over");
         }
         // Midnight fallback — distinct slot so it cannot cancel the prayer-boundary alarm.
@@ -270,7 +268,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         try {
             pi.send();
-            Log.d(TAG, "Triggered Dart refresh");
+            logDebug("Triggered Dart refresh");
         } catch (PendingIntent.CanceledException e) {
             Log.w(TAG, "Dart refresh pending intent cancelled", e);
         }
@@ -325,7 +323,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
-            Log.d(TAG, "System broadcast received: " + action + ", requesting widget refresh");
+            logDebug("System broadcast received: " + action + ", requesting widget refresh");
             // Cancel stale legacy alarm from previous app version.
             cancelAllAlarms(context);
             triggerDartRefresh(context);
@@ -337,7 +335,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             }
         } else if (ACTION_BOUNDARY_TICK.equals(action)) {
             String kind = intent.getStringExtra(EXTRA_TICK_KIND);
-            Log.d(TAG, "BOUNDARY_TICK received kind=" + kind);
+            logDebug("BOUNDARY_TICK received kind=" + kind);
             // Pass 1: re-render immediately from current prefs (also re-arms next alarms).
             AppWidgetManager mgr = AppWidgetManager.getInstance(context);
             int[] ids = mgr.getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
@@ -352,11 +350,13 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     @Override
     public void onEnabled(Context context) {
         super.onEnabled(context);
-        Log.d(TAG, "Widget enabled");
+        logDebug("Widget enabled");
         try {
             androidx.work.PeriodicWorkRequest req =
                 new androidx.work.PeriodicWorkRequest.Builder(
-                    WidgetMaintenanceWorker.class, 15, java.util.concurrent.TimeUnit.MINUTES
+                    WidgetMaintenanceWorker.class,
+                    MAINTENANCE_INTERVAL_HOURS,
+                    java.util.concurrent.TimeUnit.HOURS
                 ).build();
             androidx.work.WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "widget_maintenance",
@@ -371,6 +371,13 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     public void onDisabled(Context context) {
         super.onDisabled(context);
         cancelAllAlarms(context);
-        Log.d(TAG, "Widget disabled");
+        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("widget_maintenance");
+        logDebug("Widget disabled");
+    }
+
+    private static void logDebug(String message) {
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Log.d(TAG, message);
+        }
     }
 }

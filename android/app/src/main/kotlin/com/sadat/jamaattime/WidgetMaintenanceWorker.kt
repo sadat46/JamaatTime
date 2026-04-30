@@ -1,5 +1,6 @@
 package com.sadat.jamaattime
 
+import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,6 +13,14 @@ class WidgetMaintenanceWorker(ctx: Context, params: WorkerParameters)
 
     override suspend fun doWork(): Result {
         val ctx = applicationContext
+        val appWidgetManager = AppWidgetManager.getInstance(ctx)
+        val widgetIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(ctx, PrayerWidgetProvider::class.java)
+        )
+        if (widgetIds.isEmpty()) {
+            return Result.success()
+        }
+
         val intent = Intent("es.antonborri.home_widget.action.BACKGROUND")
             .setComponent(ComponentName(
                 ctx, "es.antonborri.home_widget.HomeWidgetBackgroundReceiver"))

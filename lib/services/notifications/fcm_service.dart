@@ -69,7 +69,13 @@ class FcmService {
     }
 
     _initialized = true;
+    unawaited(_finishDeferredRegistration(messaging, locale));
+  }
 
+  Future<void> _finishDeferredRegistration(
+    FirebaseMessaging messaging,
+    String locale,
+  ) async {
     try {
       await messaging.requestPermission(alert: true, badge: true, sound: true);
     } catch (_) {
