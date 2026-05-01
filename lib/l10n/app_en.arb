@@ -345,5 +345,26 @@
   "@activitySummaryBlockedCount": {
     "description": "Count label for blocked queries per category",
     "placeholders": {"count": {"type": "int"}}
+  },
+  "activitySummaryClearConfirmTitle": "Clear activity summary?",
+  "@activitySummaryClearConfirmTitle": {"description": "Confirmation dialog title before wiping the activity summary"},
+  "activitySummaryClearConfirmBody": "All on-device counts will be deleted. This cannot be undone.",
+  "@activitySummaryClearConfirmBody": {"description": "Confirmation dialog body before wiping the activity summary"},
+  "activitySummaryClearConfirmCta": "Clear",
+  "@activitySummaryClearConfirmCta": {"description": "Confirm button on the clear-activity-summary dialog"},
+  "activitySummaryCancelCta": "Cancel",
+  "@activitySummaryCancelCta": {"description": "Cancel button on confirmation dialogs"},
+  "activitySummaryExportCta": "Export as CSV",
+  "@activitySummaryExportCta": {"description": "Action that exports activity-summary counts to a CSV file"},
+  "activitySummaryExportNothing": "No counts to export yet.",
+  "@activitySummaryExportNothing": {"description": "Snackbar shown when the user taps Export with an empty summary"},
+  "activitySummaryExportSuccess": "Activity summary exported.",
+  "@activitySummaryExportSuccess": {"description": "Snackbar shown when CSV export succeeds"},
+  "activitySummaryExportFailed": "Could not export activity summary.",
+  "@activitySummaryExportFailed": {"description": "Snackbar shown when CSV export fails"},
+  "activitySummaryRetentionNote": "Counts older than {days} days are removed automatically.",
+  "@activitySummaryRetentionNote": {
+    "description": "Footnote describing the activity-summary retention window",
+    "placeholders": {"days": {"type": "int"}}
   }
 }

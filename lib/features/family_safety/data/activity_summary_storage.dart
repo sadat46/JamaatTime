@@ -11,7 +11,34 @@ class ActivitySummaryEntry {
     required this.count,
   });
 
+  static const Set<String> _forbiddenKeys = <String>{
+    'domain',
+    'url',
+    'host',
+    'hostname',
+    'qname',
+    'query',
+    'category',
+    'time',
+    'timestamp',
+    'user',
+    'user_id',
+    'device',
+    'device_id',
+  };
+
   factory ActivitySummaryEntry.fromJson(Map<String, Object?> json) {
+    assert(() {
+      for (final key in json.keys) {
+        if (_forbiddenKeys.contains(key)) {
+          throw StateError(
+            'Activity summary must not store "$key": only (date_yyyymmdd, '
+            'category_id, count) are allowed.',
+          );
+        }
+      }
+      return true;
+    }());
     final dateYyyymmdd = json['date_yyyymmdd'];
     final categoryId = json['category_id'];
     final count = json['count'];
@@ -37,8 +64,12 @@ class ActivitySummaryEntry {
 
 class ActivitySummaryStorage {
   static const String summaryKey = 'family_safety_activity_summary';
+  static const int defaultRetentionDays = 30;
 
-  Future<List<ActivitySummaryEntry>> loadEntries() async {
+  Future<List<ActivitySummaryEntry>> loadEntries({
+    int retentionDays = defaultRetentionDays,
+    DateTime? now,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(summaryKey);
     if (raw == null || raw.isEmpty) {
@@ -48,16 +79,33 @@ class ActivitySummaryStorage {
     if (decoded is! List) {
       return const <ActivitySummaryEntry>[];
     }
-    return decoded
+    final cutoff = ActivitySummaryStorage.formatDate(
+      (now ?? DateTime.now()).subtract(Duration(days: retentionDays)),
+    );
+    final entries = decoded
         .whereType<Map<String, Object?>>()
         .map(ActivitySummaryEntry.fromJson)
         .where(
           (entry) =>
               entry.dateYyyymmdd.isNotEmpty &&
               entry.categoryId > 0 &&
-              entry.count > 0,
+              entry.count > 0 &&
+              entry.dateYyyymmdd.compareTo(cutoff) >= 0,
         )
         .toList(growable: false);
+    if (entries.length != decoded.length) {
+      // Persist the pruned set so the next load doesn't re-walk expired rows.
+      await _persist(prefs, entries);
+    }
+    return entries;
+  }
+
+  Future<void> _persist(
+    SharedPreferences prefs,
+    List<ActivitySummaryEntry> entries,
+  ) async {
+    final rows = entries.map((entry) => entry.toJson()).toList(growable: false);
+    await prefs.setString(summaryKey, jsonEncode(rows));
   }
 
   Future<void> saveEntries(List<ActivitySummaryEntry> entries) async {

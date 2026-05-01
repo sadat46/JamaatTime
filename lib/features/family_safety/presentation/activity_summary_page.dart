@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -17,7 +21,9 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
 
   final FamilySafetyChannel _channel = FamilySafetyChannel();
   Map<BlockCategory, int> _counts = const <BlockCategory, int>{};
+  List<_DailyCategoryRow> _rows = const <_DailyCategoryRow>[];
   bool _loading = true;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -28,10 +34,13 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
   Future<void> _load() async {
     final raw = await _channel.getActivitySummary(rangeDays: _rangeDays);
     final counts = <BlockCategory, int>{};
+    final rows = <_DailyCategoryRow>[];
     for (final entry in raw) {
       if (entry is! Map) continue;
+      final date = entry['date_yyyymmdd'];
       final categoryId = entry['category_id'];
       final count = entry['count'];
+      if (date is! String || date.isEmpty) continue;
       if (categoryId is! int || count is! int || count <= 0) continue;
       final category = BlockCategory.values.firstWhere(
         (c) => c.id == categoryId,
@@ -39,26 +48,115 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       );
       if (category.id != categoryId) continue;
       counts[category] = (counts[category] ?? 0) + count;
+      rows.add(_DailyCategoryRow(date, category, count));
     }
+    rows.sort((a, b) => b.dateYyyymmdd.compareTo(a.dateYyyymmdd));
     if (!mounted) return;
     setState(() {
       _counts = counts;
+      _rows = rows;
       _loading = false;
     });
   }
 
-  Future<void> _clear() async {
+  Future<void> _confirmAndClear() async {
     final strings = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.activitySummaryClearConfirmTitle),
+        content: Text(strings.activitySummaryClearConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(strings.activitySummaryCancelCta),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(strings.activitySummaryClearConfirmCta),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     await _channel.clearActivitySummary();
     if (!mounted) return;
     setState(() {
       _counts = const <BlockCategory, int>{};
+      _rows = const <_DailyCategoryRow>[];
     });
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(content: Text(strings.activitySummaryClearedSnack)),
       );
+  }
+
+  Future<void> _exportCsv() async {
+    final strings = AppLocalizations.of(context);
+    if (_rows.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(strings.activitySummaryExportNothing)),
+        );
+      return;
+    }
+    setState(() => _busy = true);
+    final csv = _buildCsv(_rows);
+    final bytes = Uint8List.fromList(utf8.encode(csv));
+    final fileName =
+        'jamaat_time_activity_summary_${_today()}.csv';
+    String? savedPath;
+    try {
+      savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: strings.activitySummaryExportCta,
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+        bytes: bytes,
+      );
+    } catch (_) {
+      savedPath = null;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    final ok = savedPath != null && savedPath.isNotEmpty;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? strings.activitySummaryExportSuccess
+                : strings.activitySummaryExportFailed,
+          ),
+        ),
+      );
+  }
+
+  String _buildCsv(List<_DailyCategoryRow> rows) {
+    final buffer = StringBuffer('date_yyyymmdd,category_id,category,count\n');
+    for (final row in rows) {
+      buffer
+        ..write(row.dateYyyymmdd)
+        ..write(',')
+        ..write(row.category.id)
+        ..write(',')
+        ..write(row.category.name)
+        ..write(',')
+        ..write(row.count)
+        ..write('\n');
+    }
+    return buffer.toString();
+  }
+
+  String _today() {
+    final now = DateTime.now();
+    final y = now.year.toString().padLeft(4, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final d = now.day.toString().padLeft(2, '0');
+    return '$y$m$d';
   }
 
   String _categoryLabel(BlockCategory category, AppLocalizations strings) {
@@ -129,17 +227,47 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                       ),
                     );
                   }),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: hasData ? _clear : null,
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(strings.activitySummaryClearCta),
+                const SizedBox(height: 16),
+                Text(
+                  strings.activitySummaryRetentionNote(_rangeDays),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
                   ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: _busy || !hasData ? null : _exportCsv,
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.file_download_outlined),
+                      label: Text(strings.activitySummaryExportCta),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: hasData ? _confirmAndClear : null,
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(strings.activitySummaryClearCta),
+                    ),
+                  ],
                 ),
               ],
             ),
     );
   }
+}
+
+class _DailyCategoryRow {
+  const _DailyCategoryRow(this.dateYyyymmdd, this.category, this.count);
+
+  final String dateYyyymmdd;
+  final BlockCategory category;
+  final int count;
 }

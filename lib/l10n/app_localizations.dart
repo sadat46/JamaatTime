@@ -979,6 +979,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} blocked'**
   String activitySummaryBlockedCount(int count);
+
+  /// Confirmation dialog title before wiping the activity summary
+  ///
+  /// In en, this message translates to:
+  /// **'Clear activity summary?'**
+  String get activitySummaryClearConfirmTitle;
+
+  /// Confirmation dialog body before wiping the activity summary
+  ///
+  /// In en, this message translates to:
+  /// **'All on-device counts will be deleted. This cannot be undone.'**
+  String get activitySummaryClearConfirmBody;
+
+  /// Confirm button on the clear-activity-summary dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get activitySummaryClearConfirmCta;
+
+  /// Cancel button on confirmation dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get activitySummaryCancelCta;
+
+  /// Action that exports activity-summary counts to a CSV file
+  ///
+  /// In en, this message translates to:
+  /// **'Export as CSV'**
+  String get activitySummaryExportCta;
+
+  /// Snackbar shown when the user taps Export with an empty summary
+  ///
+  /// In en, this message translates to:
+  /// **'No counts to export yet.'**
+  String get activitySummaryExportNothing;
+
+  /// Snackbar shown when CSV export succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Activity summary exported.'**
+  String get activitySummaryExportSuccess;
+
+  /// Snackbar shown when CSV export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export activity summary.'**
+  String get activitySummaryExportFailed;
+
+  /// Footnote describing the activity-summary retention window
+  ///
+  /// In en, this message translates to:
+  /// **'Counts older than {days} days are removed automatically.'**
+  String activitySummaryRetentionNote(int days);
 }
 
 class _AppLocalizationsDelegate

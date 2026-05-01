@@ -508,4 +508,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String activitySummaryBlockedCount(int count) {
     return '$count blocked';
   }
+
+  @override
+  String get activitySummaryClearConfirmTitle => 'Clear activity summary?';
+
+  @override
+  String get activitySummaryClearConfirmBody =>
+      'All on-device counts will be deleted. This cannot be undone.';
+
+  @override
+  String get activitySummaryClearConfirmCta => 'Clear';
+
+  @override
+  String get activitySummaryCancelCta => 'Cancel';
+
+  @override
+  String get activitySummaryExportCta => 'Export as CSV';
+
+  @override
+  String get activitySummaryExportNothing => 'No counts to export yet.';
+
+  @override
+  String get activitySummaryExportSuccess => 'Activity summary exported.';
+
+  @override
+  String get activitySummaryExportFailed =>
+      'Could not export activity summary.';
+
+  @override
+  String activitySummaryRetentionNote(int days) {
+    return 'Counts older than $days days are removed automatically.';
+  }
 }

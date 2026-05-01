@@ -170,5 +170,14 @@
   "activitySummaryCategoryAdult": "অ্যাডাল্ট কনটেন্ট",
   "activitySummaryCategoryGambling": "জুয়া",
   "activitySummaryCategoryProxyBypass": "Proxy / DNS bypass",
-  "activitySummaryBlockedCount": "{count}টি ব্লক করা হয়েছে"
+  "activitySummaryBlockedCount": "{count}টি ব্লক করা হয়েছে",
+  "activitySummaryClearConfirmTitle": "অ্যাক্টিভিটি সামারি মুছবেন?",
+  "activitySummaryClearConfirmBody": "ডিভাইসে রাখা সব সংখ্যা মুছে যাবে। এই কাজ ফিরিয়ে আনা যাবে না।",
+  "activitySummaryClearConfirmCta": "মুছুন",
+  "activitySummaryCancelCta": "বাতিল",
+  "activitySummaryExportCta": "CSV ফাইলে এক্সপোর্ট করুন",
+  "activitySummaryExportNothing": "এখনো এক্সপোর্ট করার মতো সংখ্যা নেই।",
+  "activitySummaryExportSuccess": "অ্যাক্টিভিটি সামারি এক্সপোর্ট হয়েছে।",
+  "activitySummaryExportFailed": "অ্যাক্টিভিটি সামারি এক্সপোর্ট করা যায়নি।",
+  "activitySummaryRetentionNote": "{days} দিনের পুরোনো সংখ্যা স্বয়ংক্রিয়ভাবে মুছে ফেলা হয়।"
 }

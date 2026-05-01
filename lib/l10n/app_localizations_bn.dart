@@ -512,4 +512,37 @@ class AppLocalizationsBn extends AppLocalizations {
   String activitySummaryBlockedCount(int count) {
     return '$countটি ব্লক করা হয়েছে';
   }
+
+  @override
+  String get activitySummaryClearConfirmTitle => 'অ্যাক্টিভিটি সামারি মুছবেন?';
+
+  @override
+  String get activitySummaryClearConfirmBody =>
+      'ডিভাইসে রাখা সব সংখ্যা মুছে যাবে। এই কাজ ফিরিয়ে আনা যাবে না।';
+
+  @override
+  String get activitySummaryClearConfirmCta => 'মুছুন';
+
+  @override
+  String get activitySummaryCancelCta => 'বাতিল';
+
+  @override
+  String get activitySummaryExportCta => 'CSV ফাইলে এক্সপোর্ট করুন';
+
+  @override
+  String get activitySummaryExportNothing =>
+      'এখনো এক্সপোর্ট করার মতো সংখ্যা নেই।';
+
+  @override
+  String get activitySummaryExportSuccess =>
+      'অ্যাক্টিভিটি সামারি এক্সপোর্ট হয়েছে।';
+
+  @override
+  String get activitySummaryExportFailed =>
+      'অ্যাক্টিভিটি সামারি এক্সপোর্ট করা যায়নি।';
+
+  @override
+  String activitySummaryRetentionNote(int days) {
+    return '$days দিনের পুরোনো সংখ্যা স্বয়ংক্রিয়ভাবে মুছে ফেলা হয়।';
+  }
 }

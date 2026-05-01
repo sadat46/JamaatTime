@@ -54,4 +54,65 @@ void main() {
 
     expect(await storage.loadEntries(), isEmpty);
   });
+
+  test('rejects rows containing forbidden domain-leak fields', () {
+    expect(
+      () => ActivitySummaryEntry.fromJson(<String, Object?>{
+        'date_yyyymmdd': '20260501',
+        'category_id': 1,
+        'count': 1,
+        'domain': 'example.com',
+      }),
+      throwsA(isA<StateError>()),
+    );
+
+    for (final key in const <String>[
+      'url',
+      'host',
+      'qname',
+      'query',
+      'time',
+      'user_id',
+      'device_id',
+    ]) {
+      expect(
+        () => ActivitySummaryEntry.fromJson(<String, Object?>{
+          'date_yyyymmdd': '20260501',
+          'category_id': 1,
+          'count': 1,
+          key: 'leaked',
+        }),
+        throwsA(isA<StateError>()),
+        reason: 'forbidden key "$key" should be rejected',
+      );
+    }
+  });
+
+  test('prunes rows older than the retention window on load', () async {
+    final storage = ActivitySummaryStorage();
+    final now = DateTime(2026, 6, 15);
+    final cutoffEdge = ActivitySummaryStorage.formatDate(
+      now.subtract(const Duration(days: 30)),
+    );
+    final beforeCutoff = ActivitySummaryStorage.formatDate(
+      now.subtract(const Duration(days: 31)),
+    );
+
+    await storage.saveEntries([
+      ActivitySummaryEntry(dateYyyymmdd: cutoffEdge, categoryId: 1, count: 5),
+      ActivitySummaryEntry(
+        dateYyyymmdd: beforeCutoff,
+        categoryId: 2,
+        count: 9,
+      ),
+      ActivitySummaryEntry(dateYyyymmdd: '20260615', categoryId: 3, count: 1),
+    ]);
+
+    final entries = await storage.loadEntries(now: now);
+    expect(entries, hasLength(2));
+    expect(
+      entries.map((e) => e.dateYyyymmdd),
+      everyElement(isNot(beforeCutoff)),
+    );
+  });
 }

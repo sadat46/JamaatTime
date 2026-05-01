@@ -14,7 +14,8 @@ class ActivitySummaryWriter(private val context: Context) {
     companion object {
         private const val PREFS_NAME = "family_safety_activity_summary"
         private const val KEY_ROWS = "rows"
-        private const val MAX_RETAIN_DAYS = 365
+        const val DEFAULT_RETENTION_DAYS = 30
+        private const val MAX_RETAIN_DAYS = DEFAULT_RETENTION_DAYS
         private val DATE_FORMAT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
             override fun initialValue(): SimpleDateFormat {
                 return SimpleDateFormat("yyyyMMdd", Locale.US).apply {
