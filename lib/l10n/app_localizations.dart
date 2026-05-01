@@ -859,6 +859,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue and grant permission'**
   String get familySafetyContinueGrantPermissionCta;
+
+  /// Action to start the Website Protection VPN
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on protection'**
+  String get websiteProtectionTurnOnCta;
+
+  /// Action to stop the Website Protection VPN
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off protection'**
+  String get websiteProtectionTurnOffCta;
+
+  /// Status title when the VPN filter is running
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection is on'**
+  String get websiteProtectionRunningTitle;
+
+  /// Status body when the VPN filter is running
+  ///
+  /// In en, this message translates to:
+  /// **'Blocking selected categories. Open this screen to turn it off.'**
+  String get websiteProtectionRunningBody;
+
+  /// Snackbar after a failed start of Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start protection.'**
+  String get websiteProtectionStartFailed;
+
+  /// Snackbar after Website Protection starts
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection is on.'**
+  String get websiteProtectionStarted;
+
+  /// Snackbar after Website Protection stops
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection is off.'**
+  String get websiteProtectionStopped;
+
+  /// Banner title shown when Private DNS is set to a DoH host
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS is using a DoH provider'**
+  String get websiteProtectionDohBannerTitle;
+
+  /// Banner body explaining the DoH limitation
+  ///
+  /// In en, this message translates to:
+  /// **'Some queries cannot be filtered while Private DNS is set to a DoH provider. For best results, set Private DNS to Off in system settings.'**
+  String get websiteProtectionDohBannerBody;
+
+  /// Button to open Android network settings from the DoH banner
+  ///
+  /// In en, this message translates to:
+  /// **'Open network settings'**
+  String get websiteProtectionOpenNetworkSettings;
+
+  /// Heading for the honesty paragraph on the privacy explanation page
+  ///
+  /// In en, this message translates to:
+  /// **'Limits of Website Protection'**
+  String get websiteProtectionLimitsTitle;
+
+  /// Bullet list of Website Protection limitations
+  ///
+  /// In en, this message translates to:
+  /// **'• HTTPS DNS (DoH) inside browsers like Firefox or Brave cannot be filtered.\n• Some apps with hardcoded DoH (for example, certain smart-TV or game-console apps when tethered) cannot be filtered.\n• Apps explicitly excluded from VPN by Android, or running on another network, are not filtered.\n• Disabling Wi-Fi or mobile data disables filtering.\nThis is a helpful guard, not a guarantee.'**
+  String get websiteProtectionLimitsBullets;
+
+  /// Empty state on the Activity Summary page
+  ///
+  /// In en, this message translates to:
+  /// **'No blocked queries yet. Counts will appear here once Website Protection is on.'**
+  String get activitySummaryEmpty;
+
+  /// Button to wipe the local activity summary
+  ///
+  /// In en, this message translates to:
+  /// **'Clear activity summary'**
+  String get activitySummaryClearCta;
+
+  /// Snackbar after the activity summary is cleared
+  ///
+  /// In en, this message translates to:
+  /// **'Activity summary cleared.'**
+  String get activitySummaryClearedSnack;
+
+  /// Label for the time range used by the activity summary
+  ///
+  /// In en, this message translates to:
+  /// **'Last {days} days'**
+  String activitySummaryRangeLabel(int days);
+
+  /// Category label for adult-content blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Adult content'**
+  String get activitySummaryCategoryAdult;
+
+  /// Category label for gambling blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Gambling'**
+  String get activitySummaryCategoryGambling;
+
+  /// Category label for proxy/bypass blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy / DNS bypass'**
+  String get activitySummaryCategoryProxyBypass;
+
+  /// Count label for blocked queries per category
+  ///
+  /// In en, this message translates to:
+  /// **'{count} blocked'**
+  String activitySummaryBlockedCount(int count);
 }
 
 class _AppLocalizationsDelegate

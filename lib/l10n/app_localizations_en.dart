@@ -439,4 +439,73 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get familySafetyContinueGrantPermissionCta =>
       'Continue and grant permission';
+
+  @override
+  String get websiteProtectionTurnOnCta => 'Turn on protection';
+
+  @override
+  String get websiteProtectionTurnOffCta => 'Turn off protection';
+
+  @override
+  String get websiteProtectionRunningTitle => 'Website Protection is on';
+
+  @override
+  String get websiteProtectionRunningBody =>
+      'Blocking selected categories. Open this screen to turn it off.';
+
+  @override
+  String get websiteProtectionStartFailed => 'Could not start protection.';
+
+  @override
+  String get websiteProtectionStarted => 'Website Protection is on.';
+
+  @override
+  String get websiteProtectionStopped => 'Website Protection is off.';
+
+  @override
+  String get websiteProtectionDohBannerTitle =>
+      'Private DNS is using a DoH provider';
+
+  @override
+  String get websiteProtectionDohBannerBody =>
+      'Some queries cannot be filtered while Private DNS is set to a DoH provider. For best results, set Private DNS to Off in system settings.';
+
+  @override
+  String get websiteProtectionOpenNetworkSettings => 'Open network settings';
+
+  @override
+  String get websiteProtectionLimitsTitle => 'Limits of Website Protection';
+
+  @override
+  String get websiteProtectionLimitsBullets =>
+      '• HTTPS DNS (DoH) inside browsers like Firefox or Brave cannot be filtered.\n• Some apps with hardcoded DoH (for example, certain smart-TV or game-console apps when tethered) cannot be filtered.\n• Apps explicitly excluded from VPN by Android, or running on another network, are not filtered.\n• Disabling Wi-Fi or mobile data disables filtering.\nThis is a helpful guard, not a guarantee.';
+
+  @override
+  String get activitySummaryEmpty =>
+      'No blocked queries yet. Counts will appear here once Website Protection is on.';
+
+  @override
+  String get activitySummaryClearCta => 'Clear activity summary';
+
+  @override
+  String get activitySummaryClearedSnack => 'Activity summary cleared.';
+
+  @override
+  String activitySummaryRangeLabel(int days) {
+    return 'Last $days days';
+  }
+
+  @override
+  String get activitySummaryCategoryAdult => 'Adult content';
+
+  @override
+  String get activitySummaryCategoryGambling => 'Gambling';
+
+  @override
+  String get activitySummaryCategoryProxyBypass => 'Proxy / DNS bypass';
+
+  @override
+  String activitySummaryBlockedCount(int count) {
+    return '$count blocked';
+  }
 }

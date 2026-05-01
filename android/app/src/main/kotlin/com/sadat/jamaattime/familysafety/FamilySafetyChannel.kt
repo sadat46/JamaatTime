@@ -3,7 +3,11 @@ package com.sadat.jamaattime.familysafety
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
+import com.sadat.jamaattime.familysafety.vpn.ActivitySummaryWriter
+import com.sadat.jamaattime.familysafety.vpn.FamilySafetyVpnService
 import com.sadat.jamaattime.familysafety.vpn.VpnStatusRepository
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
@@ -18,6 +22,7 @@ class FamilySafetyChannel(messenger: BinaryMessenger, private val activity: Acti
     private val channel = MethodChannel(messenger, CHANNEL_NAME)
     private val vpnPermissionManager = VpnPermissionManager(activity)
     private val vpnStatusRepository = VpnStatusRepository(context)
+    private val activitySummaryWriter = ActivitySummaryWriter(context)
 
     init {
         channel.setMethodCallHandler { call, result ->
@@ -28,15 +33,51 @@ class FamilySafetyChannel(messenger: BinaryMessenger, private val activity: Acti
                 "getVpnStatus" -> result.success(
                     vpnStatusRepository.getStatus(vpnPermissionManager.isPrepared())
                 )
-                "startWebsiteProtection" -> result.success(false)
-                "stopWebsiteProtection" -> result.success(false)
-                "getActivitySummary" -> result.success(emptyList<Map<String, Any>>())
+                "startWebsiteProtection" -> result.success(startWebsiteProtection())
+                "stopWebsiteProtection" -> result.success(stopWebsiteProtection())
+                "getActivitySummary" -> {
+                    val rangeDays = (call.argument<Int>("rangeDays") ?: 30).coerceIn(1, 365)
+                    result.success(activitySummaryWriter.readRange(rangeDays))
+                }
+                "clearActivitySummary" -> {
+                    activitySummaryWriter.clear()
+                    result.success(true)
+                }
                 "openNetworkSettings" -> {
                     openNetworkSettings()
                     result.success(true)
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun startWebsiteProtection(): Boolean {
+        if (!vpnPermissionManager.isPrepared()) return false
+        val intent = Intent(context, FamilySafetyVpnService::class.java)
+        return try {
+            vpnStatusRepository.markStarting()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(context, intent)
+            } else {
+                context.startService(intent)
+            }
+            true
+        } catch (e: Exception) {
+            vpnStatusRepository.markError(e.message)
+            false
+        }
+    }
+
+    private fun stopWebsiteProtection(): Boolean {
+        val intent = Intent(context, FamilySafetyVpnService::class.java).apply {
+            action = FamilySafetyVpnService.ACTION_STOP
+        }
+        return try {
+            context.startService(intent)
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 

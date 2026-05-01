@@ -18,12 +18,26 @@ class PrivacyExplanationPage extends StatelessWidget {
         backgroundColor: _brandGreen,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(20),
-        child: Text(
-          strings.familySafetyPrivacyExplanation,
-          style: TextStyle(color: Colors.grey[800], height: 1.45),
-        ),
+        children: [
+          Text(
+            strings.familySafetyPrivacyExplanation,
+            style: TextStyle(color: Colors.grey[800], height: 1.45),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            strings.websiteProtectionLimitsTitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            strings.websiteProtectionLimitsBullets,
+            style: TextStyle(color: Colors.grey[800], height: 1.5),
+          ),
+        ],
       ),
     );
   }

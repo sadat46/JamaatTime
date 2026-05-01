@@ -160,6 +160,17 @@ class FamilySafetyChannel {
     }
   }
 
+  Future<bool> clearActivitySummary() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('clearActivitySummary');
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   Future<PrivateDnsState> getPrivateDnsState() async {
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(

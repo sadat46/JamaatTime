@@ -442,4 +442,74 @@ class AppLocalizationsBn extends AppLocalizations {
   @override
   String get familySafetyContinueGrantPermissionCta =>
       'চালিয়ে যান এবং পারমিশন দিন';
+
+  @override
+  String get websiteProtectionTurnOnCta => 'প্রোটেকশন চালু করুন';
+
+  @override
+  String get websiteProtectionTurnOffCta => 'প্রোটেকশন বন্ধ করুন';
+
+  @override
+  String get websiteProtectionRunningTitle => 'ওয়েবসাইট প্রোটেকশন চালু আছে';
+
+  @override
+  String get websiteProtectionRunningBody =>
+      'নির্বাচিত ক্যাটাগরি ব্লক করা হচ্ছে। বন্ধ করতে এই স্ক্রিনে ফিরে আসুন।';
+
+  @override
+  String get websiteProtectionStartFailed => 'প্রোটেকশন চালু করা যায়নি।';
+
+  @override
+  String get websiteProtectionStarted => 'ওয়েবসাইট প্রোটেকশন এখন চালু।';
+
+  @override
+  String get websiteProtectionStopped => 'ওয়েবসাইট প্রোটেকশন এখন বন্ধ।';
+
+  @override
+  String get websiteProtectionDohBannerTitle =>
+      'Private DNS একটি DoH প্রোভাইডার ব্যবহার করছে';
+
+  @override
+  String get websiteProtectionDohBannerBody =>
+      'Private DNS একটি DoH প্রোভাইডারে সেট থাকলে কিছু কোয়েরি ফিল্টার করা যায় না। সবচেয়ে ভালো ফলাফলের জন্য সিস্টেম সেটিংসে Private DNS Off করুন।';
+
+  @override
+  String get websiteProtectionOpenNetworkSettings => 'নেটওয়ার্ক সেটিংস খুলুন';
+
+  @override
+  String get websiteProtectionLimitsTitle => 'ওয়েবসাইট প্রোটেকশনের সীমাবদ্ধতা';
+
+  @override
+  String get websiteProtectionLimitsBullets =>
+      '• Firefox বা Brave-এর মতো ব্রাউজারে HTTPS DNS (DoH) ফিল্টার করা যায় না।\n• হার্ডকোডেড DoH থাকা কিছু অ্যাপ ফিল্টার করা যায় না।\n• Android থেকে VPN-এর বাইরে রাখা অ্যাপ বা অন্য নেটওয়ার্কে চলা অ্যাপ ফিল্টার হয় না।\n• Wi-Fi বা মোবাইল ডেটা বন্ধ করলে ফিল্টারিং বন্ধ হয়।\nএটি একটি সহায়ক সুরক্ষা, পূর্ণ গ্যারান্টি নয়।';
+
+  @override
+  String get activitySummaryEmpty =>
+      'এখনো কোনো ব্লকড কোয়েরি নেই। ওয়েবসাইট প্রোটেকশন চালু থাকলে সংখ্যা এখানে আসবে।';
+
+  @override
+  String get activitySummaryClearCta => 'অ্যাক্টিভিটি সামারি মুছুন';
+
+  @override
+  String get activitySummaryClearedSnack =>
+      'অ্যাক্টিভিটি সামারি মুছে ফেলা হয়েছে।';
+
+  @override
+  String activitySummaryRangeLabel(int days) {
+    return 'শেষ $days দিন';
+  }
+
+  @override
+  String get activitySummaryCategoryAdult => 'অ্যাডাল্ট কনটেন্ট';
+
+  @override
+  String get activitySummaryCategoryGambling => 'জুয়া';
+
+  @override
+  String get activitySummaryCategoryProxyBypass => 'Proxy / DNS bypass';
+
+  @override
+  String activitySummaryBlockedCount(int count) {
+    return '$countটি ব্লক করা হয়েছে';
+  }
 }

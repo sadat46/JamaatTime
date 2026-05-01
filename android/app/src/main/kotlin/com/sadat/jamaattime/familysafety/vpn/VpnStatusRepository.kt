@@ -20,6 +20,29 @@ class VpnStatusRepository(context: Context) {
         )
     }
 
+    fun isRunning(): Boolean = prefs.getBoolean(KEY_RUNNING, false)
+
+    fun markStarting() {
+        prefs.edit()
+            .putBoolean(KEY_RUNNING, false)
+            .remove(KEY_LAST_ERROR)
+            .apply()
+    }
+
+    fun markRunning() {
+        prefs.edit()
+            .putBoolean(KEY_RUNNING, true)
+            .remove(KEY_LAST_ERROR)
+            .apply()
+    }
+
+    fun markError(message: String?) {
+        prefs.edit()
+            .putBoolean(KEY_RUNNING, false)
+            .putString(KEY_LAST_ERROR, message ?: "unknown_error")
+            .apply()
+    }
+
     fun markStopped() {
         prefs.edit()
             .putBoolean(KEY_RUNNING, false)
