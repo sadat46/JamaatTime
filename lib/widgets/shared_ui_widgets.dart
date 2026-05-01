@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/constants.dart';
+import '../core/app_theme_tokens.dart';
 
 /// Circular badge with icon, glow box-shadow, semi-transparent tint background.
 ///
@@ -99,7 +99,7 @@ class InfoChip extends StatelessWidget {
   }
 }
 
-/// Section header with a 4 px rounded green left accent strip + bold title.
+/// Section header with a rounded green left accent strip + bold title.
 class SectionHeader extends StatelessWidget {
   final String title;
 
@@ -112,19 +112,21 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 4,
-            height: 22,
+            width: 5,
+            height: 24,
             decoration: BoxDecoration(
-              color: AppConstants.brandGreen,
-              borderRadius: BorderRadius.circular(2),
+              color: AppColors.primaryGreen,
+              borderRadius: BorderRadius.circular(AppRadius.chip),
             ),
           ),
           const SizedBox(width: 10),
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppConstants.brandGreenDark,
-              fontWeight: FontWeight.bold,
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              height: 1.15,
             ),
           ),
         ],

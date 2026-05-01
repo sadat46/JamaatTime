@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
-import '../core/constants.dart';
+import '../core/app_theme_tokens.dart';
 
 final ThemeData greenTheme = ThemeData(
   colorScheme: ColorScheme.fromSeed(
-    seedColor: AppConstants.brandGreen,
+    seedColor: AppColors.primaryGreen,
     brightness: Brightness.light,
   ),
-  scaffoldBackgroundColor: AppConstants.brandGreenLight,
+  scaffoldBackgroundColor: AppColors.pageBackground,
   appBarTheme: const AppBarTheme(
-    backgroundColor: AppConstants.brandGreen,
+    backgroundColor: AppColors.primaryGreen,
     foregroundColor: Colors.white,
     elevation: 0,
   ),
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: Colors.black87),
-    bodyMedium: TextStyle(color: Colors.black87),
-    titleMedium: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+    bodyLarge: TextStyle(color: AppColors.textPrimary),
+    bodyMedium: TextStyle(color: AppColors.textPrimary),
+    titleMedium: TextStyle(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.bold,
+    ),
   ),
   useMaterial3: true,
-); 
+);
