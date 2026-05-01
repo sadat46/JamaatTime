@@ -4,7 +4,10 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.graphics.PixelFormat
+import android.hardware.display.DisplayManager
+import android.os.Build
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -23,6 +26,7 @@ class FocusGuardAccessibilityService : AccessibilityService() {
     private var lastActionTime = 0L
     private var overlayView: View? = null
     private var windowManager: WindowManager? = null
+    private var overlayContext: Context? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -34,9 +38,9 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
         info.notificationTimeout = 300
         info.packageNames = arrayOf(YOUTUBE_PACKAGE)
-        info.flags = info.flags or
-                AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
-                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        info.flags = (info.flags and
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS.inv()) or
+                AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
         serviceInfo = info
         Log.d(TAG, "Service connected; flags=${info.flags}")
     }
@@ -63,7 +67,6 @@ class FocusGuardAccessibilityService : AccessibilityService() {
 
         lastActionTime = now
         Log.d(TAG, "SHORTS_DETECTED — blocking")
-        performGlobalAction(GLOBAL_ACTION_BACK)
         showOverlay(settings.tempAllowMinutes, settings.quickAllowEnabled)
     }
 
@@ -158,20 +161,23 @@ class FocusGuardAccessibilityService : AccessibilityService() {
     private fun showOverlay(tempAllowMinutes: Int, quickAllowEnabled: Boolean) {
         if (overlayView != null) return
 
-        val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val context = createOverlayContext()
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        overlayContext = context
         windowManager = wm
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
         )
         params.gravity = Gravity.CENTER
 
         val view = FocusGuardOverlayViewFactory.create(
-            context = this,
+            context = context,
             tempAllowMinutes = tempAllowMinutes,
             quickAllowEnabled = quickAllowEnabled,
             onGoBack = {
@@ -188,6 +194,22 @@ class FocusGuardAccessibilityService : AccessibilityService() {
             overlayView = view
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to add overlay", t)
+            overlayContext = null
+        }
+    }
+
+    private fun createOverlayContext(): Context {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return this
+        return try {
+            val displayManager = getSystemService(DisplayManager::class.java)
+            val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            createDisplayContext(display).createWindowContext(
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                null,
+            )
+        } catch (t: Throwable) {
+            Log.w(TAG, "Falling back to service context for accessibility overlay", t)
+            this
         }
     }
 
@@ -199,6 +221,7 @@ class FocusGuardAccessibilityService : AccessibilityService() {
             // Already removed.
         }
         overlayView = null
+        overlayContext = null
     }
 
 }

@@ -14,6 +14,8 @@ class FocusGuardService {
   FocusGuardService._internal();
 
   static const String _prefsKey = 'focus_guard_settings';
+  static const String _accessibilityDisclosureKey =
+      'focus_guard_accessibility_disclosure_accepted';
   static const MethodChannel _channel = MethodChannel(
     'jamaat_time/focus_guard',
   );
@@ -38,6 +40,16 @@ class FocusGuardService {
     final encoded = jsonEncode(settings.toJson());
     await prefs.setString(_prefsKey, encoded);
     await syncSettingsToNative(settings);
+  }
+
+  Future<bool> hasAccessibilityDisclosureConsent() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_accessibilityDisclosureKey) ?? false;
+  }
+
+  Future<void> setAccessibilityDisclosureConsent(bool accepted) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_accessibilityDisclosureKey, accepted);
   }
 
   Future<void> syncSettingsToNative(FocusGuardSettings settings) async {

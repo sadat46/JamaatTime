@@ -18,6 +18,7 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
 
   FocusGuardSettings _settings = const FocusGuardSettings();
   bool _accessibilityEnabled = false;
+  bool _accessibilityDisclosureAccepted = false;
   bool _loading = true;
 
   static const List<int> _tempAllowOptions = [5, 10, 15];
@@ -45,10 +46,13 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
   Future<void> _bootstrap() async {
     final settings = await _service.loadSettings();
     final perms = await _service.getPermissionStatus();
+    final disclosureAccepted = await _service
+        .hasAccessibilityDisclosureConsent();
     if (!mounted) return;
     setState(() {
       _settings = settings;
       _accessibilityEnabled = perms['accessibility'] ?? false;
+      _accessibilityDisclosureAccepted = disclosureAccepted;
       _loading = false;
     });
   }
@@ -96,6 +100,79 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     await _save(_settings.copyWith(quickAllowEnabled: value));
   }
 
+  Future<void> _handleAccessibilitySetup() async {
+    if (!_accessibilityDisclosureAccepted) {
+      final accepted = await _showAccessibilityDisclosureDialog();
+      if (accepted != true) return;
+      await _service.setAccessibilityDisclosureConsent(true);
+      if (!mounted) return;
+      setState(() => _accessibilityDisclosureAccepted = true);
+    }
+    await _service.openAccessibilitySettings();
+  }
+
+  Future<bool?> _showAccessibilityDisclosureDialog() {
+    var checked = false;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Accessibility Disclosure'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Focus Guard uses Android Accessibility to inspect the '
+                      'current YouTube screen only enough to detect Shorts or '
+                      'Reels. Accessibility data is processed on this device '
+                      'and is not sent from the app.',
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'When Shorts is detected, Focus Guard shows a blocking '
+                      'overlay. It will use the Back action only after you tap '
+                      'Go Back in that overlay.',
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      value: checked,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text(
+                        'I understand and agree to enable Accessibility for '
+                        'Focus Guard.',
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() => checked = value ?? false);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: checked
+                      ? () => Navigator.of(context).pop(true)
+                      : null,
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -121,7 +198,7 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                   title: 'Accessibility Service',
                   subtitle: 'Required to detect when YouTube Shorts is opened.',
                   granted: _accessibilityEnabled,
-                  onSetup: _service.openAccessibilitySettings,
+                  onSetup: _handleAccessibilitySetup,
                 ),
                 const SizedBox(height: 18),
                 _masterToggleCard(),
