@@ -1,0 +1,9 @@
+Source URL: https://github.com/StevenBlack/hosts
+Additional source: local Phase 2 Private DNS provider list in this project.
+Derived from: public DoH/DoT/proxy-bypass provider hostnames.
+License: project-curated seed data; no third-party blocklist text copied.
+
+This file contains factual provider hostnames selected for this app's
+Website Protection bypass category. It may be used, copied, modified, and
+distributed as part of the Jamaat Time application and its Family Safety
+feature.
