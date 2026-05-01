@@ -216,6 +216,96 @@ class AppLocalizationsBn extends AppLocalizations {
       'সেফ সার্চ ও Private DNS নির্দেশনা পরের ধাপে যোগ করা হবে।';
 
   @override
+  String get safeSearchSetupIntro =>
+      'পরিবারের ব্যবহারের জন্য সার্চ, ভিডিও, এবং ব্রাউজিং আরও নিরাপদ করতে এই ডিভাইস ও অ্যাকাউন্ট সেটিংস ব্যবহার করুন।';
+
+  @override
+  String get safeSearchGoogleTitle => 'Google SafeSearch';
+
+  @override
+  String get safeSearchGoogleBody =>
+      'আপনার পরিবার যে প্রতিটি সাইন-ইন করা অ্যাকাউন্ট ও ব্রাউজার প্রোফাইল ব্যবহার করে, সেগুলোর Google Search settings থেকে SafeSearch চালু করুন।';
+
+  @override
+  String get safeSearchYoutubeTitle => 'YouTube Restricted Mode';
+
+  @override
+  String get safeSearchYoutubeBody =>
+      'YouTube settings খুলে Restricted Mode চালু করুন। প্রতিটি ব্রাউজার, অ্যাপ প্রোফাইল, এবং শিশুর অ্যাকাউন্টের জন্য এটি আবার করুন।';
+
+  @override
+  String get safeSearchPrivateDnsTitle => 'Android Private DNS';
+
+  @override
+  String get safeSearchPrivateDnsBody =>
+      'আরও শক্তিশালী পরিবার-ফিল্টারিংয়ের জন্য Android Private DNS-এ নিচের CleanBrowsing family host সেট করুন। এই অ্যাপ শুধু settings screen খুলে; সিস্টেম সেটিং বদলায় না।';
+
+  @override
+  String get safeSearchBrowserTitle => 'ব্রাউজার সেফ মোড';
+
+  @override
+  String get safeSearchBrowserBody =>
+      'চাইল্ড প্রোফাইল ব্যবহার করুন, ব্রাউজার অনুমতি দিলে private browsing বন্ধ করুন, এবং safe browsing protection চালু রাখুন।';
+
+  @override
+  String get privateDnsStatusTitle => 'বর্তমান Private DNS';
+
+  @override
+  String get privateDnsLoading => 'Private DNS status দেখা হচ্ছে...';
+
+  @override
+  String get privateDnsModeLabel => 'মোড';
+
+  @override
+  String get privateDnsHostLabel => 'হোস্ট';
+
+  @override
+  String get privateDnsHostNotSet => 'সেট করা নেই';
+
+  @override
+  String get privateDnsModeOff => 'বন্ধ';
+
+  @override
+  String get privateDnsModeAutomatic => 'অটোমেটিক';
+
+  @override
+  String get privateDnsModeHostname => 'Private DNS provider hostname';
+
+  @override
+  String get privateDnsModeUnsupported => 'এই প্ল্যাটফর্মে নেই';
+
+  @override
+  String get privateDnsModeUnknown => 'অজানা';
+
+  @override
+  String get privateDnsDohProviderWarning =>
+      'Private DNS একটি DoH provider-এ সেট করা আছে। Website Protection (পরে চালু হলে) DoH traffic দেখতে পারবে না — শক্তিশালী filtering-এর জন্য Private DNS Off করুন অথবা family-filter-dns.cleanbrowsing.org ব্যবহার করুন।';
+
+  @override
+  String get privateDnsStatusUnavailable =>
+      'এই ডিভাইসে Private DNS status পাওয়া যাচ্ছে না।';
+
+  @override
+  String get privateDnsRecommendedHostLabel => 'প্রস্তাবিত family DNS host';
+
+  @override
+  String get safeSearchCopyDnsHostCta => 'DNS host কপি করুন';
+
+  @override
+  String get safeSearchOpenNetworkSettingsCta => 'Network Settings খুলুন';
+
+  @override
+  String get safeSearchRefreshStatusCta => 'Status refresh করুন';
+
+  @override
+  String get safeSearchCopiedDnsHostMessage =>
+      'DNS host clipboard-এ কপি হয়েছে।';
+
+  @override
+  String get safeSearchNetworkSettingsUnavailable =>
+      'এই ডিভাইসে Network settings খোলা যায়নি।';
+
+  @override
   String get activitySummaryTitle => 'অ্যাক্টিভিটি সামারি';
 
   @override

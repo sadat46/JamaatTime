@@ -458,6 +458,168 @@ abstract class AppLocalizations {
   /// **'Safe Search and Private DNS guidance will be added in the next phase.'**
   String get safeSearchSetupPlaceholder;
 
+  /// Intro text on the Safe Search Setup page
+  ///
+  /// In en, this message translates to:
+  /// **'Use these device and account settings to make search, video, and browsing safer for family use.'**
+  String get safeSearchSetupIntro;
+
+  /// Guide card title for Google SafeSearch
+  ///
+  /// In en, this message translates to:
+  /// **'Google SafeSearch'**
+  String get safeSearchGoogleTitle;
+
+  /// Guide text for Google SafeSearch
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on SafeSearch in Google Search settings for each signed-in account and browser profile your family uses.'**
+  String get safeSearchGoogleBody;
+
+  /// Guide card title for YouTube Restricted Mode
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Restricted Mode'**
+  String get safeSearchYoutubeTitle;
+
+  /// Guide text for YouTube Restricted Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Open YouTube settings and enable Restricted Mode. Repeat this for each browser, app profile, and child account.'**
+  String get safeSearchYoutubeBody;
+
+  /// Guide card title for Android Private DNS
+  ///
+  /// In en, this message translates to:
+  /// **'Android Private DNS'**
+  String get safeSearchPrivateDnsTitle;
+
+  /// Guide text for Android Private DNS
+  ///
+  /// In en, this message translates to:
+  /// **'For stronger family filtering, set Android Private DNS to the CleanBrowsing family host shown below. This app only opens the settings screen; it does not change the system setting.'**
+  String get safeSearchPrivateDnsBody;
+
+  /// Guide card title for browser safe-mode tips
+  ///
+  /// In en, this message translates to:
+  /// **'Browser Safe Mode'**
+  String get safeSearchBrowserTitle;
+
+  /// Guide text for browser safe-mode tips
+  ///
+  /// In en, this message translates to:
+  /// **'Use child profiles, disable private browsing where your browser allows it, and keep safe browsing protection enabled.'**
+  String get safeSearchBrowserBody;
+
+  /// Private DNS status card title
+  ///
+  /// In en, this message translates to:
+  /// **'Current Private DNS'**
+  String get privateDnsStatusTitle;
+
+  /// Loading text while reading Private DNS state
+  ///
+  /// In en, this message translates to:
+  /// **'Checking Private DNS status...'**
+  String get privateDnsLoading;
+
+  /// Label for Private DNS mode
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get privateDnsModeLabel;
+
+  /// Label for Private DNS host
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get privateDnsHostLabel;
+
+  /// Private DNS host value when no hostname is configured
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get privateDnsHostNotSet;
+
+  /// Private DNS mode value for off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get privateDnsModeOff;
+
+  /// Private DNS mode value for opportunistic/automatic
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get privateDnsModeAutomatic;
+
+  /// Private DNS mode value for hostname mode
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS provider hostname'**
+  String get privateDnsModeHostname;
+
+  /// Private DNS mode value when platform channel is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable on this platform'**
+  String get privateDnsModeUnsupported;
+
+  /// Private DNS mode value when Android returns no recognized mode
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get privateDnsModeUnknown;
+
+  /// Warning shown when Private DNS uses a known DoH/DoT provider hostname
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS is set to a DoH provider. Website Protection (when enabled later) cannot inspect DoH traffic — consider switching Private DNS to Off or to family-filter-dns.cleanbrowsing.org for stronger filtering.'**
+  String get privateDnsDohProviderWarning;
+
+  /// Private DNS status unavailable message
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS status is unavailable on this device.'**
+  String get privateDnsStatusUnavailable;
+
+  /// Label before the recommended CleanBrowsing family DNS hostname
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended family DNS host'**
+  String get privateDnsRecommendedHostLabel;
+
+  /// Button label for copying the recommended family DNS host
+  ///
+  /// In en, this message translates to:
+  /// **'Copy DNS host'**
+  String get safeSearchCopyDnsHostCta;
+
+  /// Button label for opening Android network settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Network Settings'**
+  String get safeSearchOpenNetworkSettingsCta;
+
+  /// Tooltip for refreshing Private DNS status
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh status'**
+  String get safeSearchRefreshStatusCta;
+
+  /// Snackbar message after copying DNS host
+  ///
+  /// In en, this message translates to:
+  /// **'DNS host copied to clipboard.'**
+  String get safeSearchCopiedDnsHostMessage;
+
+  /// Snackbar message when network settings intent is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Network settings could not be opened on this device.'**
+  String get safeSearchNetworkSettingsUnavailable;
+
   /// Family Safety section title for Activity Summary
   ///
   /// In en, this message translates to:

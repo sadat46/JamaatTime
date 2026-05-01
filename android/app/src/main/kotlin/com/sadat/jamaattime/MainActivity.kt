@@ -1,5 +1,6 @@
 package com.sadat.jamaattime
 
+import com.sadat.jamaattime.familysafety.FamilySafetyChannel
 import com.sadat.jamaattime.focusguard.FocusGuardChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -34,5 +35,6 @@ class MainActivity : FlutterActivity() {
 
         FocusGuardChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         BatteryOptimizationChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        FamilySafetyChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
     }
 }

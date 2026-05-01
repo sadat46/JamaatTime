@@ -216,6 +216,95 @@ class AppLocalizationsEn extends AppLocalizations {
       'Safe Search and Private DNS guidance will be added in the next phase.';
 
   @override
+  String get safeSearchSetupIntro =>
+      'Use these device and account settings to make search, video, and browsing safer for family use.';
+
+  @override
+  String get safeSearchGoogleTitle => 'Google SafeSearch';
+
+  @override
+  String get safeSearchGoogleBody =>
+      'Turn on SafeSearch in Google Search settings for each signed-in account and browser profile your family uses.';
+
+  @override
+  String get safeSearchYoutubeTitle => 'YouTube Restricted Mode';
+
+  @override
+  String get safeSearchYoutubeBody =>
+      'Open YouTube settings and enable Restricted Mode. Repeat this for each browser, app profile, and child account.';
+
+  @override
+  String get safeSearchPrivateDnsTitle => 'Android Private DNS';
+
+  @override
+  String get safeSearchPrivateDnsBody =>
+      'For stronger family filtering, set Android Private DNS to the CleanBrowsing family host shown below. This app only opens the settings screen; it does not change the system setting.';
+
+  @override
+  String get safeSearchBrowserTitle => 'Browser Safe Mode';
+
+  @override
+  String get safeSearchBrowserBody =>
+      'Use child profiles, disable private browsing where your browser allows it, and keep safe browsing protection enabled.';
+
+  @override
+  String get privateDnsStatusTitle => 'Current Private DNS';
+
+  @override
+  String get privateDnsLoading => 'Checking Private DNS status...';
+
+  @override
+  String get privateDnsModeLabel => 'Mode';
+
+  @override
+  String get privateDnsHostLabel => 'Host';
+
+  @override
+  String get privateDnsHostNotSet => 'Not set';
+
+  @override
+  String get privateDnsModeOff => 'Off';
+
+  @override
+  String get privateDnsModeAutomatic => 'Automatic';
+
+  @override
+  String get privateDnsModeHostname => 'Private DNS provider hostname';
+
+  @override
+  String get privateDnsModeUnsupported => 'Unavailable on this platform';
+
+  @override
+  String get privateDnsModeUnknown => 'Unknown';
+
+  @override
+  String get privateDnsDohProviderWarning =>
+      'Private DNS is set to a DoH provider. Website Protection (when enabled later) cannot inspect DoH traffic — consider switching Private DNS to Off or to family-filter-dns.cleanbrowsing.org for stronger filtering.';
+
+  @override
+  String get privateDnsStatusUnavailable =>
+      'Private DNS status is unavailable on this device.';
+
+  @override
+  String get privateDnsRecommendedHostLabel => 'Recommended family DNS host';
+
+  @override
+  String get safeSearchCopyDnsHostCta => 'Copy DNS host';
+
+  @override
+  String get safeSearchOpenNetworkSettingsCta => 'Open Network Settings';
+
+  @override
+  String get safeSearchRefreshStatusCta => 'Refresh status';
+
+  @override
+  String get safeSearchCopiedDnsHostMessage => 'DNS host copied to clipboard.';
+
+  @override
+  String get safeSearchNetworkSettingsUnavailable =>
+      'Network settings could not be opened on this device.';
+
+  @override
   String get activitySummaryTitle => 'Activity Summary';
 
   @override
