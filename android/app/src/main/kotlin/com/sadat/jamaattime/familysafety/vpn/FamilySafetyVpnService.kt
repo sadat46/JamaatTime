@@ -1,12 +1,16 @@
 package com.sadat.jamaattime.familysafety.vpn
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.VpnService
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -15,12 +19,16 @@ class FamilySafetyVpnService : VpnService() {
 
     companion object {
         const val ACTION_STOP = "com.sadat.jamaattime.familysafety.action.STOP"
-        private const val VIRTUAL_DNS = "10.0.0.1"
         private const val LOCAL_ADDRESS = "10.0.0.2"
-        private const val UPSTREAM_DNS = "1.1.1.1"
         private const val UPSTREAM_PORT = 53
         private const val MTU = 1500
+
+        // Public fallback resolvers if the active network has no usable DNS server.
+        // We route DNS targeted at these IPs through our tun and forward upstream from there.
+        private val FALLBACK_DNS = listOf("1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4")
     }
+
+    private var routedDnsServers: List<String> = emptyList()
 
     private var tunInterface: ParcelFileDescriptor? = null
     private val running = AtomicBoolean(false)
@@ -55,20 +63,35 @@ class FamilySafetyVpnService : VpnService() {
             DomainBlockMatcher.fromCategoryDomains(emptyMap())
         }
 
+        // Discover the DNS resolvers currently used by the underlying network and route
+        // them through our tun. We deliberately do NOT call addDnsServer(): registering a
+        // virtual DNS would cause Android (when Private DNS is in strict/hostname mode) to
+        // probe DoT against it, fail, and then drop ALL DNS on the network — which surfaces
+        // as "Network has no internet access" + "Private DNS – Couldn't connect."
+        //
+        // By transparently intercepting traffic destined to the existing resolvers, we
+        // filter system DNS queries without changing the network's DNS configuration.
+        // Apps that use Private DNS DoT bypass us (documented limitation in the privacy
+        // page); apps that use plain UDP/53 to the system resolvers get filtered.
+        val systemDns = activeNetworkDnsServers().ifEmpty { FALLBACK_DNS }
+        routedDnsServers = systemDns
+
         val descriptor = try {
-            // Route only the virtual DNS address through the tun interface.
-            // All other traffic — including the system Private DNS (DoT) connection
-            // and any non-DNS traffic — uses the default network unchanged.
-            // This is what makes the filter "DNS-only" without breaking connectivity:
-            // we never see non-DNS packets, so we never have to forward them.
-            Builder()
+            val builder = Builder()
                 .addAddress(LOCAL_ADDRESS, 32)
-                .addDnsServer(VIRTUAL_DNS)
-                .addRoute(VIRTUAL_DNS, 32)
                 .setMtu(MTU)
                 .setBlocking(true)
                 .setSession("Jamaat Time – Website Protection")
-                .establish()
+            for (ip in systemDns) {
+                builder.addRoute(ip, 32)
+            }
+            // Exclude our own app from the VPN so our protected upstream sockets cannot
+            // be looped back through the tun on devices where protect() has surprises.
+            try {
+                builder.addDisallowedApplication(applicationContext.packageName)
+            } catch (_: Exception) {
+            }
+            builder.establish()
         } catch (e: Exception) {
             statusRepo.markError("establish_failed")
             stopSelf(startId)
@@ -192,18 +215,26 @@ class FamilySafetyVpnService : VpnService() {
         val dnsPayload = ByteArray(udp.payloadLength)
         System.arraycopy(udp.packet, udp.payloadOffset, dnsPayload, 0, udp.payloadLength)
 
+        // Forward to the resolver the client was originally talking to (e.g. the
+        // network's DNS server), so the filter is transparent to whichever resolver
+        // each app chose. The protected socket bypasses our VPN, so the upstream query
+        // travels via the underlying network and does not loop.
+        val upstream = try {
+            extractOriginalDestination(udp)
+        } catch (_: Throwable) {
+            null
+        } ?: return
+
         val socket = DatagramSocket()
         try {
             if (!protect(socket)) {
-                // Without VPN protection, sending the upstream query would loop back into our own tun.
-                // Drop and let the client retry; better than infinite recursion.
                 return
             }
             socket.soTimeout = 5_000
             val outPacket = DatagramPacket(
                 dnsPayload,
                 dnsPayload.size,
-                InetAddress.getByName(UPSTREAM_DNS),
+                upstream,
                 UPSTREAM_PORT,
             )
             socket.send(outPacket)
@@ -283,4 +314,27 @@ class FamilySafetyVpnService : VpnService() {
         return out
     }
 
+    private fun extractOriginalDestination(udp: DnsPacketParser.Parsed.Udp): InetAddress? {
+        return if (udp.ipVersion == 4) {
+            val bytes = ByteArray(4)
+            System.arraycopy(udp.packet, 16, bytes, 0, 4)
+            InetAddress.getByAddress(bytes)
+        } else {
+            val bytes = ByteArray(16)
+            System.arraycopy(udp.packet, 24, bytes, 0, 16)
+            InetAddress.getByAddress(bytes)
+        }
+    }
+
+    private fun activeNetworkDnsServers(): List<String> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return emptyList()
+        val cm = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE)
+            as? ConnectivityManager ?: return emptyList()
+        val active = cm.activeNetwork ?: return emptyList()
+        val link = cm.getLinkProperties(active) ?: return emptyList()
+        return link.dnsServers
+            .filterIsInstance<Inet4Address>()
+            .mapNotNull { it.hostAddress }
+            .filter { it.isNotEmpty() }
+    }
 }
