@@ -52,6 +52,33 @@ class PrivateDnsState {
   }
 }
 
+class VpnStatus {
+  const VpnStatus({
+    required this.prepared,
+    required this.running,
+    this.lastError,
+    this.supported = true,
+  });
+
+  factory VpnStatus.fromMap(Map<String, Object?> map) {
+    final lastError = map['lastError'];
+    return VpnStatus(
+      prepared: map['prepared'] == true,
+      running: map['running'] == true,
+      lastError: lastError is String && lastError.isNotEmpty ? lastError : null,
+    );
+  }
+
+  factory VpnStatus.unsupported() {
+    return const VpnStatus(prepared: false, running: false, supported: false);
+  }
+
+  final bool prepared;
+  final bool running;
+  final String? lastError;
+  final bool supported;
+}
+
 class FamilySafetyChannel {
   FamilySafetyChannel({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel(channelName);
@@ -59,6 +86,79 @@ class FamilySafetyChannel {
   static const String channelName = 'jamaat_time/family_safety';
 
   final MethodChannel _channel;
+
+  Future<bool> isVpnPrepared() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('isVpnPrepared');
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<bool> requestVpnPermission() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('requestVpnPermission');
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<VpnStatus> getVpnStatus() async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'getVpnStatus',
+      );
+      return VpnStatus.fromMap(result ?? const <String, Object?>{});
+    } on MissingPluginException {
+      return VpnStatus.unsupported();
+    } on PlatformException {
+      return VpnStatus.unsupported();
+    }
+  }
+
+  Future<bool> startWebsiteProtection() async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'startWebsiteProtection',
+      );
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<bool> stopWebsiteProtection() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('stopWebsiteProtection');
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<List<Object?>> getActivitySummary({required int rangeDays}) async {
+    try {
+      final result = await _channel.invokeListMethod<Object?>(
+        'getActivitySummary',
+        <String, Object>{'rangeDays': rangeDays},
+      );
+      return result ?? const <Object?>[];
+    } on MissingPluginException {
+      return const <Object?>[];
+    } on PlatformException {
+      return const <Object?>[];
+    }
+  }
 
   Future<PrivateDnsState> getPrivateDnsState() async {
     try {

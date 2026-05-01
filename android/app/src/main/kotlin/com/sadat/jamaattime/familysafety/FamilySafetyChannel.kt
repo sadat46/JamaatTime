@@ -1,23 +1,36 @@
 package com.sadat.jamaattime.familysafety
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import com.sadat.jamaattime.familysafety.vpn.VpnStatusRepository
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 
-class FamilySafetyChannel(messenger: BinaryMessenger, private val context: Context) {
+class FamilySafetyChannel(messenger: BinaryMessenger, private val activity: Activity) {
 
     companion object {
         const val CHANNEL_NAME = "jamaat_time/family_safety"
     }
 
+    private val context: Context = activity.applicationContext
     private val channel = MethodChannel(messenger, CHANNEL_NAME)
+    private val vpnPermissionManager = VpnPermissionManager(activity)
+    private val vpnStatusRepository = VpnStatusRepository(context)
 
     init {
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "getPrivateDnsState" -> result.success(getPrivateDnsState())
+                "isVpnPrepared" -> result.success(vpnPermissionManager.isPrepared())
+                "requestVpnPermission" -> vpnPermissionManager.requestPermission(result)
+                "getVpnStatus" -> result.success(
+                    vpnStatusRepository.getStatus(vpnPermissionManager.isPrepared())
+                )
+                "startWebsiteProtection" -> result.success(false)
+                "stopWebsiteProtection" -> result.success(false)
+                "getActivitySummary" -> result.success(emptyList<Map<String, Any>>())
                 "openNetworkSettings" -> {
                     openNetworkSettings()
                     result.success(true)
@@ -47,5 +60,9 @@ class FamilySafetyChannel(messenger: BinaryMessenger, private val context: Conte
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(fallback)
         }
+    }
+
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        return vpnPermissionManager.onActivityResult(requestCode, resultCode, data)
     }
 }

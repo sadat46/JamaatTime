@@ -159,10 +159,33 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get websiteProtectionPlaceholder =>
-      'ওয়েবসাইট প্রোটেকশন সেটআপ পরের ধাপে যোগ করা হবে। এই রিলিজে কোনো VPN বা সংবেদনশীল পারমিশন সক্রিয় নয়।';
+      'ওয়েবসাইট প্রোটেকশন পারমিশন সেটআপ এখন করা যাবে। ফিল্টারিং পরের ধাপে চালু হবে।';
 
   @override
   String get websiteProtectionEnableCta => 'ওয়েবসাইট প্রোটেকশন চালু করুন';
+
+  @override
+  String get websiteProtectionVpnPermissionReadyTitle => 'VPN পারমিশন প্রস্তুত';
+
+  @override
+  String get websiteProtectionVpnPermissionReadyBody =>
+      'পরের ধাপে ফিল্টারিং যোগ না হওয়া পর্যন্ত ওয়েবসাইট প্রোটেকশন চালু হবে না।';
+
+  @override
+  String get websiteProtectionVpnPermissionNeededTitle =>
+      'VPN পারমিশন প্রয়োজন';
+
+  @override
+  String get websiteProtectionVpnPermissionNeededBody =>
+      'প্রথমে ব্যাখ্যাটি দেখুন, তারপর Android VPN পারমিশন চাইবে। এই ধাপে প্রোটেকশন চালু হবে না।';
+
+  @override
+  String get websiteProtectionVpnPermissionGranted =>
+      'VPN পারমিশন দেওয়া হয়েছে। পরের সেটআপ ধাপের আগে ওয়েবসাইট প্রোটেকশন চালু হবে না।';
+
+  @override
+  String get websiteProtectionVpnPermissionDenied =>
+      'আপনি পরে যেকোনো সময় এটি চালু করতে পারবেন।';
 
   @override
   String get websiteProtectionVpnDisclosureTitle =>

@@ -362,10 +362,10 @@ abstract class AppLocalizations {
   /// **'Block selected harmful website categories when protection is enabled.'**
   String get websiteProtectionSubtitle;
 
-  /// Placeholder text for Website Protection during the UI shell phase
+  /// Status text for Website Protection before filtering is implemented
   ///
   /// In en, this message translates to:
-  /// **'Website Protection setup will be added in a later phase. No VPN or sensitive permission is active in this release.'**
+  /// **'Website Protection permission setup is available now. Filtering starts in a later phase.'**
   String get websiteProtectionPlaceholder;
 
   /// CTA to enable Website Protection
@@ -373,6 +373,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enable Website Protection'**
   String get websiteProtectionEnableCta;
+
+  /// Status title when Android VPN permission is already granted
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission ready'**
+  String get websiteProtectionVpnPermissionReadyTitle;
+
+  /// Status body for granted VPN permission before filtering is implemented
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection will not start until filtering is added in the next phase.'**
+  String get websiteProtectionVpnPermissionReadyBody;
+
+  /// Status title when Android VPN permission is not granted
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission required'**
+  String get websiteProtectionVpnPermissionNeededTitle;
+
+  /// Status body before requesting Android VPN permission
+  ///
+  /// In en, this message translates to:
+  /// **'Review the disclosure, then Android will ask for VPN permission. Protection will not start in this phase.'**
+  String get websiteProtectionVpnPermissionNeededBody;
+
+  /// Snackbar after Android VPN permission is granted
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission granted. Website Protection will not start until the next setup phase.'**
+  String get websiteProtectionVpnPermissionGranted;
+
+  /// Snackbar after Android VPN permission is denied or dismissed
+  ///
+  /// In en, this message translates to:
+  /// **'You can enable this anytime later.'**
+  String get websiteProtectionVpnPermissionDenied;
 
   /// Disclosure dialog title shown before Android VPN consent
   ///

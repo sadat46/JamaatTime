@@ -159,10 +159,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get websiteProtectionPlaceholder =>
-      'Website Protection setup will be added in a later phase. No VPN or sensitive permission is active in this release.';
+      'Website Protection permission setup is available now. Filtering starts in a later phase.';
 
   @override
   String get websiteProtectionEnableCta => 'Enable Website Protection';
+
+  @override
+  String get websiteProtectionVpnPermissionReadyTitle => 'VPN permission ready';
+
+  @override
+  String get websiteProtectionVpnPermissionReadyBody =>
+      'Website Protection will not start until filtering is added in the next phase.';
+
+  @override
+  String get websiteProtectionVpnPermissionNeededTitle =>
+      'VPN permission required';
+
+  @override
+  String get websiteProtectionVpnPermissionNeededBody =>
+      'Review the disclosure, then Android will ask for VPN permission. Protection will not start in this phase.';
+
+  @override
+  String get websiteProtectionVpnPermissionGranted =>
+      'VPN permission granted. Website Protection will not start until the next setup phase.';
+
+  @override
+  String get websiteProtectionVpnPermissionDenied =>
+      'You can enable this anytime later.';
 
   @override
   String get websiteProtectionVpnDisclosureTitle =>
