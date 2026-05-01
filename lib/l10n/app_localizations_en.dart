@@ -205,6 +205,90 @@ class AppLocalizationsEn extends AppLocalizations {
       'PIN setup will be added in a later phase. It will guard only Family Safety settings.';
 
   @override
+  String get parentControlPinActiveTitle => 'PIN is active';
+
+  @override
+  String get parentControlPinInactiveTitle => 'No PIN set';
+
+  @override
+  String get parentControlPinActiveBody =>
+      'Changing protected Family Safety settings will require this PIN.';
+
+  @override
+  String get parentControlPinInactiveBody =>
+      'Set a local PIN before enabling protected Family Safety settings.';
+
+  @override
+  String get parentControlPinScope =>
+      'This PIN protects Family Safety settings only. It never locks the rest of the app.';
+
+  @override
+  String get parentControlCreatePinTitle => 'Create Parent Control PIN';
+
+  @override
+  String get parentControlChangePinTitle => 'Change Parent Control PIN';
+
+  @override
+  String get parentControlCurrentPin => 'Current PIN';
+
+  @override
+  String get parentControlNewPin => 'New PIN';
+
+  @override
+  String get parentControlConfirmPin => 'Confirm PIN';
+
+  @override
+  String get parentControlPinHint => 'Use 4 to 8 digits.';
+
+  @override
+  String get parentControlSavePin => 'Save PIN';
+
+  @override
+  String get parentControlUpdatePin => 'Update PIN';
+
+  @override
+  String get parentControlCancel => 'Cancel';
+
+  @override
+  String get parentControlForgotPin => 'Forgot PIN';
+
+  @override
+  String get parentControlResetPinTitle => 'Reset Parent Control PIN';
+
+  @override
+  String get parentControlResetPinInputLabel => 'Type DISABLE';
+
+  @override
+  String get parentControlResetPinCta => 'Reset and disable';
+
+  @override
+  String get parentControlPinSaved => 'Parent Control PIN saved.';
+
+  @override
+  String get parentControlPinChanged => 'Parent Control PIN changed.';
+
+  @override
+  String get parentControlPinReset =>
+      'PIN reset and Website Protection disabled.';
+
+  @override
+  String get parentControlPinInvalid => 'Enter a PIN with 4 to 8 digits.';
+
+  @override
+  String get parentControlPinMismatch => 'PINs do not match.';
+
+  @override
+  String get parentControlPinIncorrect => 'Incorrect PIN.';
+
+  @override
+  String get parentControlPinLocked =>
+      'Too many incorrect attempts. Try again after the cooldown.';
+
+  @override
+  String get parentControlPinError =>
+      'Parent Control PIN could not be updated.';
+
+  @override
   String get safeSearchSetupTitle => 'Safe Search Setup';
 
   @override

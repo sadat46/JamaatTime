@@ -440,6 +440,162 @@ abstract class AppLocalizations {
   /// **'PIN setup will be added in a later phase. It will guard only Family Safety settings.'**
   String get parentControlPlaceholder;
 
+  /// Status title when a Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'PIN is active'**
+  String get parentControlPinActiveTitle;
+
+  /// Status title when no Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'No PIN set'**
+  String get parentControlPinInactiveTitle;
+
+  /// Status body when a Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'Changing protected Family Safety settings will require this PIN.'**
+  String get parentControlPinActiveBody;
+
+  /// Status body when no Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'Set a local PIN before enabling protected Family Safety settings.'**
+  String get parentControlPinInactiveBody;
+
+  /// Explains the local PIN scope
+  ///
+  /// In en, this message translates to:
+  /// **'This PIN protects Family Safety settings only. It never locks the rest of the app.'**
+  String get parentControlPinScope;
+
+  /// Dialog title for creating a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Create Parent Control PIN'**
+  String get parentControlCreatePinTitle;
+
+  /// Dialog title for changing a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Change Parent Control PIN'**
+  String get parentControlChangePinTitle;
+
+  /// Input label for the current Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Current PIN'**
+  String get parentControlCurrentPin;
+
+  /// Input label for a new Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'New PIN'**
+  String get parentControlNewPin;
+
+  /// Input label for confirming a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm PIN'**
+  String get parentControlConfirmPin;
+
+  /// Helper text for Parent Control PIN fields
+  ///
+  /// In en, this message translates to:
+  /// **'Use 4 to 8 digits.'**
+  String get parentControlPinHint;
+
+  /// Dialog action for saving a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Save PIN'**
+  String get parentControlSavePin;
+
+  /// Dialog action for updating a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Update PIN'**
+  String get parentControlUpdatePin;
+
+  /// Dialog cancel action in Parent Control
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get parentControlCancel;
+
+  /// Button label for forgotten Parent Control PIN flow
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot PIN'**
+  String get parentControlForgotPin;
+
+  /// Dialog title for resetting a forgotten Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Parent Control PIN'**
+  String get parentControlResetPinTitle;
+
+  /// Input label for reset confirmation word
+  ///
+  /// In en, this message translates to:
+  /// **'Type DISABLE'**
+  String get parentControlResetPinInputLabel;
+
+  /// Dialog action to reset PIN and disable Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Reset and disable'**
+  String get parentControlResetPinCta;
+
+  /// Snackbar shown after saving a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control PIN saved.'**
+  String get parentControlPinSaved;
+
+  /// Snackbar shown after changing a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control PIN changed.'**
+  String get parentControlPinChanged;
+
+  /// Snackbar shown after resetting a forgotten Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'PIN reset and Website Protection disabled.'**
+  String get parentControlPinReset;
+
+  /// Validation message for invalid Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a PIN with 4 to 8 digits.'**
+  String get parentControlPinInvalid;
+
+  /// Validation message for mismatched Parent Control PIN confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'PINs do not match.'**
+  String get parentControlPinMismatch;
+
+  /// Snackbar shown after an incorrect Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN.'**
+  String get parentControlPinIncorrect;
+
+  /// Snackbar/status message shown during Parent Control PIN cooldown
+  ///
+  /// In en, this message translates to:
+  /// **'Too many incorrect attempts. Try again after the cooldown.'**
+  String get parentControlPinLocked;
+
+  /// Generic error message for Parent Control PIN actions
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control PIN could not be updated.'**
+  String get parentControlPinError;
+
   /// Family Safety section title for Safe Search Setup
   ///
   /// In en, this message translates to:

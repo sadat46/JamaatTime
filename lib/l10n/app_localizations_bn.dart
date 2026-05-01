@@ -205,6 +205,92 @@ class AppLocalizationsBn extends AppLocalizations {
       'PIN সেটআপ পরের ধাপে যোগ করা হবে। এটি শুধু ফ্যামিলি সেফটি সেটিংস সুরক্ষিত রাখবে।';
 
   @override
+  String get parentControlPinActiveTitle => 'PIN সক্রিয় আছে';
+
+  @override
+  String get parentControlPinInactiveTitle => 'কোনো PIN সেট নেই';
+
+  @override
+  String get parentControlPinActiveBody =>
+      'সুরক্ষিত ফ্যামিলি সেফটি সেটিংস পরিবর্তন করতে এই PIN লাগবে।';
+
+  @override
+  String get parentControlPinInactiveBody =>
+      'সুরক্ষিত ফ্যামিলি সেফটি সেটিংস চালু করার আগে একটি লোকাল PIN সেট করুন।';
+
+  @override
+  String get parentControlPinScope =>
+      'এই PIN শুধু ফ্যামিলি সেফটি সেটিংস সুরক্ষিত রাখে। এটি অ্যাপের বাকি অংশ কখনো লক করে না।';
+
+  @override
+  String get parentControlCreatePinTitle => 'প্যারেন্ট কন্ট্রোল PIN তৈরি করুন';
+
+  @override
+  String get parentControlChangePinTitle =>
+      'প্যারেন্ট কন্ট্রোল PIN পরিবর্তন করুন';
+
+  @override
+  String get parentControlCurrentPin => 'বর্তমান PIN';
+
+  @override
+  String get parentControlNewPin => 'নতুন PIN';
+
+  @override
+  String get parentControlConfirmPin => 'PIN নিশ্চিত করুন';
+
+  @override
+  String get parentControlPinHint => '৪ থেকে ৮টি সংখ্যা ব্যবহার করুন।';
+
+  @override
+  String get parentControlSavePin => 'PIN সংরক্ষণ করুন';
+
+  @override
+  String get parentControlUpdatePin => 'PIN আপডেট করুন';
+
+  @override
+  String get parentControlCancel => 'বাতিল';
+
+  @override
+  String get parentControlForgotPin => 'PIN ভুলে গেছেন';
+
+  @override
+  String get parentControlResetPinTitle => 'প্যারেন্ট কন্ট্রোল PIN রিসেট করুন';
+
+  @override
+  String get parentControlResetPinInputLabel => 'DISABLE টাইপ করুন';
+
+  @override
+  String get parentControlResetPinCta => 'রিসেট করে বন্ধ করুন';
+
+  @override
+  String get parentControlPinSaved => 'প্যারেন্ট কন্ট্রোল PIN সংরক্ষণ হয়েছে।';
+
+  @override
+  String get parentControlPinChanged =>
+      'প্যারেন্ট কন্ট্রোল PIN পরিবর্তন হয়েছে।';
+
+  @override
+  String get parentControlPinReset =>
+      'PIN রিসেট হয়েছে এবং ওয়েবসাইট প্রোটেকশন বন্ধ হয়েছে।';
+
+  @override
+  String get parentControlPinInvalid => '৪ থেকে ৮ সংখ্যার একটি PIN দিন।';
+
+  @override
+  String get parentControlPinMismatch => 'PIN মিলছে না।';
+
+  @override
+  String get parentControlPinIncorrect => 'PIN সঠিক নয়।';
+
+  @override
+  String get parentControlPinLocked =>
+      'অনেকবার ভুল চেষ্টা হয়েছে। কুলডাউন শেষে আবার চেষ্টা করুন।';
+
+  @override
+  String get parentControlPinError =>
+      'প্যারেন্ট কন্ট্রোল PIN আপডেট করা যায়নি।';
+
+  @override
   String get safeSearchSetupTitle => 'সেফ সার্চ সেটআপ';
 
   @override
