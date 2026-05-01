@@ -138,4 +138,109 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebadat_referencesTitle => 'References';
+
+  @override
+  String get familySafetyTitle => 'Family Safety';
+
+  @override
+  String get familySafetySubtitle =>
+      'Help protect your family from harmful and distracting online content.';
+
+  @override
+  String get familySafetyIntro =>
+      'Optional on-device tools for family-friendly browsing habits and safer setup guidance.';
+
+  @override
+  String get websiteProtectionTitle => 'Website Protection';
+
+  @override
+  String get websiteProtectionSubtitle =>
+      'Block selected harmful website categories when protection is enabled.';
+
+  @override
+  String get websiteProtectionPlaceholder =>
+      'Website Protection setup will be added in a later phase. No VPN or sensitive permission is active in this release.';
+
+  @override
+  String get websiteProtectionEnableCta => 'Enable Website Protection';
+
+  @override
+  String get websiteProtectionVpnDisclosureTitle =>
+      'Enable Website Protection?';
+
+  @override
+  String get websiteProtectionVpnDisclosureBody =>
+      'Website Protection helps block harmful website categories (such as adult\ncontent, gambling, and proxy-bypass sites) for everyone using this device.\n\nTo do this, the app uses Android\'s VPN system locally on your device to\ninspect website addresses (domain names) and block selected categories.\n\nWhat this feature does NOT do:\n• It does not read messages, passwords, or payment details.\n• It does not inspect the contents of secure (HTTPS) pages.\n• It does not install any certificates.\n• It does not upload your browsing to any server.\n\nActivity summaries (counts only) are stored on your device and you can\nclear them at any time. You can disable Website Protection from this\nscreen whenever you want.';
+
+  @override
+  String get digitalWellbeingTitle => 'Digital Wellbeing';
+
+  @override
+  String get digitalWellbeingSubtitle =>
+      'Review focus-friendly options without changing existing Focus Guard behavior.';
+
+  @override
+  String get digitalWellbeingPlaceholder =>
+      'Digital Wellbeing status will connect to the existing Focus Guard feature in a later phase.';
+
+  @override
+  String get parentControlTitle => 'Parent Control';
+
+  @override
+  String get parentControlSubtitle =>
+      'Use a local PIN to guard Family Safety settings.';
+
+  @override
+  String get parentControlSetPin => 'Set PIN';
+
+  @override
+  String get parentControlChangePin => 'Change PIN';
+
+  @override
+  String get parentControlForgotPinWarning =>
+      'This will reset your PIN and disable Website Protection. To reset, type the word DISABLE.';
+
+  @override
+  String get parentControlPlaceholder =>
+      'PIN setup will be added in a later phase. It will guard only Family Safety settings.';
+
+  @override
+  String get safeSearchSetupTitle => 'Safe Search Setup';
+
+  @override
+  String get safeSearchSetupSubtitle =>
+      'Guidance for SafeSearch, Restricted Mode, and family-filtered DNS.';
+
+  @override
+  String get safeSearchSetupPlaceholder =>
+      'Safe Search and Private DNS guidance will be added in the next phase.';
+
+  @override
+  String get activitySummaryTitle => 'Activity Summary';
+
+  @override
+  String get activitySummarySubtitle =>
+      'View local counts for blocked categories without storing browsing history.';
+
+  @override
+  String get activitySummaryPlaceholder =>
+      'Activity Summary will show local counts only after Website Protection exists.';
+
+  @override
+  String get privacyExplanationTitle => 'Privacy';
+
+  @override
+  String get privacyExplanationSubtitle =>
+      'Understand what Family Safety does locally on this device.';
+
+  @override
+  String get familySafetyPrivacyExplanation =>
+      'Family Safety is optional and off by default. This phase adds only guidance and placeholder screens. It does not add a VPN, Accessibility changes, overlays, DNS upload, HTTPS interception, or new permissions.';
+
+  @override
+  String get familySafetyNotNowCta => 'Not now';
+
+  @override
+  String get familySafetyContinueGrantPermissionCta =>
+      'Continue and grant permission';
 }

@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../core/app_locale_controller.dart';
 import '../core/feature_flags.dart';
+import '../features/family_safety/presentation/family_safety_page.dart';
 import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
 import '../services/settings_service.dart';
@@ -24,8 +25,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _locale = 'bn';
   int _bangladeshHijriOffsetDays =
       SettingsService.defaultBangladeshHijriOffsetDays;
-  int _prayerNotificationSoundMode = 0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
-  int _jamaatNotificationSoundMode = 0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
+  int _prayerNotificationSoundMode =
+      0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
+  int _jamaatNotificationSoundMode =
+      0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
   bool _loading = true;
 
   @override
@@ -418,7 +421,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   children: [
                     _buildDropdownField<int>(
-                      label: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
+                      label: _tr(
+                        'নামাজ রিমাইন্ডার সাউন্ড',
+                        'Prayer reminder sound',
+                      ),
                       initialValue: _prayerNotificationSoundMode,
                       items: [
                         DropdownMenuItem(
@@ -449,7 +455,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildDropdownField<int>(
-                      label: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
+                      label: _tr(
+                        'জামাত রিমাইন্ডার সাউন্ড',
+                        'Jamaat reminder sound',
+                      ),
                       initialValue: _jamaatNotificationSoundMode,
                       items: [
                         DropdownMenuItem(
@@ -528,6 +537,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 1.5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_cardRadius),
+                  ),
+                  child: ListTile(
+                    leading: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00897B).withAlpha(26),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.family_restroom_outlined,
+                        color: Color(0xFF00897B),
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      AppLocalizations.of(context).familySafetyTitle,
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      AppLocalizations.of(context).familySafetySubtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        height: 1.35,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const FamilySafetyPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -538,13 +592,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Text(
                     _tr(
                       'বর্তমান সেটআপ: ${_madhab.toUpperCase()} · '
-                      'হিজরি ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
-                      'নামাজ ${_soundModeLabel(_prayerNotificationSoundMode)} · '
-                      'জামাত ${_soundModeLabel(_jamaatNotificationSoundMode)}',
+                          'হিজরি ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
+                          'নামাজ ${_soundModeLabel(_prayerNotificationSoundMode)} · '
+                          'জামাত ${_soundModeLabel(_jamaatNotificationSoundMode)}',
                       'Current setup: ${_madhab.toUpperCase()} · '
-                      'Hijri ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
-                      'Prayer ${_soundModeLabel(_prayerNotificationSoundMode)} · '
-                      'Jamaat ${_soundModeLabel(_jamaatNotificationSoundMode)}',
+                          'Hijri ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
+                          'Prayer ${_soundModeLabel(_prayerNotificationSoundMode)} · '
+                          'Jamaat ${_soundModeLabel(_jamaatNotificationSoundMode)}',
                     ),
                     style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                   ),
@@ -554,4 +608,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-

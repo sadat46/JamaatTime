@@ -331,6 +331,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'References'**
   String get ebadat_referencesTitle;
+
+  /// Settings entry and page title for Family Safety
+  ///
+  /// In en, this message translates to:
+  /// **'Family Safety'**
+  String get familySafetyTitle;
+
+  /// Settings entry subtitle for Family Safety
+  ///
+  /// In en, this message translates to:
+  /// **'Help protect your family from harmful and distracting online content.'**
+  String get familySafetySubtitle;
+
+  /// Intro text on the Family Safety landing page
+  ///
+  /// In en, this message translates to:
+  /// **'Optional on-device tools for family-friendly browsing habits and safer setup guidance.'**
+  String get familySafetyIntro;
+
+  /// Family Safety section title for website protection
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection'**
+  String get websiteProtectionTitle;
+
+  /// Subtitle for Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Block selected harmful website categories when protection is enabled.'**
+  String get websiteProtectionSubtitle;
+
+  /// Placeholder text for Website Protection during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection setup will be added in a later phase. No VPN or sensitive permission is active in this release.'**
+  String get websiteProtectionPlaceholder;
+
+  /// CTA to enable Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Website Protection'**
+  String get websiteProtectionEnableCta;
+
+  /// Disclosure dialog title shown before Android VPN consent
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Website Protection?'**
+  String get websiteProtectionVpnDisclosureTitle;
+
+  /// Disclosure dialog body shown before Android VPN consent
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection helps block harmful website categories (such as adult\ncontent, gambling, and proxy-bypass sites) for everyone using this device.\n\nTo do this, the app uses Android\'s VPN system locally on your device to\ninspect website addresses (domain names) and block selected categories.\n\nWhat this feature does NOT do:\n• It does not read messages, passwords, or payment details.\n• It does not inspect the contents of secure (HTTPS) pages.\n• It does not install any certificates.\n• It does not upload your browsing to any server.\n\nActivity summaries (counts only) are stored on your device and you can\nclear them at any time. You can disable Website Protection from this\nscreen whenever you want.'**
+  String get websiteProtectionVpnDisclosureBody;
+
+  /// Family Safety section title for Digital Wellbeing
+  ///
+  /// In en, this message translates to:
+  /// **'Digital Wellbeing'**
+  String get digitalWellbeingTitle;
+
+  /// Subtitle for Digital Wellbeing
+  ///
+  /// In en, this message translates to:
+  /// **'Review focus-friendly options without changing existing Focus Guard behavior.'**
+  String get digitalWellbeingSubtitle;
+
+  /// Placeholder text for Digital Wellbeing during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Digital Wellbeing status will connect to the existing Focus Guard feature in a later phase.'**
+  String get digitalWellbeingPlaceholder;
+
+  /// Family Safety section title for Parent Control
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control'**
+  String get parentControlTitle;
+
+  /// Subtitle for Parent Control
+  ///
+  /// In en, this message translates to:
+  /// **'Use a local PIN to guard Family Safety settings.'**
+  String get parentControlSubtitle;
+
+  /// Button label to set a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Set PIN'**
+  String get parentControlSetPin;
+
+  /// Button label to change a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get parentControlChangePin;
+
+  /// Warning copy for forgotten Parent Control PIN reset
+  ///
+  /// In en, this message translates to:
+  /// **'This will reset your PIN and disable Website Protection. To reset, type the word DISABLE.'**
+  String get parentControlForgotPinWarning;
+
+  /// Placeholder text for Parent Control during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'PIN setup will be added in a later phase. It will guard only Family Safety settings.'**
+  String get parentControlPlaceholder;
+
+  /// Family Safety section title for Safe Search Setup
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Search Setup'**
+  String get safeSearchSetupTitle;
+
+  /// Subtitle for Safe Search Setup
+  ///
+  /// In en, this message translates to:
+  /// **'Guidance for SafeSearch, Restricted Mode, and family-filtered DNS.'**
+  String get safeSearchSetupSubtitle;
+
+  /// Placeholder text for Safe Search Setup during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Search and Private DNS guidance will be added in the next phase.'**
+  String get safeSearchSetupPlaceholder;
+
+  /// Family Safety section title for Activity Summary
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Summary'**
+  String get activitySummaryTitle;
+
+  /// Subtitle for Activity Summary
+  ///
+  /// In en, this message translates to:
+  /// **'View local counts for blocked categories without storing browsing history.'**
+  String get activitySummarySubtitle;
+
+  /// Placeholder text for Activity Summary during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Summary will show local counts only after Website Protection exists.'**
+  String get activitySummaryPlaceholder;
+
+  /// Family Safety privacy explanation page title
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get privacyExplanationTitle;
+
+  /// Family Safety privacy explanation tile subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Understand what Family Safety does locally on this device.'**
+  String get privacyExplanationSubtitle;
+
+  /// Privacy explanation for the Family Safety section
+  ///
+  /// In en, this message translates to:
+  /// **'Family Safety is optional and off by default. This phase adds only guidance and placeholder screens. It does not add a VPN, Accessibility changes, overlays, DNS upload, HTTPS interception, or new permissions.'**
+  String get familySafetyPrivacyExplanation;
+
+  /// Negative action on Family Safety disclosure dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get familySafetyNotNowCta;
+
+  /// Positive action on Website Protection VPN disclosure dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Continue and grant permission'**
+  String get familySafetyContinueGrantPermissionCta;
 }
 
 class _AppLocalizationsDelegate
