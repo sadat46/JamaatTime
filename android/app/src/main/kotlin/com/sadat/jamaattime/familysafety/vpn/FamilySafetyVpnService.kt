@@ -56,10 +56,15 @@ class FamilySafetyVpnService : VpnService() {
         }
 
         val descriptor = try {
+            // Route only the virtual DNS address through the tun interface.
+            // All other traffic — including the system Private DNS (DoT) connection
+            // and any non-DNS traffic — uses the default network unchanged.
+            // This is what makes the filter "DNS-only" without breaking connectivity:
+            // we never see non-DNS packets, so we never have to forward them.
             Builder()
                 .addAddress(LOCAL_ADDRESS, 32)
                 .addDnsServer(VIRTUAL_DNS)
-                .addRoute("0.0.0.0", 0)
+                .addRoute(VIRTUAL_DNS, 32)
                 .setMtu(MTU)
                 .setBlocking(true)
                 .setSession("Jamaat Time – Website Protection")
@@ -140,26 +145,19 @@ class FamilySafetyVpnService : VpnService() {
             val parsed = try {
                 DnsPacketParser.parse(packet, read)
             } catch (_: Throwable) {
-                writeSafely(output, packet, read)
+                // Malformed packet on a tun that should only carry UDP/53 to our virtual DNS — drop.
                 continue
             }
 
             when (parsed) {
                 is DnsPacketParser.Parsed.Udp -> {
-                    if (parsed.dstPort != 53) {
-                        writeSafely(output, packet, read)
-                        continue
-                    }
+                    if (parsed.dstPort != 53) continue
                     val query = try {
                         DnsPacketParser.parseDnsQuery(parsed)
                     } catch (_: Throwable) {
-                        writeSafely(output, packet, read)
                         continue
                     }
-                    if (query == null) {
-                        writeSafely(output, packet, read)
-                        continue
-                    }
+                    if (query == null) continue
                     val match = try {
                         activeMatcher.match(query.qname)
                     } catch (_: Throwable) {
@@ -178,7 +176,10 @@ class FamilySafetyVpnService : VpnService() {
                         forwardDnsQuery(parsed, query, output)
                     }
                 }
-                DnsPacketParser.Parsed.Other -> writeSafely(output, packet, read)
+                DnsPacketParser.Parsed.Other -> {
+                    // Only UDP/53 to the virtual DNS should ever reach this tun.
+                    // Anything else (TCP/53, ICMP probes, IPv6 ND noise) gets dropped here.
+                }
             }
         }
     }
@@ -194,7 +195,8 @@ class FamilySafetyVpnService : VpnService() {
         val socket = DatagramSocket()
         try {
             if (!protect(socket)) {
-                writeSafely(output, udp.packet, udp.length)
+                // Without VPN protection, sending the upstream query would loop back into our own tun.
+                // Drop and let the client retry; better than infinite recursion.
                 return
             }
             socket.soTimeout = 5_000
@@ -281,12 +283,4 @@ class FamilySafetyVpnService : VpnService() {
         return out
     }
 
-    private fun writeSafely(output: FileOutputStream, packet: ByteArray, length: Int) {
-        try {
-            output.write(packet, 0, length)
-            output.flush()
-        } catch (_: Exception) {
-            // ignore
-        }
-    }
 }
