@@ -34,6 +34,48 @@ class _SelectedDateCardData {
   final String hijriDate;
 }
 
+String buildPrayerShareText({
+  required String locationLabel,
+  required String gregorianDate,
+  required String weekday,
+  required String hijriDate,
+  required String banglaDate,
+  required List<List<String>> rows,
+}) {
+  String jamaatValue(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty || trimmed == '-' || trimmed == '--' ? '—' : trimmed;
+  }
+
+  final buffer = StringBuffer()
+    ..writeln('Prayer & Jamaat Time')
+    ..writeln(locationLabel)
+    ..writeln()
+    ..writeln('$gregorianDate, $weekday')
+    ..writeln(hijriDate)
+    ..writeln(banglaDate)
+    ..writeln()
+    ..writeln('Name        Prayer     Jamaat')
+    ..writeln('────────────────────────');
+
+  for (final row in rows) {
+    if (row.length < 3) {
+      continue;
+    }
+    buffer.writeln(
+      '${row[0].padRight(12)}'
+      '${row[1].padRight(11)}'
+      '${jamaatValue(row[2])}',
+    );
+  }
+
+  buffer
+    ..writeln()
+    ..write('Shared from Jamaat Time');
+
+  return buffer.toString();
+}
+
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -402,26 +444,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   String _selectedDateShareText(BuildContext context) {
     final dateData = _selectedDateCardData(_selectedDay);
-    final buffer = StringBuffer()
-      ..writeln('Prayer + Jamaat Time for $_locationLabel')
-      ..writeln()
-      ..writeln('English: ${dateData.gregorianDate}, ${dateData.weekday}')
-      ..writeln('Bangla: ${dateData.banglaDate}')
-      ..writeln('Hijri: ${dateData.hijriDate}')
-      ..writeln()
-      ..writeln('Location: $_locationLabel')
-      ..writeln()
-      ..writeln('Prayer | Prayer Time | Jamaat Time');
-
-    for (final prayerName in _prayerOrder) {
-      buffer.writeln(
-        '${_prayerDisplayName(context, prayerName)} | '
-        '${_displayPrayerTimeForPrayer(prayerName)} | '
-        '${_displayJamaatTimeForPrayer(prayerName)}',
-      );
-    }
-
-    return buffer.toString().trim();
+    return buildPrayerShareText(
+      locationLabel: _locationLabel,
+      gregorianDate: dateData.gregorianDate,
+      weekday: dateData.weekday,
+      hijriDate: dateData.hijriDate,
+      banglaDate: dateData.banglaDate,
+      rows: _prayerOrder
+          .map(
+            (prayerName) => [
+              _prayerDisplayName(context, prayerName),
+              _displayPrayerTimeForPrayer(prayerName),
+              _displayJamaatTimeForPrayer(prayerName),
+            ],
+          )
+          .toList(),
+    );
   }
 
   Future<void> _shareSelectedDateInfo(BuildContext context) async {
