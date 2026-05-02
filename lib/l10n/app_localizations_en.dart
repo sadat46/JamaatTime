@@ -151,11 +151,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Optional on-device tools for family-friendly browsing habits and safer setup guidance.';
 
   @override
-  String get websiteProtectionTitle => 'Website Protection';
+  String get basicWebsiteProtectionTitle => 'Basic Website Protection';
+
+  @override
+  String get basicWebsiteProtectionSubtitle =>
+      'Set up family-friendly Private DNS for basic website filtering.';
+
+  @override
+  String get websiteProtectionTitle => 'Advanced Website Protection';
 
   @override
   String get websiteProtectionSubtitle =>
-      'Block selected harmful website categories when protection is enabled.';
+      'Use optional local VPN filtering for stronger website protection.';
 
   @override
   String get websiteProtectionPlaceholder =>
@@ -200,7 +207,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get digitalWellbeingSubtitle =>
-      'Review focus-friendly options without changing existing Focus Guard behavior.';
+      'View current Focus Guard and distracting-content protection.';
 
   @override
   String get digitalWellbeingPlaceholder =>
@@ -312,11 +319,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Parent Control PIN could not be updated.';
 
   @override
-  String get safeSearchSetupTitle => 'Safe Search Setup';
+  String get safeSearchSetupTitle => 'Other Safety Guide';
 
   @override
   String get safeSearchSetupSubtitle =>
-      'Guidance for SafeSearch, Restricted Mode, and family-filtered DNS.';
+      'Enable Google SafeSearch, YouTube Restricted Mode, and browser safety settings.';
 
   @override
   String get safeSearchSetupPlaceholder =>

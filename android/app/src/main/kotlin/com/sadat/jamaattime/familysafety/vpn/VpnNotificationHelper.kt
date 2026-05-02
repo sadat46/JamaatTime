@@ -39,7 +39,7 @@ internal object VpnNotificationHelper {
         val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val pending = PendingIntent.getActivity(context, 0, tapIntent, pendingFlags)
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Family Safety – Website Protection")
             .setContentText("On — blocking selected categories")
             .setOngoing(true)

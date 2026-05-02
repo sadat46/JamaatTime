@@ -350,16 +350,28 @@ abstract class AppLocalizations {
   /// **'Optional on-device tools for family-friendly browsing habits and safer setup guidance.'**
   String get familySafetyIntro;
 
-  /// Family Safety section title for website protection
+  /// Family Safety section title for Private DNS based basic website protection
   ///
   /// In en, this message translates to:
-  /// **'Website Protection'**
+  /// **'Basic Website Protection'**
+  String get basicWebsiteProtectionTitle;
+
+  /// Subtitle for Basic Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Set up family-friendly Private DNS for basic website filtering.'**
+  String get basicWebsiteProtectionSubtitle;
+
+  /// Family Safety section title for VPN-based advanced website protection
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Website Protection'**
   String get websiteProtectionTitle;
 
   /// Subtitle for Website Protection
   ///
   /// In en, this message translates to:
-  /// **'Block selected harmful website categories when protection is enabled.'**
+  /// **'Use optional local VPN filtering for stronger website protection.'**
   String get websiteProtectionSubtitle;
 
   /// Status text for Website Protection before filtering is implemented
@@ -431,7 +443,7 @@ abstract class AppLocalizations {
   /// Subtitle for Digital Wellbeing
   ///
   /// In en, this message translates to:
-  /// **'Review focus-friendly options without changing existing Focus Guard behavior.'**
+  /// **'View current Focus Guard and distracting-content protection.'**
   String get digitalWellbeingSubtitle;
 
   /// Placeholder text for Digital Wellbeing during the UI shell phase
@@ -632,16 +644,16 @@ abstract class AppLocalizations {
   /// **'Parent Control PIN could not be updated.'**
   String get parentControlPinError;
 
-  /// Family Safety section title for Safe Search Setup
+  /// Family Safety section title for Other Safety Guide
   ///
   /// In en, this message translates to:
-  /// **'Safe Search Setup'**
+  /// **'Other Safety Guide'**
   String get safeSearchSetupTitle;
 
-  /// Subtitle for Safe Search Setup
+  /// Subtitle for Other Safety Guide
   ///
   /// In en, this message translates to:
-  /// **'Guidance for SafeSearch, Restricted Mode, and family-filtered DNS.'**
+  /// **'Enable Google SafeSearch, YouTube Restricted Mode, and browser safety settings.'**
   String get safeSearchSetupSubtitle;
 
   /// Placeholder text for Safe Search Setup during the UI shell phase

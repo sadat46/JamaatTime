@@ -151,11 +151,18 @@ class AppLocalizationsBn extends AppLocalizations {
       'পরিবারবান্ধব ব্রাউজিং অভ্যাস ও নিরাপদ সেটআপের জন্য ঐচ্ছিক অন-ডিভাইস টুল।';
 
   @override
-  String get websiteProtectionTitle => 'ওয়েবসাইট প্রোটেকশন';
+  String get basicWebsiteProtectionTitle => 'বেসিক ওয়েবসাইট প্রোটেকশন';
+
+  @override
+  String get basicWebsiteProtectionSubtitle =>
+      'বেসিক ওয়েবসাইট ফিল্টারিংয়ের জন্য পরিবারবান্ধব Private DNS সেটআপ করুন।';
+
+  @override
+  String get websiteProtectionTitle => 'অ্যাডভান্সড ওয়েবসাইট প্রোটেকশন';
 
   @override
   String get websiteProtectionSubtitle =>
-      'প্রোটেকশন চালু থাকলে নির্বাচিত ক্ষতিকর ওয়েবসাইট ক্যাটাগরি ব্লক করুন।';
+      'আরও শক্তিশালী ওয়েবসাইট প্রোটেকশনের জন্য ঐচ্ছিক লোকাল VPN ফিল্টারিং ব্যবহার করুন।';
 
   @override
   String get websiteProtectionPlaceholder =>
@@ -200,7 +207,7 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get digitalWellbeingSubtitle =>
-      'বর্তমান ফোকাস গার্ড আচরণ না বদলে ফোকাসবান্ধব অপশন দেখুন।';
+      'বর্তমান ফোকাস গার্ড এবং মনোযোগ নষ্ট করা কনটেন্ট প্রোটেকশন দেখুন।';
 
   @override
   String get digitalWellbeingPlaceholder =>
@@ -314,11 +321,11 @@ class AppLocalizationsBn extends AppLocalizations {
       'প্যারেন্ট কন্ট্রোল PIN আপডেট করা যায়নি।';
 
   @override
-  String get safeSearchSetupTitle => 'সেফ সার্চ সেটআপ';
+  String get safeSearchSetupTitle => 'অন্যান্য সেফটি গাইড';
 
   @override
   String get safeSearchSetupSubtitle =>
-      'SafeSearch, Restricted Mode, এবং পরিবার-ফিল্টারড DNS সেটআপের নির্দেশনা।';
+      'Google SafeSearch, YouTube Restricted Mode, এবং ব্রাউজার সেফটি সেটিংস চালু করুন।';
 
   @override
   String get safeSearchSetupPlaceholder =>

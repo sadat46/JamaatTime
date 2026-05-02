@@ -4,14 +4,16 @@ import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
 import '../platform/family_safety_channel.dart';
 
-class SafeSearchSetupPage extends StatefulWidget {
-  const SafeSearchSetupPage({super.key});
+class BasicWebsiteProtectionPage extends StatefulWidget {
+  const BasicWebsiteProtectionPage({super.key});
 
   @override
-  State<SafeSearchSetupPage> createState() => _SafeSearchSetupPageState();
+  State<BasicWebsiteProtectionPage> createState() =>
+      _BasicWebsiteProtectionPageState();
 }
 
-class _SafeSearchSetupPageState extends State<SafeSearchSetupPage> {
+class _BasicWebsiteProtectionPageState
+    extends State<BasicWebsiteProtectionPage> {
   static const Color _brandGreen = Color(0xFF388E3C);
   static const String _familyDnsHost = 'family-filter-dns.cleanbrowsing.org';
 
@@ -75,7 +77,7 @@ class _SafeSearchSetupPageState extends State<SafeSearchSetupPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(strings.safeSearchSetupTitle),
+        title: Text(strings.basicWebsiteProtectionTitle),
         centerTitle: true,
         backgroundColor: _brandGreen,
         foregroundColor: Colors.white,
@@ -84,35 +86,11 @@ class _SafeSearchSetupPageState extends State<SafeSearchSetupPage> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           Text(
-            strings.safeSearchSetupIntro,
+            strings.basicWebsiteProtectionSubtitle,
             style: TextStyle(color: Colors.grey[700], height: 1.35),
           ),
           const SizedBox(height: 14),
           _buildPrivateDnsCard(strings),
-          const SizedBox(height: 12),
-          _GuidanceTile(
-            icon: Icons.search_outlined,
-            title: strings.safeSearchGoogleTitle,
-            body: strings.safeSearchGoogleBody,
-          ),
-          const SizedBox(height: 10),
-          _GuidanceTile(
-            icon: Icons.play_circle_outline,
-            title: strings.safeSearchYoutubeTitle,
-            body: strings.safeSearchYoutubeBody,
-          ),
-          const SizedBox(height: 10),
-          _GuidanceTile(
-            icon: Icons.dns_outlined,
-            title: strings.safeSearchPrivateDnsTitle,
-            body: strings.safeSearchPrivateDnsBody,
-          ),
-          const SizedBox(height: 10),
-          _GuidanceTile(
-            icon: Icons.language_outlined,
-            title: strings.safeSearchBrowserTitle,
-            body: strings.safeSearchBrowserBody,
-          ),
         ],
       ),
     );
@@ -216,6 +194,53 @@ class _SafeSearchSetupPageState extends State<SafeSearchSetupPage> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class OtherSafetyGuidePage extends StatelessWidget {
+  const OtherSafetyGuidePage({super.key});
+
+  static const Color _brandGreen = Color(0xFF388E3C);
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(strings.safeSearchSetupTitle),
+        centerTitle: true,
+        backgroundColor: _brandGreen,
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          Text(
+            strings.safeSearchSetupIntro,
+            style: TextStyle(color: Colors.grey[700], height: 1.35),
+          ),
+          const SizedBox(height: 14),
+          _GuidanceTile(
+            icon: Icons.search_outlined,
+            title: strings.safeSearchGoogleTitle,
+            body: strings.safeSearchGoogleBody,
+          ),
+          const SizedBox(height: 10),
+          _GuidanceTile(
+            icon: Icons.play_circle_outline,
+            title: strings.safeSearchYoutubeTitle,
+            body: strings.safeSearchYoutubeBody,
+          ),
+          const SizedBox(height: 10),
+          _GuidanceTile(
+            icon: Icons.language_outlined,
+            title: strings.safeSearchBrowserTitle,
+            body: strings.safeSearchBrowserBody,
+          ),
+        ],
       ),
     );
   }
