@@ -33,11 +33,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
         .trim();
   }
 
-  Widget _buildDateChip(
-    BuildContext context, {
-    required String label,
-    required String value,
-  }) {
+  Widget _buildDateChip(BuildContext context, {required String value}) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final displayValue = LocaleDigits.localize(
       _normalizedChipValue(value),
@@ -60,18 +56,6 @@ class CalendarSelectedDateCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              color: isDarkMode ? Colors.white70 : Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 4),
           Text(
             displayValue,
             maxLines: 1,
@@ -203,11 +187,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
                           bn: 'বাংলা তারিখ ${_normalizedChipValue(banglaDate)}',
                           en: 'Bangla date ${_normalizedChipValue(banglaDate)}',
                         ),
-                        child: _buildDateChip(
-                          context,
-                          label: context.tr(bn: 'বাংলা', en: 'Bangla'),
-                          value: banglaDate,
-                        ),
+                        child: _buildDateChip(context, value: banglaDate),
                       ),
                     ),
                     SizedBox(
@@ -217,11 +197,7 @@ class CalendarSelectedDateCard extends StatelessWidget {
                           bn: 'হিজরি তারিখ ${_normalizedChipValue(hijriDate)}',
                           en: 'Hijri date ${_normalizedChipValue(hijriDate)}',
                         ),
-                        child: _buildDateChip(
-                          context,
-                          label: context.tr(bn: 'হিজরি', en: 'Hijri'),
-                          value: hijriDate,
-                        ),
+                        child: _buildDateChip(context, value: hijriDate),
                       ),
                     ),
                   ],

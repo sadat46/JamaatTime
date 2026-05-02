@@ -43,21 +43,22 @@ Finder _richTextContaining(String text) {
 void main() {
   const localizedHeaderDate = '\u09E7\u09EA Apr \u09E8\u09E6\u09E8\u09EC';
 
-  testWidgets('shows Gregorian header and normalized Bangla/Hijri date chips', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(_testHost(child: _buildCard()));
+  testWidgets(
+    'shows Gregorian header and normalized date chips without labels',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(_testHost(child: _buildCard()));
 
-    expect(_richTextContaining('14 Apr 2026'), findsAtLeastNWidgets(1));
-    expect(_richTextContaining('Tuesday'), findsOneWidget);
-    expect(find.text('1 Boishakh 1433'), findsOneWidget);
-    expect(find.text('25 Shawwal 1447'), findsOneWidget);
-    expect(find.text('Bangla'), findsOneWidget);
-    expect(find.text('Hijri'), findsOneWidget);
-    expect(find.text('English'), findsNothing);
-  });
+      expect(_richTextContaining('14 Apr 2026'), findsAtLeastNWidgets(1));
+      expect(_richTextContaining('Tuesday'), findsOneWidget);
+      expect(find.text('1 Boishakh 1433'), findsOneWidget);
+      expect(find.text('25 Shawwal 1447'), findsOneWidget);
+      expect(find.text('Bangla'), findsNothing);
+      expect(find.text('Hijri'), findsNothing);
+      expect(find.text('English'), findsNothing);
+    },
+  );
 
-  testWidgets('shows localized chip labels in Bengali locale', (
+  testWidgets('hides localized chip labels in Bengali locale', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -66,8 +67,8 @@ void main() {
     expect(_richTextContaining(localizedHeaderDate), findsAtLeastNWidgets(1));
 
     expect(find.text('ইংরেজি'), findsNothing);
-    expect(find.text('বাংলা'), findsOneWidget);
-    expect(find.text('হিজরি'), findsOneWidget);
+    expect(find.text('বাংলা'), findsNothing);
+    expect(find.text('হিজরি'), findsNothing);
   });
 
   testWidgets('header RichText inherits themed font family', (
