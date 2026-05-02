@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../services/focus_guard_service.dart';
+import '../data/parent_control_storage.dart';
+import '../platform/family_safety_channel.dart';
 import 'activity_summary_page.dart';
 import 'digital_wellbeing_page.dart';
 import 'parent_control_page.dart';
@@ -9,13 +12,58 @@ import 'safe_search_setup_page.dart';
 import 'website_protection_page.dart';
 import 'widgets/family_safety_section_tile.dart';
 
-class FamilySafetyPage extends StatelessWidget {
+class FamilySafetyPage extends StatefulWidget {
   const FamilySafetyPage({super.key});
 
-  static const Color _brandGreen = Color(0xFF388E3C);
+  @override
+  State<FamilySafetyPage> createState() => _FamilySafetyPageState();
+}
 
-  void _open(BuildContext context, Widget page) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+class _FamilySafetyPageState extends State<FamilySafetyPage> {
+  static const Color _brandGreen = Color(0xFF388E3C);
+  static const int _activitySummaryRangeDays = 30;
+  static const String _familyDnsHost = 'family-filter-dns.cleanbrowsing.org';
+
+  final FamilySafetyChannel _familySafetyChannel = FamilySafetyChannel();
+  final FocusGuardService _focusGuardService = FocusGuardService();
+  final ParentControlStorage _parentControlStorage = ParentControlStorage();
+
+  bool? _basicProtectionOn;
+  bool? _digitalWellbeingOn;
+  bool? _advancedProtectionOn;
+  bool? _parentControlOn;
+  bool? _activitySummaryOn;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatuses();
+  }
+
+  Future<void> _loadStatuses() async {
+    final dns = await _familySafetyChannel.getPrivateDnsState();
+    final vpn = await _familySafetyChannel.getVpnStatus();
+    final focusGuard = await _focusGuardService.loadSettings();
+    final parentControl = await _parentControlStorage.loadStatus();
+    final activitySummary = await _familySafetyChannel.getActivitySummary(
+      rangeDays: _activitySummaryRangeDays,
+    );
+    if (!mounted) return;
+    setState(() {
+      _basicProtectionOn =
+          dns.isHostnameMode &&
+          dns.host?.trim().toLowerCase() == _familyDnsHost;
+      _digitalWellbeingOn = focusGuard.enabled;
+      _advancedProtectionOn = vpn.running;
+      _parentControlOn = parentControl.hasPin;
+      _activitySummaryOn = activitySummary.isNotEmpty;
+    });
+  }
+
+  Future<void> _open(BuildContext context, Widget page) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    if (!mounted) return;
+    await _loadStatuses();
   }
 
   @override
@@ -42,6 +90,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFF2E7D32),
             title: strings.basicWebsiteProtectionTitle,
             subtitle: strings.basicWebsiteProtectionSubtitle,
+            statusOn: _basicProtectionOn,
             onTap: () => _open(context, const BasicWebsiteProtectionPage()),
           ),
           const SizedBox(height: 10),
@@ -50,6 +99,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFF1565C0),
             title: strings.digitalWellbeingTitle,
             subtitle: strings.digitalWellbeingSubtitle,
+            statusOn: _digitalWellbeingOn,
             onTap: () => _open(context, const DigitalWellbeingPage()),
           ),
           const SizedBox(height: 10),
@@ -58,6 +108,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFF00897B),
             title: strings.websiteProtectionTitle,
             subtitle: strings.websiteProtectionSubtitle,
+            statusOn: _advancedProtectionOn,
             onTap: () => _open(context, const WebsiteProtectionPage()),
           ),
           const SizedBox(height: 10),
@@ -66,6 +117,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFF00796B),
             title: strings.safeSearchSetupTitle,
             subtitle: strings.safeSearchSetupSubtitle,
+            statusOn: false,
             onTap: () => _open(context, const OtherSafetyGuidePage()),
           ),
           const SizedBox(height: 10),
@@ -74,6 +126,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFF6A1B9A),
             title: strings.parentControlTitle,
             subtitle: strings.parentControlSubtitle,
+            statusOn: _parentControlOn,
             onTap: () => _open(context, const ParentControlPage()),
           ),
           const SizedBox(height: 10),
@@ -82,6 +135,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFFEF6C00),
             title: strings.activitySummaryTitle,
             subtitle: strings.activitySummarySubtitle,
+            statusOn: _activitySummaryOn,
             onTap: () => _open(context, const ActivitySummaryPage()),
           ),
           const SizedBox(height: 10),
@@ -90,6 +144,7 @@ class FamilySafetyPage extends StatelessWidget {
             iconColor: const Color(0xFF455A64),
             title: strings.privacyExplanationTitle,
             subtitle: strings.privacyExplanationSubtitle,
+            statusOn: false,
             onTap: () => _open(context, const PrivacyExplanationPage()),
           ),
         ],
