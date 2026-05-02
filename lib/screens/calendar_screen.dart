@@ -414,7 +414,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
     return context.tr(
       bn: 'নির্বাচিত তারিখের নামাজ ও জামাতের সময়',
-      en: 'Prayer + Jamaat Time for Selected Date',
+      en: 'Prayer + Jamaat Time for',
     );
   }
 
@@ -774,48 +774,71 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 24,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  _timesSourceCaption(context),
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: isDarkMode
-                        ? Colors.white
-                        : AppConstants.brandGreenDark,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 3,
+                child: SizedBox(
+                  height: 24,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _timesSourceCaption(context),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode
+                              ? Colors.white
+                              : AppConstants.brandGreenDark,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_outlined,
-                size: 14,
-                color: isDarkMode ? Colors.white60 : Colors.black54,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  _locationLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.white60 : Colors.black54,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 10),
+              Flexible(
+                flex: 2,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: isDarkMode ? Colors.white60 : Colors.black54,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _locationLabel,
+                        maxLines: 1,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode ? Colors.white60 : Colors.black54,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          _buildSelectedDateCard(
+            context,
+            cardBackground: isDarkMode
+                ? const Color(0xFF1E2B22)
+                : AppConstants.brandGreen.withValues(alpha: 0.04),
+            borderColor: borderColor,
           ),
           const SizedBox(height: 12),
           _buildTimesHeader(context),
@@ -1016,13 +1039,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildSelectedDateCard(
-                    context,
-                    cardBackground: cardBackground,
-                    borderColor: borderColor,
                   ),
                   const SizedBox(height: 16),
 

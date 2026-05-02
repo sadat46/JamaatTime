@@ -188,28 +188,14 @@ class CalendarSelectedDateCard extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 8.0;
-                final chipWidth = constraints.maxWidth > (spacing * 2)
-                    ? (constraints.maxWidth - (spacing * 2)) / 3
+                final chipWidth = constraints.maxWidth > spacing
+                    ? (constraints.maxWidth - spacing) / 2
                     : constraints.maxWidth;
 
                 return Wrap(
                   spacing: spacing,
                   runSpacing: spacing,
                   children: [
-                    SizedBox(
-                      width: chipWidth,
-                      child: Semantics(
-                        label: context.tr(
-                          bn: 'ইংরেজি তারিখ ${_normalizedChipValue(gregorianDate)}',
-                          en: 'English date ${_normalizedChipValue(gregorianDate)}',
-                        ),
-                        child: _buildDateChip(
-                          context,
-                          label: context.tr(bn: 'ইংরেজি', en: 'English'),
-                          value: gregorianDate,
-                        ),
-                      ),
-                    ),
                     SizedBox(
                       width: chipWidth,
                       child: Semantics(

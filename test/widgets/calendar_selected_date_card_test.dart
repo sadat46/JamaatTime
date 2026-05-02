@@ -43,7 +43,7 @@ Finder _richTextContaining(String text) {
 void main() {
   const localizedHeaderDate = '\u09E7\u09EA Apr \u09E8\u09E6\u09E8\u09EC';
 
-  testWidgets('shows Gregorian header and normalized date chips in English', (
+  testWidgets('shows Gregorian header and normalized Bangla/Hijri date chips', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_testHost(child: _buildCard()));
@@ -54,7 +54,7 @@ void main() {
     expect(find.text('25 Shawwal 1447'), findsOneWidget);
     expect(find.text('Bangla'), findsOneWidget);
     expect(find.text('Hijri'), findsOneWidget);
-    expect(find.text('English'), findsOneWidget);
+    expect(find.text('English'), findsNothing);
   });
 
   testWidgets('shows localized chip labels in Bengali locale', (
@@ -65,7 +65,7 @@ void main() {
     );
     expect(_richTextContaining(localizedHeaderDate), findsAtLeastNWidgets(1));
 
-    expect(find.text('ইংরেজি'), findsOneWidget);
+    expect(find.text('ইংরেজি'), findsNothing);
     expect(find.text('বাংলা'), findsOneWidget);
     expect(find.text('হিজরি'), findsOneWidget);
   });
