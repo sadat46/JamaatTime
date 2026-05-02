@@ -9,7 +9,8 @@ internal object BlocklistLoader {
     fun load(context: Context): DomainBlockMatcher {
         val blockedByCategory = mutableMapOf<BlockCategory, MutableSet<String>>()
         for (category in BlockCategory.values()) {
-            val domains = readAsset(context, category.assetPath)
+            val assetPath = category.assetPath ?: continue
+            val domains = readAsset(context, assetPath)
             blockedByCategory[category] = domains
         }
         return DomainBlockMatcher.fromCategoryDomains(blockedByCategory)

@@ -974,6 +974,12 @@ abstract class AppLocalizations {
   /// **'Website blocks today'**
   String get activitySummaryWebsiteBlocksToday;
 
+  /// Count label for Focus Guard short-video blocks on the current day
+  ///
+  /// In en, this message translates to:
+  /// **'Short-video blocks today'**
+  String get activitySummaryShortVideoBlocksToday;
+
   /// Privacy note shown on the Safety Summary page
   ///
   /// In en, this message translates to:

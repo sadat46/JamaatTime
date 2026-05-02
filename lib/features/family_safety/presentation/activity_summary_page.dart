@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/focus_guard_service.dart';
 import '../domain/block_category.dart';
+import '../domain/safety_summary_metrics.dart';
 import '../platform/family_safety_channel.dart';
 
 class ActivitySummaryPage extends StatefulWidget {
@@ -20,7 +21,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
   final FamilySafetyChannel _channel = FamilySafetyChannel();
   final FocusGuardService _focusGuardService = FocusGuardService();
   Map<BlockCategory, int> _counts = const <BlockCategory, int>{};
-  List<_DailyCategoryRow> _rows = const <_DailyCategoryRow>[];
+  List<SafetySummaryRow> _rows = const <SafetySummaryRow>[];
   bool _basicProtectionOn = false;
   bool _advancedProtectionOn = false;
   bool _digitalWellbeingOn = false;
@@ -39,7 +40,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
     final vpn = await _channel.getVpnStatus();
     final focusGuard = await _focusGuardService.loadSettings();
     final counts = <BlockCategory, int>{};
-    final rows = <_DailyCategoryRow>[];
+    final rows = <SafetySummaryRow>[];
     for (final entry in raw) {
       if (entry is! Map) continue;
       final date = entry['date_yyyymmdd'];
@@ -53,7 +54,9 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       );
       if (category.id != categoryId) continue;
       counts[category] = (counts[category] ?? 0) + count;
-      rows.add(_DailyCategoryRow(date, category, count));
+      rows.add(
+        SafetySummaryRow(dateYyyymmdd: date, category: category, count: count),
+      );
     }
     rows.sort((a, b) => b.dateYyyymmdd.compareTo(a.dateYyyymmdd));
     if (!mounted) return;
@@ -94,7 +97,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
     if (!mounted) return;
     setState(() {
       _counts = const <BlockCategory, int>{};
-      _rows = const <_DailyCategoryRow>[];
+      _rows = const <SafetySummaryRow>[];
       _busy = false;
     });
     ScaffoldMessenger.of(context)
@@ -105,17 +108,28 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
   }
 
   String _today() {
-    final now = DateTime.now();
-    final y = now.year.toString().padLeft(4, '0');
-    final m = now.month.toString().padLeft(2, '0');
-    final d = now.day.toString().padLeft(2, '0');
-    return '$y$m$d';
+    return SafetySummaryMetrics.formatDate(DateTime.now());
   }
 
   int get _websiteBlocksToday {
     final today = _today();
     return _rows
-        .where((row) => row.dateYyyymmdd == today)
+        .where(
+          (row) =>
+              row.dateYyyymmdd == today &&
+              websiteProtectionBlockCategories.contains(row.category),
+        )
+        .fold<int>(0, (total, row) => total + row.count);
+  }
+
+  int get _shortVideoBlocksToday {
+    final today = _today();
+    return _rows
+        .where(
+          (row) =>
+              row.dateYyyymmdd == today &&
+              row.category == BlockCategory.focusGuardShortVideo,
+        )
         .fold<int>(0, (total, row) => total + row.count);
   }
 
@@ -156,6 +170,12 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                   icon: Icons.today_outlined,
                   title: strings.activitySummaryWebsiteBlocksToday,
                   count: _websiteBlocksToday,
+                ),
+                const SizedBox(height: 10),
+                _SummaryCountCard(
+                  icon: Icons.video_collection_outlined,
+                  title: strings.activitySummaryShortVideoBlocksToday,
+                  count: _shortVideoBlocksToday,
                 ),
                 const SizedBox(height: 10),
                 _SummaryCountCard(
@@ -226,14 +246,6 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
             ),
     );
   }
-}
-
-class _DailyCategoryRow {
-  const _DailyCategoryRow(this.dateYyyymmdd, this.category, this.count);
-
-  final String dateYyyymmdd;
-  final BlockCategory category;
-  final int count;
 }
 
 class _SummaryCountCard extends StatelessWidget {

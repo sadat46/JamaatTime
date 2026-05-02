@@ -509,6 +509,9 @@ class AppLocalizationsBn extends AppLocalizations {
   String get activitySummaryWebsiteBlocksToday => 'আজকের ওয়েবসাইট ব্লক';
 
   @override
+  String get activitySummaryShortVideoBlocksToday => 'আজকের শর্ট-ভিডিও ব্লক';
+
+  @override
   String get activitySummaryPrivacyNote =>
       'সেফটি সামারি শুধু লোকাল প্রোটেকশন সংখ্যা সংরক্ষণ করে। এটি ওয়েবসাইট, সার্চ টার্ম, বা পূর্ণ অ্যাপ ব্যবহারের ইতিহাস সংরক্ষণ করে না।';
 

@@ -38,6 +38,37 @@ void main() {
     expect(row.keys, hasLength(3));
   });
 
+  test(
+    'stores focus guard short-video count without sensitive fields',
+    () async {
+      final storage = ActivitySummaryStorage();
+
+      await storage.recordBlockedCategory(
+        date: DateTime(2026, 5, 2, 9),
+        category: BlockCategory.focusGuardShortVideo,
+      );
+
+      final entries = await storage.loadEntries();
+      expect(entries, hasLength(1));
+      expect(entries.single.dateYyyymmdd, '20260502');
+      expect(entries.single.categoryId, BlockCategory.focusGuardShortVideo.id);
+      expect(entries.single.count, 1);
+
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(ActivitySummaryStorage.summaryKey);
+      final decoded = jsonDecode(raw!) as List<Object?>;
+      final row = decoded.single! as Map<String, Object?>;
+
+      expect(
+        row.keys,
+        unorderedEquals(['date_yyyymmdd', 'category_id', 'count']),
+      );
+      expect(row.keys, isNot(contains('package_name')));
+      expect(row.keys, isNot(contains('url')));
+      expect(row.keys, isNot(contains('timestamp')));
+    },
+  );
+
   test('drops invalid rows and ignores non-positive increments', () async {
     final storage = ActivitySummaryStorage();
     await storage.saveEntries(const [

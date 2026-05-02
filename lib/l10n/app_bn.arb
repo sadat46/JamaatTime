@@ -170,6 +170,7 @@
   "activitySummaryClearedSnack": "সেফটি সামারি মুছে ফেলা হয়েছে।",
   "activitySummaryRangeLabel": "শেষ {days} দিন",
   "activitySummaryWebsiteBlocksToday": "আজকের ওয়েবসাইট ব্লক",
+  "activitySummaryShortVideoBlocksToday": "আজকের শর্ট-ভিডিও ব্লক",
   "activitySummaryPrivacyNote": "সেফটি সামারি শুধু লোকাল প্রোটেকশন সংখ্যা সংরক্ষণ করে। এটি ওয়েবসাইট, সার্চ টার্ম, বা পূর্ণ অ্যাপ ব্যবহারের ইতিহাস সংরক্ষণ করে না।",
   "activitySummaryCategoryAdult": "অ্যাডাল্ট কনটেন্ট",
   "activitySummaryCategoryGambling": "জুয়া",

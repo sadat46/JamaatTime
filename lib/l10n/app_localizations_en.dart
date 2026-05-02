@@ -506,6 +506,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activitySummaryWebsiteBlocksToday => 'Website blocks today';
 
   @override
+  String get activitySummaryShortVideoBlocksToday => 'Short-video blocks today';
+
+  @override
   String get activitySummaryPrivacyNote =>
       'Safety Summary stores only local protection counts. It does not store websites, search terms, or full app usage history.';
 

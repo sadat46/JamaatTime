@@ -13,6 +13,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.sadat.jamaattime.familysafety.vpn.ActivitySummaryWriter
 import org.json.JSONObject
 
 class FocusGuardAccessibilityService : AccessibilityService() {
@@ -27,6 +28,10 @@ class FocusGuardAccessibilityService : AccessibilityService() {
     private var overlayView: View? = null
     private var windowManager: WindowManager? = null
     private var overlayContext: Context? = null
+    private val activityWriter by lazy { ActivitySummaryWriter(applicationContext) }
+    private val blockCountGate by lazy {
+        FocusGuardBlockCountGate { category -> activityWriter.increment(category) }
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -192,6 +197,11 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         try {
             wm.addView(view, params)
             overlayView = view
+            try {
+                blockCountGate.onConfirmedBlockOverlayShown()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to increment Focus Guard block count", t)
+            }
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to add overlay", t)
             overlayContext = null
@@ -222,6 +232,7 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         }
         overlayView = null
         overlayContext = null
+        blockCountGate.onOverlayDismissed()
     }
 
 }

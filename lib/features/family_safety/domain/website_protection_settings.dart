@@ -45,6 +45,7 @@ class WebsiteProtectionSettings {
                     orElse: () => BlockCategory.adult,
                   ),
                 )
+                .where((category) => category.isWebsiteProtectionCategory)
                 .toSet()
           : const <BlockCategory>{
               BlockCategory.adult,
