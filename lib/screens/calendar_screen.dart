@@ -1,6 +1,7 @@
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -397,6 +398,50 @@ class _CalendarScreenState extends State<CalendarScreen> {
       banglaDate: _banglaDateLine(day),
       hijriDate: _hijriDateLine(day),
     );
+  }
+
+  String _selectedDateShareText(BuildContext context) {
+    final dateData = _selectedDateCardData(_selectedDay);
+    final buffer = StringBuffer()
+      ..writeln('Prayer + Jamaat Time for $_locationLabel')
+      ..writeln()
+      ..writeln('English: ${dateData.gregorianDate}, ${dateData.weekday}')
+      ..writeln('Bangla: ${dateData.banglaDate}')
+      ..writeln('Hijri: ${dateData.hijriDate}')
+      ..writeln()
+      ..writeln('Location: $_locationLabel')
+      ..writeln()
+      ..writeln('Prayer | Prayer Time | Jamaat Time');
+
+    for (final prayerName in _prayerOrder) {
+      buffer.writeln(
+        '${_prayerDisplayName(context, prayerName)} | '
+        '${_displayPrayerTimeForPrayer(prayerName)} | '
+        '${_displayJamaatTimeForPrayer(prayerName)}',
+      );
+    }
+
+    return buffer.toString().trim();
+  }
+
+  Future<void> _shareSelectedDateInfo(BuildContext context) async {
+    try {
+      await Share.share(
+        _selectedDateShareText(context),
+        subject: 'Prayer + Jamaat Time for $_locationLabel',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr(bn: 'শেয়ার করতে সমস্যা হয়েছে', en: 'Failed to share'),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   String _timesSourceCaption(BuildContext context) {
@@ -829,6 +874,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: () => _shareSelectedDateInfo(context),
+                icon: const Icon(Icons.share_outlined),
+                iconSize: 18,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                tooltip: context.tr(bn: 'শেয়ার', en: 'Share'),
+                color: isDarkMode ? Colors.white70 : AppConstants.brandGreen,
               ),
             ],
           ),
