@@ -69,8 +69,10 @@ void main() {
     for (final key in const <String>[
       'url',
       'host',
+      'package_name',
       'qname',
       'query',
+      'search_term',
       'time',
       'user_id',
       'device_id',
@@ -100,11 +102,7 @@ void main() {
 
     await storage.saveEntries([
       ActivitySummaryEntry(dateYyyymmdd: cutoffEdge, categoryId: 1, count: 5),
-      ActivitySummaryEntry(
-        dateYyyymmdd: beforeCutoff,
-        categoryId: 2,
-        count: 9,
-      ),
+      ActivitySummaryEntry(dateYyyymmdd: beforeCutoff, categoryId: 2, count: 9),
       ActivitySummaryEntry(dateYyyymmdd: '20260615', categoryId: 3, count: 1),
     ]);
 

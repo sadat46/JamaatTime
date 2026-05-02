@@ -422,15 +422,15 @@ class AppLocalizationsBn extends AppLocalizations {
       'এই ডিভাইসে Network settings খোলা যায়নি।';
 
   @override
-  String get activitySummaryTitle => 'অ্যাক্টিভিটি সামারি';
+  String get activitySummaryTitle => 'সেফটি সামারি';
 
   @override
   String get activitySummarySubtitle =>
-      'ব্রাউজিং ইতিহাস না রেখে ব্লক হওয়া ক্যাটাগরির লোকাল সংখ্যা দেখুন।';
+      'ব্রাউজিং ইতিহাস না রেখে লোকাল প্রোটেকশন সংখ্যা দেখুন।';
 
   @override
   String get activitySummaryPlaceholder =>
-      'ওয়েবসাইট প্রোটেকশন তৈরি হওয়ার পর অ্যাক্টিভিটি সামারি শুধু লোকাল সংখ্যা দেখাবে।';
+      'সেফটি সামারি শুধু লোকাল প্রোটেকশন সংখ্যা দেখায়।';
 
   @override
   String get privacyExplanationTitle => 'প্রাইভেসি';
@@ -492,19 +492,25 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get activitySummaryEmpty =>
-      'এখনো কোনো ব্লকড কোয়েরি নেই। ওয়েবসাইট প্রোটেকশন চালু থাকলে সংখ্যা এখানে আসবে।';
+      'এখনো কোনো ওয়েবসাইট ব্লক নেই। প্রোটেকশন কোনো ক্যাটাগরি ব্লক করলে সংখ্যা এখানে আসবে।';
 
   @override
-  String get activitySummaryClearCta => 'অ্যাক্টিভিটি সামারি মুছুন';
+  String get activitySummaryClearCta => 'সামারি মুছুন';
 
   @override
-  String get activitySummaryClearedSnack =>
-      'অ্যাক্টিভিটি সামারি মুছে ফেলা হয়েছে।';
+  String get activitySummaryClearedSnack => 'সেফটি সামারি মুছে ফেলা হয়েছে।';
 
   @override
   String activitySummaryRangeLabel(int days) {
     return 'শেষ $days দিন';
   }
+
+  @override
+  String get activitySummaryWebsiteBlocksToday => 'আজকের ওয়েবসাইট ব্লক';
+
+  @override
+  String get activitySummaryPrivacyNote =>
+      'সেফটি সামারি শুধু লোকাল প্রোটেকশন সংখ্যা সংরক্ষণ করে। এটি ওয়েবসাইট, সার্চ টার্ম, বা পূর্ণ অ্যাপ ব্যবহারের ইতিহাস সংরক্ষণ করে না।';
 
   @override
   String get activitySummaryCategoryAdult => 'অ্যাডাল্ট কনটেন্ট';
@@ -521,7 +527,7 @@ class AppLocalizationsBn extends AppLocalizations {
   }
 
   @override
-  String get activitySummaryClearConfirmTitle => 'অ্যাক্টিভিটি সামারি মুছবেন?';
+  String get activitySummaryClearConfirmTitle => 'সামারি মুছবেন?';
 
   @override
   String get activitySummaryClearConfirmBody =>

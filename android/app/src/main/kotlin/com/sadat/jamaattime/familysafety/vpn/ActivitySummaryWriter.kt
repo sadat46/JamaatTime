@@ -16,6 +16,28 @@ class ActivitySummaryWriter(private val context: Context) {
         private const val KEY_ROWS = "rows"
         const val DEFAULT_RETENTION_DAYS = 30
         private const val MAX_RETAIN_DAYS = DEFAULT_RETENTION_DAYS
+        private val ALLOWED_ROW_KEYS = setOf("date_yyyymmdd", "category_id", "count")
+        private val FORBIDDEN_ROW_KEYS = setOf(
+            "domain",
+            "url",
+            "host",
+            "hostname",
+            "qname",
+            "query",
+            "search",
+            "search_term",
+            "app",
+            "app_usage",
+            "app_usage_history",
+            "package",
+            "package_name",
+            "time",
+            "timestamp",
+            "user",
+            "user_id",
+            "device",
+            "device_id",
+        )
         private val DATE_FORMAT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
             override fun initialValue(): SimpleDateFormat {
                 return SimpleDateFormat("yyyyMMdd", Locale.US).apply {
@@ -99,8 +121,19 @@ class ActivitySummaryWriter(private val context: Context) {
             obj.put("date_yyyymmdd", row.dateYyyymmdd)
             obj.put("category_id", row.categoryId)
             obj.put("count", row.count)
+            assertPrivacySafeRow(obj)
             arr.put(obj)
         }
         prefs.edit().putString(KEY_ROWS, arr.toString()).apply()
+    }
+
+    private fun assertPrivacySafeRow(obj: JSONObject) {
+        val keys = obj.keys().asSequence().toSet()
+        require(keys.all { it in ALLOWED_ROW_KEYS }) {
+            "Safety summary rows may contain only date_yyyymmdd, category_id, and count"
+        }
+        require(keys.none { it in FORBIDDEN_ROW_KEYS }) {
+            "Safety summary rows must not contain domain, URL, host, search, app usage, user, or device identifiers"
+        }
     }
 }

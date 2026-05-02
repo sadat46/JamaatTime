@@ -824,22 +824,22 @@ abstract class AppLocalizations {
   /// **'Network settings could not be opened on this device.'**
   String get safeSearchNetworkSettingsUnavailable;
 
-  /// Family Safety section title for Activity Summary
+  /// Family Safety section title for Safety Summary
   ///
   /// In en, this message translates to:
-  /// **'Activity Summary'**
+  /// **'Safety Summary'**
   String get activitySummaryTitle;
 
-  /// Subtitle for Activity Summary
+  /// Subtitle for Safety Summary
   ///
   /// In en, this message translates to:
-  /// **'View local counts for blocked categories without storing browsing history.'**
+  /// **'View local protection counts without storing browsing history.'**
   String get activitySummarySubtitle;
 
-  /// Placeholder text for Activity Summary during the UI shell phase
+  /// Placeholder text for Safety Summary during the UI shell phase
   ///
   /// In en, this message translates to:
-  /// **'Activity Summary will show local counts only after Website Protection exists.'**
+  /// **'Safety Summary shows local protection counts only.'**
   String get activitySummaryPlaceholder;
 
   /// Family Safety privacy explanation page title
@@ -944,29 +944,41 @@ abstract class AppLocalizations {
   /// **'• HTTPS DNS (DoH) inside browsers like Firefox or Brave cannot be filtered.\n• Some apps with hardcoded DoH (for example, certain smart-TV or game-console apps when tethered) cannot be filtered.\n• Apps explicitly excluded from VPN by Android, or running on another network, are not filtered.\n• Disabling Wi-Fi or mobile data disables filtering.\nThis is a helpful guard, not a guarantee.'**
   String get websiteProtectionLimitsBullets;
 
-  /// Empty state on the Activity Summary page
+  /// Empty state on the Safety Summary page
   ///
   /// In en, this message translates to:
-  /// **'No blocked queries yet. Counts will appear here once Website Protection is on.'**
+  /// **'No website blocks yet. Counts will appear here once protection blocks a category.'**
   String get activitySummaryEmpty;
 
-  /// Button to wipe the local activity summary
+  /// Button to wipe the local safety summary
   ///
   /// In en, this message translates to:
-  /// **'Clear activity summary'**
+  /// **'Clear summary'**
   String get activitySummaryClearCta;
 
-  /// Snackbar after the activity summary is cleared
+  /// Snackbar after the safety summary is cleared
   ///
   /// In en, this message translates to:
-  /// **'Activity summary cleared.'**
+  /// **'Safety summary cleared.'**
   String get activitySummaryClearedSnack;
 
-  /// Label for the time range used by the activity summary
+  /// Label for the time range used by the safety summary
   ///
   /// In en, this message translates to:
   /// **'Last {days} days'**
   String activitySummaryRangeLabel(int days);
+
+  /// Count label for website blocks on the current day
+  ///
+  /// In en, this message translates to:
+  /// **'Website blocks today'**
+  String get activitySummaryWebsiteBlocksToday;
+
+  /// Privacy note shown on the Safety Summary page
+  ///
+  /// In en, this message translates to:
+  /// **'Safety Summary stores only local protection counts. It does not store websites, search terms, or full app usage history.'**
+  String get activitySummaryPrivacyNote;
 
   /// Category label for adult-content blocks
   ///
@@ -992,13 +1004,13 @@ abstract class AppLocalizations {
   /// **'{count} blocked'**
   String activitySummaryBlockedCount(int count);
 
-  /// Confirmation dialog title before wiping the activity summary
+  /// Confirmation dialog title before wiping the safety summary
   ///
   /// In en, this message translates to:
-  /// **'Clear activity summary?'**
+  /// **'Clear summary?'**
   String get activitySummaryClearConfirmTitle;
 
-  /// Confirmation dialog body before wiping the activity summary
+  /// Confirmation dialog body before wiping the safety summary
   ///
   /// In en, this message translates to:
   /// **'All on-device counts will be deleted. This cannot be undone.'**

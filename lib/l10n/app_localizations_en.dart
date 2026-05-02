@@ -419,15 +419,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Network settings could not be opened on this device.';
 
   @override
-  String get activitySummaryTitle => 'Activity Summary';
+  String get activitySummaryTitle => 'Safety Summary';
 
   @override
   String get activitySummarySubtitle =>
-      'View local counts for blocked categories without storing browsing history.';
+      'View local protection counts without storing browsing history.';
 
   @override
   String get activitySummaryPlaceholder =>
-      'Activity Summary will show local counts only after Website Protection exists.';
+      'Safety Summary shows local protection counts only.';
 
   @override
   String get privacyExplanationTitle => 'Privacy';
@@ -489,18 +489,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activitySummaryEmpty =>
-      'No blocked queries yet. Counts will appear here once Website Protection is on.';
+      'No website blocks yet. Counts will appear here once protection blocks a category.';
 
   @override
-  String get activitySummaryClearCta => 'Clear activity summary';
+  String get activitySummaryClearCta => 'Clear summary';
 
   @override
-  String get activitySummaryClearedSnack => 'Activity summary cleared.';
+  String get activitySummaryClearedSnack => 'Safety summary cleared.';
 
   @override
   String activitySummaryRangeLabel(int days) {
     return 'Last $days days';
   }
+
+  @override
+  String get activitySummaryWebsiteBlocksToday => 'Website blocks today';
+
+  @override
+  String get activitySummaryPrivacyNote =>
+      'Safety Summary stores only local protection counts. It does not store websites, search terms, or full app usage history.';
 
   @override
   String get activitySummaryCategoryAdult => 'Adult content';
@@ -517,7 +524,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get activitySummaryClearConfirmTitle => 'Clear activity summary?';
+  String get activitySummaryClearConfirmTitle => 'Clear summary?';
 
   @override
   String get activitySummaryClearConfirmBody =>

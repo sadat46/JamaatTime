@@ -1,10 +1,7 @@
-import 'dart:convert';
-
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../services/focus_guard_service.dart';
 import '../domain/block_category.dart';
 import '../platform/family_safety_channel.dart';
 
@@ -18,10 +15,15 @@ class ActivitySummaryPage extends StatefulWidget {
 class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
   static const Color _brandGreen = Color(0xFF388E3C);
   static const int _rangeDays = 30;
+  static const String _familyDnsHost = 'family-filter-dns.cleanbrowsing.org';
 
   final FamilySafetyChannel _channel = FamilySafetyChannel();
+  final FocusGuardService _focusGuardService = FocusGuardService();
   Map<BlockCategory, int> _counts = const <BlockCategory, int>{};
   List<_DailyCategoryRow> _rows = const <_DailyCategoryRow>[];
+  bool _basicProtectionOn = false;
+  bool _advancedProtectionOn = false;
+  bool _digitalWellbeingOn = false;
   bool _loading = true;
   bool _busy = false;
 
@@ -33,6 +35,9 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
 
   Future<void> _load() async {
     final raw = await _channel.getActivitySummary(rangeDays: _rangeDays);
+    final dns = await _channel.getPrivateDnsState();
+    final vpn = await _channel.getVpnStatus();
+    final focusGuard = await _focusGuardService.loadSettings();
     final counts = <BlockCategory, int>{};
     final rows = <_DailyCategoryRow>[];
     for (final entry in raw) {
@@ -55,6 +60,11 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
     setState(() {
       _counts = counts;
       _rows = rows;
+      _basicProtectionOn =
+          dns.isHostnameMode &&
+          dns.host?.trim().toLowerCase() == _familyDnsHost;
+      _advancedProtectionOn = vpn.running;
+      _digitalWellbeingOn = focusGuard.enabled;
       _loading = false;
     });
   }
@@ -79,75 +89,19 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
     await _channel.clearActivitySummary();
     if (!mounted) return;
     setState(() {
       _counts = const <BlockCategory, int>{};
       _rows = const <_DailyCategoryRow>[];
+      _busy = false;
     });
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(content: Text(strings.activitySummaryClearedSnack)),
       );
-  }
-
-  Future<void> _exportCsv() async {
-    final strings = AppLocalizations.of(context);
-    if (_rows.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text(strings.activitySummaryExportNothing)),
-        );
-      return;
-    }
-    setState(() => _busy = true);
-    final csv = _buildCsv(_rows);
-    final bytes = Uint8List.fromList(utf8.encode(csv));
-    final fileName = 'jamaat_time_activity_summary_${_today()}.csv';
-    String? savedPath;
-    try {
-      savedPath = await FilePicker.platform.saveFile(
-        dialogTitle: strings.activitySummaryExportCta,
-        fileName: fileName,
-        type: FileType.custom,
-        allowedExtensions: const ['csv'],
-        bytes: bytes,
-      );
-    } catch (_) {
-      savedPath = null;
-    }
-    if (!mounted) return;
-    setState(() => _busy = false);
-    final ok = savedPath != null && savedPath.isNotEmpty;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? strings.activitySummaryExportSuccess
-                : strings.activitySummaryExportFailed,
-          ),
-        ),
-      );
-  }
-
-  String _buildCsv(List<_DailyCategoryRow> rows) {
-    final buffer = StringBuffer('date_yyyymmdd,category_id,category,count\n');
-    for (final row in rows) {
-      buffer
-        ..write(row.dateYyyymmdd)
-        ..write(',')
-        ..write(row.category.id)
-        ..write(',')
-        ..write(row.category.name)
-        ..write(',')
-        ..write(row.count)
-        ..write('\n');
-    }
-    return buffer.toString();
   }
 
   String _today() {
@@ -158,15 +112,11 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
     return '$y$m$d';
   }
 
-  String _categoryLabel(BlockCategory category, AppLocalizations strings) {
-    switch (category) {
-      case BlockCategory.adult:
-        return strings.activitySummaryCategoryAdult;
-      case BlockCategory.gambling:
-        return strings.activitySummaryCategoryGambling;
-      case BlockCategory.proxyBypass:
-        return strings.activitySummaryCategoryProxyBypass;
-    }
+  int get _websiteBlocksToday {
+    final today = _today();
+    return _rows
+        .where((row) => row.dateYyyymmdd == today)
+        .fold<int>(0, (total, row) => total + row.count);
   }
 
   @override
@@ -202,31 +152,54 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                   style: TextStyle(color: Colors.grey[700]),
                 ),
                 const SizedBox(height: 20),
-                if (!hasData)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      strings.activitySummaryEmpty,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[700], height: 1.4),
-                    ),
-                  )
-                else
-                  ...BlockCategory.values.map((category) {
-                    final count = _counts[category] ?? 0;
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
-                        leading: const Icon(Icons.shield_outlined),
-                        title: Text(_categoryLabel(category, strings)),
-                        trailing: Text(
-                          strings.activitySummaryBlockedCount(count),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    );
-                  }),
+                _SummaryCountCard(
+                  icon: Icons.today_outlined,
+                  title: strings.activitySummaryWebsiteBlocksToday,
+                  count: _websiteBlocksToday,
+                ),
+                const SizedBox(height: 10),
+                _SummaryCountCard(
+                  icon: Icons.no_adult_content_outlined,
+                  title: strings.activitySummaryCategoryAdult,
+                  count: _counts[BlockCategory.adult] ?? 0,
+                ),
+                const SizedBox(height: 10),
+                _SummaryCountCard(
+                  icon: Icons.casino_outlined,
+                  title: strings.activitySummaryCategoryGambling,
+                  count: _counts[BlockCategory.gambling] ?? 0,
+                ),
+                const SizedBox(height: 10),
+                _SummaryCountCard(
+                  icon: Icons.vpn_lock_outlined,
+                  title: strings.activitySummaryCategoryProxyBypass,
+                  count: _counts[BlockCategory.proxyBypass] ?? 0,
+                ),
+                const SizedBox(height: 18),
+                _ProtectionStatusCard(
+                  title: strings.basicWebsiteProtectionTitle,
+                  enabled: _basicProtectionOn,
+                ),
+                const SizedBox(height: 10),
+                _ProtectionStatusCard(
+                  title: strings.websiteProtectionTitle,
+                  enabled: _advancedProtectionOn,
+                ),
+                const SizedBox(height: 10),
+                _ProtectionStatusCard(
+                  title: strings.digitalWellbeingTitle,
+                  enabled: _digitalWellbeingOn,
+                ),
                 const SizedBox(height: 16),
+                Text(
+                  strings.activitySummaryPrivacyNote,
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    height: 1.4,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   strings.activitySummaryRetentionNote(_rangeDays),
                   style: TextStyle(
@@ -243,17 +216,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                   overflowSpacing: 8,
                   children: [
                     TextButton.icon(
-                      onPressed: _busy || !hasData ? null : _exportCsv,
-                      icon: _busy
-                          ? const SizedBox.square(
-                              dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.file_download_outlined),
-                      label: Text(strings.activitySummaryExportCta),
-                    ),
-                    TextButton.icon(
-                      onPressed: hasData ? _confirmAndClear : null,
+                      onPressed: _busy || !hasData ? null : _confirmAndClear,
                       icon: const Icon(Icons.delete_outline),
                       label: Text(strings.activitySummaryClearCta),
                     ),
@@ -271,4 +234,73 @@ class _DailyCategoryRow {
   final String dateYyyymmdd;
   final BlockCategory category;
   final int count;
+}
+
+class _SummaryCountCard extends StatelessWidget {
+  const _SummaryCountCard({
+    required this.icon,
+    required this.title,
+    required this.count,
+  });
+
+  final IconData icon;
+  final String title;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1.2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        leading: Icon(icon, color: _ActivitySummaryPageState._brandGreen),
+        title: Text(title),
+        trailing: Text(
+          '$count',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProtectionStatusCard extends StatelessWidget {
+  const _ProtectionStatusCard({required this.title, required this.enabled});
+
+  final String title;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = enabled ? const Color(0xFF2E7D32) : Colors.grey.shade700;
+    return Card(
+      elevation: 1.2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        leading: Icon(
+          enabled ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+          color: color,
+        ),
+        title: Text(title),
+        trailing: DecoratedBox(
+          decoration: BoxDecoration(
+            color: color.withAlpha(24),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withAlpha(80)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Text(
+              enabled ? 'ON' : 'OFF',
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
