@@ -5,7 +5,6 @@ import '../features/family_safety/presentation/family_safety_page.dart';
 import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
 import '../services/settings_service.dart';
-import 'focus_guard_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -488,54 +487,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  elevation: 1.5,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(_cardRadius),
-                  ),
-                  child: ListTile(
-                    leading: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: _brandGreen.withAlpha(26),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.shield_outlined,
-                        color: _brandGreen,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      _tr('ফোকাস গার্ড', 'Focus Guard'),
-                      style: TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      _tr(
-                        'ফোকাস ধরে রাখতে YouTube Shorts ব্লক করুন।',
-                        'Block YouTube Shorts to stay focused.',
-                      ),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        height: 1.35,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const FocusGuardScreen(),
-                        ),
-                      );
-                    },
-                  ),
                 ),
                 const SizedBox(height: 12),
                 Card(
