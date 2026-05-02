@@ -105,8 +105,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
     setState(() => _busy = true);
     final csv = _buildCsv(_rows);
     final bytes = Uint8List.fromList(utf8.encode(csv));
-    final fileName =
-        'jamaat_time_activity_summary_${_today()}.csv';
+    final fileName = 'jamaat_time_activity_summary_${_today()}.csv';
     String? savedPath;
     try {
       savedPath = await FilePicker.platform.saveFile(
@@ -237,8 +236,11 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                OverflowBar(
+                  alignment: MainAxisAlignment.end,
+                  overflowAlignment: OverflowBarAlignment.end,
+                  spacing: 8,
+                  overflowSpacing: 8,
                   children: [
                     TextButton.icon(
                       onPressed: _busy || !hasData ? null : _exportCsv,
@@ -250,7 +252,6 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                           : const Icon(Icons.file_download_outlined),
                       label: Text(strings.activitySummaryExportCta),
                     ),
-                    const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: hasData ? _confirmAndClear : null,
                       icon: const Icon(Icons.delete_outline),
