@@ -669,7 +669,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 3,
             child: Text(
-              context.tr(bn: 'নামাজ', en: 'Prayer'),
+              context.tr(bn: 'নামাজ', en: 'Name'),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -680,7 +680,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              context.tr(bn: 'নামাজের সময়', en: 'Prayer Time'),
+              context.tr(bn: 'নামাজের সময়', en: 'Prayer'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -692,7 +692,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              context.tr(bn: 'জামাতের সময়', en: 'Jamaat Time'),
+              context.tr(bn: 'জামাতের সময়', en: 'Jamaat'),
               textAlign: TextAlign.end,
               style: TextStyle(
                 fontSize: 12,
