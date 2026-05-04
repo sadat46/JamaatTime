@@ -201,6 +201,21 @@ class WidgetService {
           : '$hijriDate  |  $banglaDate';
       final localizedLocation = _localizedLocationName(locationName, locale);
 
+      final strings = AppText.of(locale);
+      final localMidnight = DateTime(date.year, date.month, date.day);
+      final tomorrowFajrMillis = tomorrowFajr?.millisecondsSinceEpoch ?? 0;
+
+      int epochOf(String key) =>
+          times[key]?.millisecondsSinceEpoch ?? 0;
+
+      int jamaatEpochOf(String prayerName) =>
+          resolveTodayJamaatTime(
+            now: date,
+            prayerName: prayerName,
+            jamaatTimes: jamaatTimes,
+          )?.millisecondsSinceEpoch ??
+          0;
+
       await Future.wait([
         HomeWidget.saveWidgetData<String>('prayer_name', widgetData.prayerName),
         HomeWidget.saveWidgetData<String>('prayer_time', widgetData.prayerTime),
@@ -264,6 +279,98 @@ class WidgetService {
         HomeWidget.saveWidgetData<String>('islamic_date', islamicDate),
         HomeWidget.saveWidgetData<String>('location', localizedLocation),
         HomeWidget.saveWidgetData<String>('locale_code', localeCode),
+        // Raw epoch keys consumed by the native Kotlin state machine.
+        HomeWidget.saveWidgetData<int>('epoch_fajr_today', epochOf('Fajr')),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_sunrise_today',
+          epochOf('Sunrise'),
+        ),
+        HomeWidget.saveWidgetData<int>('epoch_dhuhr_today', epochOf('Dhuhr')),
+        HomeWidget.saveWidgetData<int>('epoch_asr_today', epochOf('Asr')),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_maghrib_today',
+          epochOf('Maghrib'),
+        ),
+        HomeWidget.saveWidgetData<int>('epoch_isha_today', epochOf('Isha')),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_fajr_tomorrow',
+          tomorrowFajrMillis,
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_fajr_today',
+          jamaatEpochOf('Fajr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_dhuhr_today',
+          jamaatEpochOf('Dhuhr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_asr_today',
+          jamaatEpochOf('Asr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_maghrib_today',
+          jamaatEpochOf('Maghrib'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_isha_today',
+          jamaatEpochOf('Isha'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'last_compute_day_epoch',
+          localMidnight.millisecondsSinceEpoch,
+        ),
+        // Localization payload consumed by the native Kotlin state machine.
+        HomeWidget.saveWidgetData<String>(
+          'loc_prayer_fajr',
+          strings.prayer_fajr,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_prayer_sunrise',
+          strings.prayer_sunrise,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_prayer_dhuhr',
+          strings.prayer_dhuhr,
+        ),
+        HomeWidget.saveWidgetData<String>('loc_prayer_asr', strings.prayer_asr),
+        HomeWidget.saveWidgetData<String>(
+          'loc_prayer_maghrib',
+          strings.prayer_maghrib,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_prayer_isha',
+          strings.prayer_isha,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_jamaat_in_suffix',
+          strings.widget_jamaatInSuffix,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_jamaat_ongoing',
+          strings.widget_jamaatOngoing,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_jamaat_over',
+          strings.widget_jamaatOver,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_jamaat_na',
+          strings.widget_jamaatNA,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_prayer_ends_in',
+          strings.widget_prayerEndsIn,
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_next_prayer_in_template',
+          strings.widget_nextPrayerIn('{0}'),
+        ),
+        HomeWidget.saveWidgetData<String>(
+          'loc_next_prayer_jamaat_template',
+          strings.widget_nextPrayerJamaatAt('{0}', '{1}'),
+        ),
+        HomeWidget.saveWidgetData<String>('time_format_pattern', _fmt),
       ]);
 
       await HomeWidget.updateWidget(androidName: _androidWidgetName);
@@ -528,6 +635,19 @@ class WidgetService {
   }
 
   static DateTime? _resolveTodayJamaatTime({
+    required DateTime now,
+    required String prayerName,
+    required Map<String, dynamic>? jamaatTimes,
+  }) {
+    return resolveTodayJamaatTime(
+      now: now,
+      prayerName: prayerName,
+      jamaatTimes: jamaatTimes,
+    );
+  }
+
+  @visibleForTesting
+  static DateTime? resolveTodayJamaatTime({
     required DateTime now,
     required String prayerName,
     required Map<String, dynamic>? jamaatTimes,

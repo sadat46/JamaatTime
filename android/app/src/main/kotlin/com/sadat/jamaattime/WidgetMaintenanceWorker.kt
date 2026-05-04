@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 
@@ -21,10 +20,8 @@ class WidgetMaintenanceWorker(ctx: Context, params: WorkerParameters)
             return Result.success()
         }
 
-        val intent = Intent("es.antonborri.home_widget.action.BACKGROUND")
-            .setComponent(ComponentName(
-                ctx, "es.antonborri.home_widget.HomeWidgetBackgroundReceiver"))
-            .setData(Uri.parse("homewidget://maintenance"))
+        val intent = Intent(ctx, PrayerWidgetProvider::class.java)
+            .setAction(PrayerWidgetProvider.ACTION_BOUNDARY_TICK)
         ctx.sendBroadcast(intent)
         return Result.success()
     }
