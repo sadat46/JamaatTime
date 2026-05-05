@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -19,6 +23,7 @@ import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
 import '../utils/locale_digits.dart';
 import '../widgets/calendar_selected_date_card.dart';
+import '../widgets/calendar_share_card.dart';
 
 class _SelectedDateCardData {
   const _SelectedDateCardData({
@@ -32,48 +37,6 @@ class _SelectedDateCardData {
   final String weekday;
   final String banglaDate;
   final String hijriDate;
-}
-
-String buildPrayerShareText({
-  required String locationLabel,
-  required String gregorianDate,
-  required String weekday,
-  required String hijriDate,
-  required String banglaDate,
-  required List<List<String>> rows,
-}) {
-  String jamaatValue(String value) {
-    final trimmed = value.trim();
-    return trimmed.isEmpty || trimmed == '-' || trimmed == '--' ? '—' : trimmed;
-  }
-
-  final buffer = StringBuffer()
-    ..writeln('Prayer & Jamaat Time')
-    ..writeln(locationLabel)
-    ..writeln()
-    ..writeln('$gregorianDate, $weekday')
-    ..writeln(hijriDate)
-    ..writeln(banglaDate)
-    ..writeln()
-    ..writeln('Name        Prayer     Jamaat')
-    ..writeln('────────────────────────');
-
-  for (final row in rows) {
-    if (row.length < 3) {
-      continue;
-    }
-    buffer.writeln(
-      '${row[0].padRight(12)}'
-      '${row[1].padRight(11)}'
-      '${jamaatValue(row[2])}',
-    );
-  }
-
-  buffer
-    ..writeln()
-    ..write('Shared from Jamaat Time');
-
-  return buffer.toString();
 }
 
 class CalendarScreen extends StatefulWidget {
@@ -126,6 +89,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final PrayerAuxCalculator _jamaatTimeUtility = PrayerAuxCalculator.instance;
   final LocationConfigService _locationConfigService = LocationConfigService();
   final SettingsService _settingsService = SettingsService();
+  final ScreenshotController _shareScreenshotController = ScreenshotController();
 
   late DateTime _focusedDay;
   late DateTime _selectedDay;
@@ -442,9 +406,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  String _selectedDateShareText(BuildContext context) {
+  CalendarShareCard _buildShareCard(BuildContext context) {
     final dateData = _selectedDateCardData(_selectedDay);
-    return buildPrayerShareText(
+    return CalendarShareCard(
       locationLabel: _locationLabel,
       gregorianDate: dateData.gregorianDate,
       weekday: dateData.weekday,
@@ -452,11 +416,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       banglaDate: dateData.banglaDate,
       rows: _prayerOrder
           .map(
-            (prayerName) => [
-              _prayerDisplayName(context, prayerName),
-              _displayPrayerTimeForPrayer(prayerName),
-              _displayJamaatTimeForPrayer(prayerName),
-            ],
+            (prayerName) => CalendarShareRow(
+              name: _prayerDisplayName(context, prayerName),
+              prayer: _displayPrayerTimeForPrayer(prayerName),
+              jamaat: _displayJamaatTimeForPrayer(prayerName),
+            ),
           )
           .toList(),
     );
@@ -464,9 +428,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _shareSelectedDateInfo(BuildContext context) async {
     try {
-      await Share.share(
-        _selectedDateShareText(context),
+      final bytes = await _shareScreenshotController.captureFromWidget(
+        _buildShareCard(context),
+        pixelRatio: 3.0,
+        context: context,
+      );
+
+      final dir = await getTemporaryDirectory();
+      final dateStamp = _selectedDay.toIso8601String().split('T').first;
+      final file = await File(
+        '${dir.path}/jamaat_time_$dateStamp.png',
+      ).writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
         subject: 'Prayer + Jamaat Time for $_locationLabel',
+        text: 'Prayer + Jamaat Time for $_locationLabel',
       );
     } catch (_) {
       if (!mounted) return;
