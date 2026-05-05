@@ -956,21 +956,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         updatedJamaatTimes['maghrib'] = maghribJamaatTime;
       }
       jamaatTimes = updatedJamaatTimes;
-
-      // Reschedule notifications with updated times.
-      _lastNotificationScheduleKey = null;
-      unawaited(_scheduleNotificationsIfNeeded());
     }
+
+    // Always reschedule so prayer reminders still fire when jamaat data
+    // is unavailable (network failure, JamaatSource.none).
+    _lastNotificationScheduleKey = null;
+    unawaited(_scheduleNotificationsIfNeeded());
 
     // Pre-compute table data after prayer times update
     _computePrayerTableData();
   }
 
   Future<void> _scheduleNotificationsIfNeeded() async {
-    if (jamaatTimes == null) {
-      return;
-    }
-
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selectedDateOnly = DateTime(
@@ -1045,10 +1042,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _lastNotificationScheduleKey = null;
       _notificationScheduleVersion++;
 
-      // Reschedule notifications with new settings
-      if (jamaatTimes != null) {
-        await _scheduleNotificationsIfNeeded();
-      }
+      // Reschedule notifications with new settings — schedule prayer
+      // reminders even when jamaat data is unavailable.
+      await _scheduleNotificationsIfNeeded();
     } catch (e) {
       // Handle error silently
     }
