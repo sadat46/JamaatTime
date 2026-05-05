@@ -15,6 +15,8 @@ class SettingsService {
       'prayer_notification_sound_mode';
   static const String _keyJamaatNotificationSoundMode =
       'jamaat_notification_sound_mode';
+  static const String _keyFajrVoiceNotificationEnabled =
+      'fajr_voice_notification_enabled';
   static const String _keyNotificationSoundDefaultMigratedV2 =
       'notification_sound_default_migrated_v2';
   static const String _keyBangladeshHijriOffsetDays =
@@ -116,6 +118,17 @@ class SettingsService {
     final prefs = await _prefs;
     await prefs.setInt(_keyJamaatNotificationSoundMode, mode);
     // Notify listeners that notification settings have changed
+    _controller.add(null);
+  }
+
+  Future<bool> getFajrVoiceNotificationEnabled() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_keyFajrVoiceNotificationEnabled) ?? false;
+  }
+
+  Future<void> setFajrVoiceNotificationEnabled(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_keyFajrVoiceNotificationEnabled, enabled);
     _controller.add(null);
   }
 

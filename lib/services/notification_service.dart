@@ -368,6 +368,18 @@ class NotificationService {
         await androidImplementation.createNotificationChannel(
           jamaatSilentChannel,
         );
+
+        final fajrVoiceChannel = AndroidNotificationChannel(
+          'fajr_voice_channel_v1',
+          'Fajr Voice Notification',
+          description: 'Plays voice reminder at Fajr prayer start time',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+          sound: RawResourceAndroidNotificationSound('fajr_prayer_voice'),
+        );
+        await androidImplementation.createNotificationChannel(fajrVoiceChannel);
       }
     } catch (e) {
       developer.log(
@@ -875,6 +887,70 @@ class NotificationService {
     }
   }
 
+  /// Schedule Fajr voice notification exactly at Fajr start time (if enabled)
+  Future<void> scheduleFajrVoiceNotification(
+    Map<String, DateTime?> prayerTimes,
+  ) async {
+    const int fajrVoiceId = 10001;
+    try {
+      final enabled = await _settingsService.getFajrVoiceNotificationEnabled();
+
+      if (!enabled) {
+        await flutterLocalNotificationsPlugin.cancel(fajrVoiceId);
+        return;
+      }
+
+      final fajrTime = prayerTimes['Fajr'];
+      if (fajrTime == null) return;
+
+      final location = _getLocation();
+      final fajrLocal = tz.TZDateTime.from(fajrTime, location);
+      final now = tz.TZDateTime.now(location);
+
+      if (!fajrLocal.isAfter(now)) return;
+
+      final locale = await _resolveLocale();
+      final strings = AppText.of(locale);
+      final prayerLabel = _localizedPrayerName(locale, 'Fajr');
+
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        fajrVoiceId,
+        strings.notification_prayerTitle(prayerLabel),
+        strings.notification_prayerBody(prayerLabel),
+        fajrLocal,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'fajr_voice_channel_v1',
+            'Fajr Voice Notification',
+            channelDescription:
+                'Plays voice reminder at Fajr prayer start time',
+            importance: Importance.max,
+            priority: Priority.high,
+            showWhen: true,
+            enableVibration: true,
+            playSound: true,
+            icon: '@mipmap/launcher_icon',
+            color: const Color(0xFF388E3C),
+            sound: RawResourceAndroidNotificationSound('fajr_prayer_voice'),
+            vibrationPattern: Int64List.fromList([0, 5000]),
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (e) {
+      developer.log(
+        'Error scheduling fajr voice notification: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+    }
+  }
+
   /// Schedule all notifications (prayer and Jamaat)
   Future<void> scheduleAllNotifications(
     Map<String, DateTime?> prayerTimes,
@@ -884,6 +960,7 @@ class NotificationService {
       await cancelAllNotifications();
       await schedulePrayerNotifications(prayerTimes);
       await scheduleJamaatNotifications(jamaatTimes);
+      await scheduleFajrVoiceNotification(prayerTimes);
     } catch (e) {
       developer.log(
         'Error in scheduleAllNotifications: $e',

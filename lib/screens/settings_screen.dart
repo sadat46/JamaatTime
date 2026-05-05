@@ -28,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
   int _jamaatNotificationSoundMode =
       0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
+  bool _fajrVoiceNotificationEnabled = false;
   bool _loading = true;
 
   @override
@@ -45,6 +46,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .getPrayerNotificationSoundMode();
     final jamaatSoundMode = await _settingsService
         .getJamaatNotificationSoundMode();
+    final fajrVoiceEnabled = await _settingsService
+        .getFajrVoiceNotificationEnabled();
 
     if (!mounted) return;
     setState(() {
@@ -53,6 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _bangladeshHijriOffsetDays = bangladeshHijriOffset;
       _prayerNotificationSoundMode = prayerSoundMode;
       _jamaatNotificationSoundMode = jamaatSoundMode;
+      _fajrVoiceNotificationEnabled = fajrVoiceEnabled;
       _loading = false;
     });
   }
@@ -168,6 +172,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _updateFajrVoiceNotification(bool value) async {
+    await _settingsService.setFajrVoiceNotificationEnabled(value);
+    if (!mounted) return;
+    setState(() => _fajrVoiceNotificationEnabled = value);
   }
 
   Widget _buildSectionCard({
@@ -485,6 +495,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (val == null) return;
                         await _updateJamaatSoundMode(val);
                       },
+                    ),
+                    const SizedBox(height: 4),
+                    SwitchListTile(
+                      value: _fajrVoiceNotificationEnabled,
+                      onChanged: _updateFajrVoiceNotification,
+                      activeTrackColor: _brandGreen,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        _tr(
+                          'ফজর ভয়েস নোটিফিকেশন',
+                          'Fajr voice notification',
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _tr(
+                          'ফজরের ওয়াক্ত শুরু হলে ভয়েস রিমাইন্ডার বাজবে।',
+                          'Play voice reminder when Fajr time starts.',
+                        ),
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
