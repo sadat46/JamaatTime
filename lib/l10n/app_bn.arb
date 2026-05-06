@@ -44,6 +44,10 @@
   "@notification_prayerBody": {
     "placeholders": {"prayer": {"type": "String"}}
   },
+  "notification_fajrStartBody": "{prayer} নামাজের সময় হয়েছে।",
+  "@notification_fajrStartBody": {
+    "placeholders": {"prayer": {"type": "String"}}
+  },
   "notification_jamaatTitle": "{prayer} জামাত",
   "@notification_jamaatTitle": {
     "placeholders": {"prayer": {"type": "String"}}

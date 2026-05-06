@@ -254,6 +254,12 @@ abstract class AppLocalizations {
   /// **'{prayer} time remaining 20 minutes.'**
   String notification_prayerBody(String prayer);
 
+  /// Body for the Fajr-start voice notification (id=3101)
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s time for {prayer} prayer.'**
+  String notification_fajrStartBody(String prayer);
+
   /// Jamaat notification title
   ///
   /// In en, this message translates to:

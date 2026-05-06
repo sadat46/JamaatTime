@@ -97,6 +97,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String notification_fajrStartBody(String prayer) {
+    return 'It\'s time for $prayer prayer.';
+  }
+
+  @override
   String notification_jamaatTitle(String prayer) {
     return '$prayer Jamaat';
   }

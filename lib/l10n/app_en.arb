@@ -70,6 +70,11 @@
     "description": "Prayer notification body",
     "placeholders": {"prayer": {"type": "String"}}
   },
+  "notification_fajrStartBody": "It's time for {prayer} prayer.",
+  "@notification_fajrStartBody": {
+    "description": "Body for the Fajr-start voice notification (id=3101)",
+    "placeholders": {"prayer": {"type": "String"}}
+  },
   "notification_jamaatTitle": "{prayer} Jamaat",
   "@notification_jamaatTitle": {
     "description": "Jamaat notification title",

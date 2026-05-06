@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
@@ -318,9 +319,22 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         val pi = buildBoundaryIntent(ctx, REQ_BOUNDARY)
         val nowMs = System.currentTimeMillis()
         val deltaSec = ((fireAt - nowMs).coerceAtLeast(0L)) / 1000L
-        // Inexact-only path: SCHEDULE_EXACT_ALARM is no longer requested.
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
-        Log.i(TAG, "JT_WIDGET scheduled fireAt=$fireAt deltaSec=$deltaSec mode=inexact req=$REQ_BOUNDARY")
+        val canExact =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
+        val mode = try {
+            if (canExact) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
+                "exact"
+            } else {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
+                "inexact"
+            }
+        } catch (se: SecurityException) {
+            // Permission revoked between check and set; fall back without crashing.
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
+            "inexact_fallback"
+        }
+        Log.i(TAG, "JT_WIDGET scheduled fireAt=$fireAt deltaSec=$deltaSec mode=$mode req=$REQ_BOUNDARY")
     }
 
     private fun cancelBoundaryAlarm(ctx: Context) {

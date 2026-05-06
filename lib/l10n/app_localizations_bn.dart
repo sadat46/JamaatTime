@@ -97,6 +97,11 @@ class AppLocalizationsBn extends AppLocalizations {
   }
 
   @override
+  String notification_fajrStartBody(String prayer) {
+    return '$prayer নামাজের সময় হয়েছে।';
+  }
+
+  @override
   String notification_jamaatTitle(String prayer) {
     return '$prayer জামাত';
   }

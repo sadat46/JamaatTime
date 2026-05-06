@@ -1037,7 +1037,7 @@ class NotificationService {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         _fajrVoiceNotificationId,
         strings.notification_prayerTitle(prayerLabel),
-        strings.notification_prayerBody(prayerLabel),
+        strings.notification_fajrStartBody(prayerLabel),
         fajrLocal,
         NotificationDetails(
           android: AndroidNotificationDetails(
