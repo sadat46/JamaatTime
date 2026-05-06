@@ -5,6 +5,7 @@ import '../core/app_locale_controller.dart';
 import '../core/feature_flags.dart';
 import '../features/family_safety/presentation/family_safety_page.dart';
 import '../l10n/app_localizations.dart';
+import '../services/auto_vibration_service.dart';
 import '../services/notification_service.dart';
 import '../services/settings_service.dart';
 
@@ -22,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   final SettingsService _settingsService = SettingsService();
   final NotificationService _notificationService = NotificationService();
+  final AutoVibrationService _autoVibrationService = AutoVibrationService();
 
   String _madhab = 'hanafi';
   String _locale = 'bn';
@@ -33,6 +35,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
   bool _fajrVoiceNotificationEnabled = false;
   bool _exactAlarmsGranted = true;
+  bool _autoVibrationEnabled = false;
+  int _autoVibrationMinutesBefore =
+      SettingsService.defaultAutoVibrationMinutesBefore;
+  int _autoVibrationMinutesAfter =
+      SettingsService.defaultAutoVibrationMinutesAfter;
+  bool _autoVibrationPendingEnable = false;
   bool _loading = true;
 
   @override
@@ -54,7 +62,20 @@ class _SettingsScreenState extends State<SettingsScreen>
     // the displayed status with the OS-level state.
     if (state == AppLifecycleState.resumed) {
       _refreshExactAlarmsStatus();
+      _resolvePendingAutoVibrationEnable();
     }
+  }
+
+  Future<void> _resolvePendingAutoVibrationEnable() async {
+    if (!_autoVibrationPendingEnable || !Platform.isAndroid) return;
+    final granted = await _autoVibrationService.hasDndAccess();
+    if (!mounted || !granted) return;
+    await _settingsService.setAutoVibrationEnabled(true);
+    if (!mounted) return;
+    setState(() {
+      _autoVibrationEnabled = true;
+      _autoVibrationPendingEnable = false;
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -71,6 +92,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     final exactAlarms = Platform.isAndroid
         ? await _notificationService.refreshExactAlarmsAvailable()
         : true;
+    final autoVibrationEnabled = await _settingsService
+        .getAutoVibrationEnabled();
+    final autoVibrationBefore = await _settingsService
+        .getAutoVibrationMinutesBefore();
+    final autoVibrationAfter = await _settingsService
+        .getAutoVibrationMinutesAfter();
 
     if (!mounted) return;
     setState(() {
@@ -81,6 +108,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       _jamaatNotificationSoundMode = jamaatSoundMode;
       _fajrVoiceNotificationEnabled = fajrVoiceEnabled;
       _exactAlarmsGranted = exactAlarms;
+      _autoVibrationEnabled = autoVibrationEnabled;
+      _autoVibrationMinutesBefore = autoVibrationBefore;
+      _autoVibrationMinutesAfter = autoVibrationAfter;
       _loading = false;
     });
   }
@@ -217,6 +247,70 @@ class _SettingsScreenState extends State<SettingsScreen>
     await _settingsService.setFajrVoiceNotificationEnabled(value);
     if (!mounted) return;
     setState(() => _fajrVoiceNotificationEnabled = value);
+  }
+
+  Future<void> _updateAutoVibrationEnabled(bool value) async {
+    if (!Platform.isAndroid) return;
+    if (!value) {
+      await _settingsService.setAutoVibrationEnabled(false);
+      if (!mounted) return;
+      setState(() {
+        _autoVibrationEnabled = false;
+        _autoVibrationPendingEnable = false;
+      });
+      return;
+    }
+    final granted = await _autoVibrationService.hasDndAccess();
+    if (granted) {
+      await _settingsService.setAutoVibrationEnabled(true);
+      if (!mounted) return;
+      setState(() => _autoVibrationEnabled = true);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _autoVibrationPendingEnable = true);
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(_tr('অনুমতি প্রয়োজন', 'Permission required')),
+        content: Text(
+          _tr(
+            'জামাতের সময় ফোন অটো ভাইব্রেট করতে "Do Not Disturb" এক্সেস প্রয়োজন। সেটিংস খুলে অনুমতি দিন।',
+            'To switch your phone to vibrate around jamaat time, allow Do Not Disturb access in system settings.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(_tr('পরে', 'Later')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(_tr('সেটিংস খুলুন', 'Open settings')),
+          ),
+        ],
+      ),
+    );
+    if (shouldOpen == true) {
+      await _autoVibrationService.openDndSettings();
+    } else {
+      if (!mounted) return;
+      setState(() => _autoVibrationPendingEnable = false);
+    }
+  }
+
+  Future<void> _updateAutoVibrationMinutesBefore(int value) async {
+    final clamped = value.clamp(0, SettingsService.maxAutoVibrationMinutesBefore);
+    await _settingsService.setAutoVibrationMinutesBefore(clamped);
+    if (!mounted) return;
+    setState(() => _autoVibrationMinutesBefore = clamped);
+  }
+
+  Future<void> _updateAutoVibrationMinutesAfter(int value) async {
+    final clamped = value.clamp(0, SettingsService.maxAutoVibrationMinutesAfter);
+    await _settingsService.setAutoVibrationMinutesAfter(clamped);
+    if (!mounted) return;
+    setState(() => _autoVibrationMinutesAfter = clamped);
   }
 
   Widget _buildSectionCard({
@@ -363,6 +457,115 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildStepperRow({
+    required String label,
+    required int value,
+    required int min,
+    required int max,
+    required ValueChanged<int> onChanged,
+    required bool enabled,
+  }) {
+    final canDec = enabled && value > min;
+    final canInc = enabled && value < max;
+    final accent = enabled ? _brandGreen : Colors.grey;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: enabled ? null : Colors.grey,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: canDec ? () => onChanged(value - 1) : null,
+            icon: const Icon(Icons.remove_circle_outline),
+            color: accent,
+            iconSize: 26,
+            visualDensity: VisualDensity.compact,
+          ),
+          SizedBox(
+            width: 56,
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: enabled ? null : Colors.grey,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: canInc ? () => onChanged(value + 1) : null,
+            icon: const Icon(Icons.add_circle_outline),
+            color: accent,
+            iconSize: 26,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAutoVibrationCard() {
+    return _buildSectionCard(
+      icon: Icons.vibration,
+      color: const Color(0xFF6D4C41),
+      title: _tr('অটো ভাইব্রেশন মোড', 'Auto vibration mode'),
+      subtitle: _tr(
+        'জামাতের সময় ফোন স্বয়ংক্রিয়ভাবে ভাইব্রেট মোডে যাবে এবং পরে আগের অবস্থায় ফিরবে।',
+        'Switches the phone to vibrate around jamaat and restores it afterward.',
+      ),
+      children: [
+        SwitchListTile(
+          value: _autoVibrationEnabled,
+          onChanged: _updateAutoVibrationEnabled,
+          activeTrackColor: _brandGreen,
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            _tr('চালু করুন', 'Enable'),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            _tr(
+              'প্রতিটি জামাতের আগে ও পরে নির্ধারিত সময়ের জন্য সক্রিয় থাকবে।',
+              'Active for the configured window around each jamaat.',
+            ),
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+        _buildStepperRow(
+          label: _tr(
+            'জামাতের আগে (মিনিট)',
+            'Minutes before jamaat',
+          ),
+          value: _autoVibrationMinutesBefore,
+          min: 0,
+          max: SettingsService.maxAutoVibrationMinutesBefore,
+          enabled: _autoVibrationEnabled,
+          onChanged: _updateAutoVibrationMinutesBefore,
+        ),
+        _buildStepperRow(
+          label: _tr(
+            'জামাতের পরে (মিনিট)',
+            'Minutes after jamaat',
+          ),
+          value: _autoVibrationMinutesAfter,
+          min: 0,
+          max: SettingsService.maxAutoVibrationMinutesAfter,
+          enabled: _autoVibrationEnabled,
+          onChanged: _updateAutoVibrationMinutesAfter,
+        ),
+      ],
     );
   }
 
@@ -647,6 +850,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     if (Platform.isAndroid) _buildExactAlarmTile(),
                   ],
                 ),
+                if (Platform.isAndroid) ...[
+                  const SizedBox(height: 12),
+                  _buildAutoVibrationCard(),
+                ],
                 const SizedBox(height: 12),
                 Card(
                   elevation: 1.5,

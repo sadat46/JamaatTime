@@ -7,6 +7,7 @@ import '../core/app_locale_controller.dart';
 import '../services/settings_service.dart';
 import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
+import '../services/auto_vibration_service.dart';
 import '../services/notification_service.dart';
 import '../services/jamaat_service.dart';
 import '../services/location_config_service.dart';
@@ -800,6 +801,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _loadBangladeshHijriOffset();
       await _handleNotificationSettingsChange();
       _updateHomeWidget();
+      unawaited(AutoVibrationService().reschedule(jamaatTimes));
     });
   }
 
@@ -1000,6 +1002,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _lastNotificationScheduleKey = scheduleKey;
         _lastScheduledDate = today;
       }
+      // Best-effort: also (re)schedule auto-vibration windows. Service guards
+      // toggle/platform internally and no-ops when disabled or on iOS.
+      unawaited(AutoVibrationService().reschedule(jamaatTimes));
     } catch (e) {
       // Handle error silently
     } finally {
