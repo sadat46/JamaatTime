@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../models/focus_guard_settings.dart';
 import '../../../screens/focus_guard_screen.dart';
 import '../../../services/focus_guard_service.dart';
+import 'widgets/parent_pin_prompt_dialog.dart';
 
 class DigitalWellbeingPage extends StatefulWidget {
   const DigitalWellbeingPage({super.key});
@@ -36,6 +37,8 @@ class _DigitalWellbeingPageState extends State<DigitalWellbeingPage> {
   }
 
   Future<void> _openFocusGuard() async {
+    final allowed = await requireParentPin(context);
+    if (!allowed || !mounted) return;
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const FocusGuardScreen()));

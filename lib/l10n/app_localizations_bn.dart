@@ -326,6 +326,15 @@ class AppLocalizationsBn extends AppLocalizations {
       'প্যারেন্ট কন্ট্রোল PIN আপডেট করা যায়নি।';
 
   @override
+  String get parentControlVerifyPinTitle => 'প্যারেন্ট কন্ট্রোল PIN দিন';
+
+  @override
+  String get parentControlVerifyPinBody => 'চালিয়ে যেতে আপনার PIN নিশ্চিত করুন।';
+
+  @override
+  String get parentControlVerifyCta => 'আনলক';
+
+  @override
   String get safeSearchSetupTitle => 'অন্যান্য সেফটি গাইড';
 
   @override

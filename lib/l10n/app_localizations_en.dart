@@ -324,6 +324,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Parent Control PIN could not be updated.';
 
   @override
+  String get parentControlVerifyPinTitle => 'Enter Parent Control PIN';
+
+  @override
+  String get parentControlVerifyPinBody => 'Confirm your PIN to continue.';
+
+  @override
+  String get parentControlVerifyCta => 'Unlock';
+
+  @override
   String get safeSearchSetupTitle => 'Other Safety Guide';
 
   @override

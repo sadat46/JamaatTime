@@ -7,10 +7,12 @@ import '../platform/family_safety_channel.dart';
 import 'activity_summary_page.dart';
 import 'digital_wellbeing_page.dart';
 import 'parent_control_page.dart';
+import 'parent_pin_session.dart';
 import 'privacy_explanation_page.dart';
 import 'safe_search_setup_page.dart';
 import 'website_protection_page.dart';
 import 'widgets/family_safety_section_tile.dart';
+import 'widgets/parent_pin_prompt_dialog.dart';
 
 class FamilySafetyPage extends StatefulWidget {
   const FamilySafetyPage({super.key});
@@ -19,7 +21,8 @@ class FamilySafetyPage extends StatefulWidget {
   State<FamilySafetyPage> createState() => _FamilySafetyPageState();
 }
 
-class _FamilySafetyPageState extends State<FamilySafetyPage> {
+class _FamilySafetyPageState extends State<FamilySafetyPage>
+    with WidgetsBindingObserver {
   static const Color _brandGreen = Color(0xFF388E3C);
   static const int _activitySummaryRangeDays = 30;
   static const String _familyDnsHost = 'family-filter-dns.cleanbrowsing.org';
@@ -37,7 +40,23 @@ class _FamilySafetyPageState extends State<FamilySafetyPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ParentPinSession.clear();
     _loadStatuses();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ParentPinSession.clear();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      ParentPinSession.clear();
+    }
   }
 
   Future<void> _loadStatuses() async {
@@ -61,6 +80,8 @@ class _FamilySafetyPageState extends State<FamilySafetyPage> {
   }
 
   Future<void> _open(BuildContext context, Widget page) async {
+    final allowed = await requireParentPin(context);
+    if (!allowed || !context.mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     if (!mounted) return;
     await _loadStatuses();

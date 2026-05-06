@@ -5,6 +5,7 @@ import '../../../services/focus_guard_service.dart';
 import '../domain/block_category.dart';
 import '../domain/safety_summary_metrics.dart';
 import '../platform/family_safety_channel.dart';
+import 'widgets/parent_pin_prompt_dialog.dart';
 
 class ActivitySummaryPage extends StatefulWidget {
   const ActivitySummaryPage({super.key});
@@ -92,6 +93,8 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    final allowed = await requireParentPin(context);
+    if (!allowed || !mounted) return;
     setState(() => _busy = true);
     await _channel.clearActivitySummary();
     if (!mounted) return;

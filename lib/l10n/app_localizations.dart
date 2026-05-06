@@ -650,6 +650,24 @@ abstract class AppLocalizations {
   /// **'Parent Control PIN could not be updated.'**
   String get parentControlPinError;
 
+  /// Dialog title shown when verifying the Parent Control PIN to access protected Family Safety settings
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Parent Control PIN'**
+  String get parentControlVerifyPinTitle;
+
+  /// Dialog body shown when verifying the Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your PIN to continue.'**
+  String get parentControlVerifyPinBody;
+
+  /// Dialog action to verify the Parent Control PIN and continue
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get parentControlVerifyCta;
+
   /// Family Safety section title for Other Safety Guide
   ///
   /// In en, this message translates to:

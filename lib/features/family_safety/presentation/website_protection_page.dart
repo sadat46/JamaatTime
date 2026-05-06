@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../platform/family_safety_channel.dart';
 import 'widgets/disclosure_dialog.dart';
+import 'widgets/parent_pin_prompt_dialog.dart';
 
 class WebsiteProtectionPage extends StatefulWidget {
   const WebsiteProtectionPage({super.key});
@@ -68,6 +69,8 @@ class _WebsiteProtectionPageState extends State<WebsiteProtectionPage> {
 
   Future<void> _toggleProtection({required bool turnOn}) async {
     final strings = AppLocalizations.of(context);
+    final allowed = await requireParentPin(context);
+    if (!allowed || !mounted) return;
     setState(() => _busy = true);
     final ok = turnOn
         ? await _channel.startWebsiteProtection()
