@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/locale_text.dart';
 import '../../models/ebadat_topic.dart';
@@ -31,6 +32,11 @@ class EbadatScreen extends StatefulWidget {
 }
 
 class _EbadatScreenState extends State<EbadatScreen> {
+  // Topic ids whose content the developer has manually verified.
+  // In release mode, all other cards render dimmed and show a "coming soon"
+  // snackbar on tap until their content is reviewed and added here.
+  static const Set<int> _verifiedTopicIds = {0, 1, 2, 3};
+
   @override
   void initState() {
     super.initState();
@@ -62,12 +68,33 @@ class _EbadatScreenState extends State<EbadatScreen> {
           itemCount: ebadatTopics.length,
           itemBuilder: (context, index) {
             final topic = ebadatTopics[index];
+            final isLocked =
+                kReleaseMode && !_verifiedTopicIds.contains(topic.id);
             return EbadatTopicCard(
               topic: topic,
-              onTap: () => _navigateToTopic(topic),
+              isLocked: isLocked,
+              onTap: () =>
+                  isLocked ? _showLockedMessage() : _navigateToTopic(topic),
             );
           },
         ),
+      ),
+    );
+  }
+
+  void _showLockedMessage() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          context.tr(
+            bn: 'শীঘ্রই আসছে — কনটেন্ট যাচাই চলছে',
+            en: 'Coming soon — content under review',
+          ),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
