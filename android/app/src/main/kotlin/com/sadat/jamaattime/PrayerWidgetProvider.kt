@@ -27,11 +27,14 @@ class PrayerWidgetProvider : AppWidgetProvider() {
 
         const val ACTION_BOUNDARY_TICK = "com.sadat.jamaattime.action.BOUNDARY_TICK"
 
-        // Single self-rearming alarm slot.
-        private const val REQ_BOUNDARY = 10
+        // Single self-rearming alarm slot. Required architecture pins this
+        // to 460100 so it cannot collide with notification IDs (1101-1105,
+        // 2101-2105, 3101) and stays distinct from legacy widget slots.
+        private const val REQ_BOUNDARY = 460100
         // Legacy slots kept only for cancellation on upgrade.
         private const val LEGACY_REQ_ALARM = 2
         private const val LEGACY_REQ_SELF_HEAL = 3
+        private const val LEGACY_REQ_BOUNDARY_PRE_460100 = 10
         private const val LEGACY_REQ_JAMAAT_BOUNDARY = 11
         private const val LEGACY_REQ_JAMAAT_OVER = 12
         private const val LEGACY_REQ_MIDNIGHT = 13
@@ -160,6 +163,11 @@ class PrayerWidgetProvider : AppWidgetProvider() {
 
             val nextMidnight = WidgetState.nextLocalMidnightEpoch(now)
             val nextBoundary = WidgetState.nextBoundaryEpoch(now, raw, nextMidnight)
+            Log.i(
+                TAG,
+                "JT_WIDGET recalculated now=$now nextBoundary=$nextBoundary " +
+                    "countdownEpoch=${state.countdownEpoch}"
+            )
             scheduleBoundaryAlarm(context, nextBoundary + 1000L)
 
             logd(
@@ -190,6 +198,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 updateAllWidgets(context)
             }
             ACTION_BOUNDARY_TICK -> {
+                Log.i(TAG, "JT_WIDGET fired")
                 logd("BOUNDARY_TICK received")
                 updateAllWidgets(context)
             }
@@ -310,9 +319,11 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         val pi = buildBoundaryIntent(ctx, REQ_BOUNDARY)
         val nowMs = System.currentTimeMillis()
         val deltaSec = ((fireAt - nowMs).coerceAtLeast(0L)) / 1000L
+        var mode = "inexact"
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
+                mode = "exact"
                 logd("alarm scheduled in ${deltaSec}s via exactIdle")
             } else {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
@@ -321,7 +332,9 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         } catch (e: SecurityException) {
             Log.w(TAG, "Exact alarm denied; falling back to inexact idle", e)
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
+            mode = "inexact"
         }
+        Log.i(TAG, "JT_WIDGET scheduled fireAt=$fireAt deltaSec=$deltaSec mode=$mode req=$REQ_BOUNDARY")
     }
 
     private fun cancelBoundaryAlarm(ctx: Context) {
@@ -332,6 +345,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
     private fun cancelLegacyAlarms(ctx: Context) {
         val am = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         // Cancel multi-alarm-scheme PIs from the prior build.
+        am.cancel(buildBoundaryIntent(ctx, LEGACY_REQ_BOUNDARY_PRE_460100))
         am.cancel(buildBoundaryIntent(ctx, LEGACY_REQ_JAMAAT_BOUNDARY))
         am.cancel(buildBoundaryIntent(ctx, LEGACY_REQ_JAMAAT_OVER))
         am.cancel(buildBoundaryIntent(ctx, LEGACY_REQ_MIDNIGHT))

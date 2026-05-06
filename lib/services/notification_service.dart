@@ -20,6 +20,82 @@ class NotificationService {
   final SettingsService _settingsService = SettingsService();
   bool _isInitialized = false;
 
+  // Fixed notification IDs. Required architecture mandates stable numeric
+  // ranges so cancellation and dedupe behave deterministically across builds.
+  static const Map<String, int> _prayerNotificationIds = {
+    'Fajr': 1101,
+    'Dhuhr': 1102,
+    'Asr': 1103,
+    'Maghrib': 1104,
+    'Isha': 1105,
+  };
+  static const Map<String, int> _jamaatNotificationIds = {
+    'Fajr': 2101,
+    'Dhuhr': 2102,
+    'Asr': 2103,
+    'Maghrib': 2104,
+    'Isha': 2105,
+  };
+  static const int _fajrVoiceNotificationId = 3101;
+
+  // Cached state of SCHEDULE_EXACT_ALARM. On Android 12+ the user can revoke
+  // this from system settings; without it `setExactAndAllowWhileIdle` throws
+  // SecurityException and no notification fires. We fall back to inexact
+  // scheduling so reminders still arrive (within ~10 min of the target).
+  bool _exactAlarmsAvailable = true;
+  bool get exactAlarmsAvailable => _exactAlarmsAvailable;
+
+  AndroidScheduleMode get _androidScheduleMode => _exactAlarmsAvailable
+      ? AndroidScheduleMode.exactAllowWhileIdle
+      : AndroidScheduleMode.inexactAllowWhileIdle;
+
+  AndroidFlutterLocalNotificationsPlugin? _androidPlugin() =>
+      flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
+  /// Refresh the cached SCHEDULE_EXACT_ALARM state and return it.
+  /// Returns true on non-Android platforms (no equivalent restriction).
+  Future<bool> refreshExactAlarmsAvailable() async {
+    if (!Platform.isAndroid) {
+      _exactAlarmsAvailable = true;
+      return true;
+    }
+    try {
+      final granted =
+          await _androidPlugin()?.canScheduleExactNotifications() ?? false;
+      _exactAlarmsAvailable = granted;
+      return granted;
+    } catch (e) {
+      developer.log(
+        'canScheduleExactNotifications failed: $e',
+        name: 'NotificationService',
+      );
+      _exactAlarmsAvailable = false;
+      return false;
+    }
+  }
+
+  /// Open the system "Alarms & reminders" page so the user can grant
+  /// SCHEDULE_EXACT_ALARM. Returns the resulting permission state, and
+  /// updates the cached value.
+  Future<bool> requestExactAlarmsPermission() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final result =
+          await _androidPlugin()?.requestExactAlarmsPermission() ?? false;
+      _exactAlarmsAvailable = result;
+      return result;
+    } catch (e) {
+      developer.log(
+        'requestExactAlarmsPermission failed: $e',
+        name: 'NotificationService',
+      );
+      return false;
+    }
+  }
+
   // Location configuration for timezone handling
   LocationConfig? _currentLocationConfig;
 
@@ -128,13 +204,11 @@ class NotificationService {
       // Request notification permissions for Android 13+ and iOS
       if (Platform.isAndroid) {
         final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-            flutterLocalNotificationsPlugin
-                .resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin
-                >();
+            _androidPlugin();
         if (androidImplementation != null) {
           await androidImplementation.requestNotificationsPermission();
         }
+        await refreshExactAlarmsAvailable();
       }
 
       _isInitialized = true;
@@ -402,10 +476,18 @@ class NotificationService {
     try {
       // Check if service is initialized
       if (!_isInitialized) {
+        developer.log(
+          'JT_NOTIFY skipped id=$id reason=not_initialized',
+          name: 'NotificationService',
+        );
         return;
       }
 
       if (scheduledTime.isBefore(DateTime.now())) {
+        developer.log(
+          'JT_NOTIFY skipped id=$id reason=in_past',
+          name: 'NotificationService',
+        );
         return;
       }
 
@@ -470,11 +552,15 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: _androidScheduleMode,
+      );
+      developer.log(
+        'JT_NOTIFY scheduled id=$id type=$notificationType at=${scheduledDate.toIso8601String()} mode=${_exactAlarmsAvailable ? "exact" : "inexact"}',
+        name: 'NotificationService',
       );
     } catch (e) {
       developer.log(
-        'Error scheduling notification: $e',
+        'JT_NOTIFY error id=$id $e',
         name: 'NotificationService',
         error: e,
       );
@@ -694,7 +780,7 @@ class NotificationService {
         if (notifyTime.isAfter(now)) {
           final prayerLabel = _localizedPrayerName(locale, 'Fajr');
           await scheduleNotification(
-            id: 'Fajr'.hashCode,
+            id: _prayerNotificationIds['Fajr']!,
             title: strings.notification_prayerTitle(prayerLabel),
             body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
@@ -712,7 +798,7 @@ class NotificationService {
         if (notifyTime.isAfter(now)) {
           final prayerLabel = _localizedPrayerName(locale, 'Dhuhr');
           await scheduleNotification(
-            id: 'Dhuhr'.hashCode,
+            id: _prayerNotificationIds['Dhuhr']!,
             title: strings.notification_prayerTitle(prayerLabel),
             body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
@@ -730,7 +816,7 @@ class NotificationService {
         if (notifyTime.isAfter(now)) {
           final prayerLabel = _localizedPrayerName(locale, 'Asr');
           await scheduleNotification(
-            id: 'Asr'.hashCode,
+            id: _prayerNotificationIds['Asr']!,
             title: strings.notification_prayerTitle(prayerLabel),
             body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
@@ -748,7 +834,7 @@ class NotificationService {
         if (notifyTime.isAfter(now)) {
           final prayerLabel = _localizedPrayerName(locale, 'Maghrib');
           await scheduleNotification(
-            id: 'Maghrib'.hashCode,
+            id: _prayerNotificationIds['Maghrib']!,
             title: strings.notification_prayerTitle(prayerLabel),
             body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
@@ -768,7 +854,7 @@ class NotificationService {
         if (notifyTime.isAfter(now)) {
           final prayerLabel = _localizedPrayerName(locale, 'Isha');
           await scheduleNotification(
-            id: 'Isha'.hashCode,
+            id: _prayerNotificationIds['Isha']!,
             title: strings.notification_prayerTitle(prayerLabel),
             body: strings.notification_prayerBody(prayerLabel),
             scheduledTime: notifyTime,
@@ -856,12 +942,20 @@ class NotificationService {
                 final canonicalPrayerName = _canonicalPrayerNameFromJamaatKey(
                   name,
                 );
+                final jamaatId = _jamaatNotificationIds[canonicalPrayerName];
+                if (jamaatId == null) {
+                  developer.log(
+                    'JT_NOTIFY skipped jamaat=$name reason=unknown_prayer_key',
+                    name: 'NotificationService',
+                  );
+                  continue;
+                }
                 final displayName = _localizedPrayerName(
                   locale,
                   canonicalPrayerName,
                 );
                 await scheduleNotification(
-                  id: name.hashCode + 1000,
+                  id: jamaatId,
                   title: strings.notification_jamaatTitle(displayName),
                   body: strings.notification_jamaatBody(displayName),
                   scheduledTime: notifyTime,
@@ -891,30 +985,45 @@ class NotificationService {
   Future<void> scheduleFajrVoiceNotification(
     Map<String, DateTime?> prayerTimes,
   ) async {
-    const int fajrVoiceId = 10001;
     try {
       final enabled = await _settingsService.getFajrVoiceNotificationEnabled();
 
       if (!enabled) {
-        await flutterLocalNotificationsPlugin.cancel(fajrVoiceId);
+        await flutterLocalNotificationsPlugin.cancel(_fajrVoiceNotificationId);
+        developer.log(
+          'JT_NOTIFY skipped id=$_fajrVoiceNotificationId reason=disabled',
+          name: 'NotificationService',
+        );
         return;
       }
 
       final fajrTime = prayerTimes['Fajr'];
-      if (fajrTime == null) return;
+      if (fajrTime == null) {
+        developer.log(
+          'JT_NOTIFY skipped id=$_fajrVoiceNotificationId reason=no_fajr_time',
+          name: 'NotificationService',
+        );
+        return;
+      }
 
       final location = _getLocation();
       final fajrLocal = tz.TZDateTime.from(fajrTime, location);
       final now = tz.TZDateTime.now(location);
 
-      if (!fajrLocal.isAfter(now)) return;
+      if (!fajrLocal.isAfter(now)) {
+        developer.log(
+          'JT_NOTIFY skipped id=$_fajrVoiceNotificationId reason=in_past',
+          name: 'NotificationService',
+        );
+        return;
+      }
 
       final locale = await _resolveLocale();
       final strings = AppText.of(locale);
       final prayerLabel = _localizedPrayerName(locale, 'Fajr');
 
       await flutterLocalNotificationsPlugin.zonedSchedule(
-        fajrVoiceId,
+        _fajrVoiceNotificationId,
         strings.notification_prayerTitle(prayerLabel),
         strings.notification_prayerBody(prayerLabel),
         fajrLocal,
@@ -940,11 +1049,15 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: _androidScheduleMode,
+      );
+      developer.log(
+        'JT_NOTIFY scheduled id=$_fajrVoiceNotificationId at=${fajrLocal.toIso8601String()} mode=${_exactAlarmsAvailable ? "exact" : "inexact"}',
+        name: 'NotificationService',
       );
     } catch (e) {
       developer.log(
-        'Error scheduling fajr voice notification: $e',
+        'JT_NOTIFY error id=$_fajrVoiceNotificationId $e',
         name: 'NotificationService',
         error: e,
       );
@@ -957,13 +1070,20 @@ class NotificationService {
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
+      // The user may have toggled the OS-level "Alarms & reminders"
+      // permission since last schedule; re-check before picking a mode.
+      await refreshExactAlarmsAvailable();
+      developer.log(
+        'JT_NOTIFY scheduleAll called exact=$_exactAlarmsAvailable',
+        name: 'NotificationService',
+      );
       await cancelAllNotifications();
       await schedulePrayerNotifications(prayerTimes);
       await scheduleJamaatNotifications(jamaatTimes);
       await scheduleFajrVoiceNotification(prayerTimes);
     } catch (e) {
       developer.log(
-        'Error in scheduleAllNotifications: $e',
+        'JT_NOTIFY error scheduleAll $e',
         name: 'NotificationService',
         error: e,
       );

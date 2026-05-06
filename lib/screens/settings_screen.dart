@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import '../core/app_locale_controller.dart';
 import '../core/feature_flags.dart';
@@ -13,7 +15,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   static const Color _brandGreen = Color(0xFF388E3C);
   static const double _cardRadius = 18;
 
@@ -29,12 +32,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _jamaatNotificationSoundMode =
       0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
   bool _fajrVoiceNotificationEnabled = false;
+  bool _exactAlarmsGranted = true;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // After the user returns from the system "Alarms & reminders" page, sync
+    // the displayed status with the OS-level state.
+    if (state == AppLifecycleState.resumed) {
+      _refreshExactAlarmsStatus();
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -48,6 +68,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .getJamaatNotificationSoundMode();
     final fajrVoiceEnabled = await _settingsService
         .getFajrVoiceNotificationEnabled();
+    final exactAlarms = Platform.isAndroid
+        ? await _notificationService.refreshExactAlarmsAvailable()
+        : true;
 
     if (!mounted) return;
     setState(() {
@@ -57,8 +80,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _prayerNotificationSoundMode = prayerSoundMode;
       _jamaatNotificationSoundMode = jamaatSoundMode;
       _fajrVoiceNotificationEnabled = fajrVoiceEnabled;
+      _exactAlarmsGranted = exactAlarms;
       _loading = false;
     });
+  }
+
+  Future<void> _refreshExactAlarmsStatus() async {
+    if (!Platform.isAndroid) return;
+    final granted = await _notificationService.refreshExactAlarmsAvailable();
+    if (!mounted) return;
+    setState(() => _exactAlarmsGranted = granted);
+  }
+
+  Future<void> _grantExactAlarms() async {
+    if (!Platform.isAndroid) return;
+    await _notificationService.requestExactAlarmsPermission();
+    // The grant flow opens the system settings page; user returns to the app
+    // afterward. Re-check on next frame to reflect their choice.
+    await _refreshExactAlarmsStatus();
   }
 
   Future<void> _updateLocale(String code) async {
@@ -238,6 +277,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ...children,
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildExactAlarmTile() {
+    final granted = _exactAlarmsGranted;
+    final accent = granted ? _brandGreen : const Color(0xFFD84315);
+    final statusLabel = granted
+        ? _tr('অনুমোদিত', 'Granted')
+        : _tr('অনুমতি দেওয়া নেই', 'Not granted');
+    final descriptionLabel = granted
+        ? _tr(
+            'অ্যালার্ম ও রিমাইন্ডার অনুমতি চালু আছে — সঠিক সময়ে নোটিফিকেশন আসবে।',
+            'Alarms & reminders permission is on — notifications will fire at the exact time.',
+          )
+        : _tr(
+            'অনুমতি বন্ধ থাকলে নোটিফিকেশন ১০ মিনিট পর্যন্ত দেরিতে আসতে পারে।',
+            'Without this permission notifications may arrive up to ~10 minutes late.',
+          );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            granted ? Icons.alarm_on : Icons.alarm_off,
+            size: 20,
+            color: accent,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      _tr('সঠিক সময়ের নোটিফিকেশন', 'Exact-time notifications'),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha(26),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  descriptionLabel,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          if (!granted) ...[
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: _grantExactAlarms,
+              style: TextButton.styleFrom(
+                foregroundColor: accent,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: Text(_tr('অনুমতি দিন', 'Grant')),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -520,6 +644,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: const TextStyle(fontSize: 12),
                       ),
                     ),
+                    if (Platform.isAndroid) _buildExactAlarmTile(),
                   ],
                 ),
                 const SizedBox(height: 12),
