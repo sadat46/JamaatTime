@@ -19,6 +19,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   final SettingsService _settingsService = SettingsService();
   bool _isInitialized = false;
+  Future<void>? _initializeFuture;
 
   // Fixed notification IDs. Required architecture mandates stable numeric
   // ranges so cancellation and dedupe behave deterministically across builds.
@@ -38,11 +39,12 @@ class NotificationService {
   };
   static const int _fajrVoiceNotificationId = 3101;
 
-  // Cached state of SCHEDULE_EXACT_ALARM. On Android 12+ the user can revoke
-  // this from system settings; without it `setExactAndAllowWhileIdle` throws
-  // SecurityException and no notification fires. We fall back to inexact
-  // scheduling so reminders still arrive (within ~10 min of the target).
-  bool _exactAlarmsAvailable = true;
+  // Cached state of SCHEDULE_EXACT_ALARM. On Android 12+ the user must grant
+  // this from system "Alarms & reminders"; without it `setExactAndAllowWhileIdle`
+  // throws SecurityException. We pick exact mode when granted (prayer/jamaat
+  // and Fajr voice arrive on the dot) and fall back to inexact otherwise so
+  // reminders still fire within ~10 min of target.
+  bool _exactAlarmsAvailable = false;
   bool get exactAlarmsAvailable => _exactAlarmsAvailable;
 
   AndroidScheduleMode get _androidScheduleMode => _exactAlarmsAvailable
@@ -169,9 +171,12 @@ class NotificationService {
   }
 
   /// Initialize notification service
-  Future<void> initialize([BuildContext? context]) async {
-    if (_isInitialized) return;
+  Future<void> initialize([BuildContext? context]) {
+    if (_isInitialized) return Future<void>.value();
+    return _initializeFuture ??= _initialize(context);
+  }
 
+  Future<void> _initialize(BuildContext? context) async {
     try {
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/launcher_icon');
@@ -214,6 +219,13 @@ class NotificationService {
       _isInitialized = true;
     } catch (e) {
       // Don't set _isInitialized to true if initialization failed
+      developer.log(
+        'JT_NOTIFY initialize failed $e',
+        name: 'NotificationService',
+        error: e,
+      );
+    } finally {
+      _initializeFuture = null;
     }
   }
 
@@ -1065,11 +1077,20 @@ class NotificationService {
   }
 
   /// Schedule all notifications (prayer and Jamaat)
-  Future<void> scheduleAllNotifications(
+  Future<bool> scheduleAllNotifications(
     Map<String, DateTime?> prayerTimes,
     Map<String, dynamic>? jamaatTimes,
   ) async {
     try {
+      await initialize(null);
+      if (!_isInitialized) {
+        developer.log(
+          'JT_NOTIFY scheduleAll skipped reason=not_initialized',
+          name: 'NotificationService',
+        );
+        return false;
+      }
+
       // The user may have toggled the OS-level "Alarms & reminders"
       // permission since last schedule; re-check before picking a mode.
       await refreshExactAlarmsAvailable();
@@ -1081,12 +1102,14 @@ class NotificationService {
       await schedulePrayerNotifications(prayerTimes);
       await scheduleJamaatNotifications(jamaatTimes);
       await scheduleFajrVoiceNotification(prayerTimes);
+      return true;
     } catch (e) {
       developer.log(
         'JT_NOTIFY error scheduleAll $e',
         name: 'NotificationService',
         error: e,
       );
+      return false;
     }
   }
 
@@ -1129,6 +1152,7 @@ class NotificationService {
   /// Reset notification service
   Future<void> reset() async {
     _isInitialized = false;
+    _initializeFuture = null;
     await initialize(null);
   }
 

@@ -992,9 +992,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _notificationScheduleInFlightKey = scheduleKey;
     try {
-      await _notificationService.scheduleAllNotifications(times, jamaatTimes);
-      _lastNotificationScheduleKey = scheduleKey;
-      _lastScheduledDate = today;
+      final scheduled = await _notificationService.scheduleAllNotifications(
+        times,
+        jamaatTimes,
+      );
+      if (scheduled) {
+        _lastNotificationScheduleKey = scheduleKey;
+        _lastScheduledDate = today;
+      }
     } catch (e) {
       // Handle error silently
     } finally {
