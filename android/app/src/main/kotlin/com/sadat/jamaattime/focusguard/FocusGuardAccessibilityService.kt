@@ -186,8 +186,14 @@ class FocusGuardAccessibilityService : AccessibilityService() {
             tempAllowMinutes = tempAllowMinutes,
             quickAllowEnabled = quickAllowEnabled,
             onGoBack = {
+                // HOME exits YouTube in one step regardless of Shorts' internal
+                // back-stack. Dispatch before dismissing the overlay so the
+                // launcher is already coming forward when our window tears down.
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                // Re-arm debounce so trailing YouTube events from the transition
+                // cannot resurrect the overlay on top of the launcher.
+                lastActionTime = System.currentTimeMillis()
                 dismissOverlay()
-                performGlobalAction(GLOBAL_ACTION_BACK)
             },
             onAllow = { minutes ->
                 setTempAllow(minutes)
