@@ -74,6 +74,9 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
   }
 
   Future<void> _confirmAndClear() async {
+    final allowed = await requireParentPin(context);
+    if (!allowed || !mounted) return;
+
     final strings = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -93,8 +96,6 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final allowed = await requireParentPin(context);
-    if (!allowed || !mounted) return;
     setState(() => _busy = true);
     await _channel.clearActivitySummary();
     if (!mounted) return;

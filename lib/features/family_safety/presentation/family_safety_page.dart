@@ -152,7 +152,7 @@ class _FamilySafetyPageState extends State<FamilySafetyPage>
             title: strings.activitySummaryTitle,
             subtitle: strings.activitySummarySubtitle,
             statusOn: _activitySummaryOn,
-            onTap: () => _open(context, const ActivitySummaryPage()),
+            onTap: () => _openInfoPage(context, const ActivitySummaryPage()),
           ),
           const SizedBox(height: 10),
           FamilySafetySectionTile(
