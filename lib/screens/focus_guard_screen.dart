@@ -21,6 +21,8 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
   bool _accessibilityDisclosureAccepted = false;
   bool _loading = true;
 
+  static const List<int> _tempAllowOptions = [5, 10, 15];
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +90,14 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     final next = Map<String, bool>.from(_settings.blockedApps);
     next['youtube'] = value;
     await _save(_settings.copyWith(blockedApps: next));
+  }
+
+  Future<void> _handleTempAllowChange(int minutes) async {
+    await _save(_settings.copyWith(tempAllowMinutes: minutes));
+  }
+
+  Future<void> _handleQuickAllowToggle(bool value) async {
+    await _save(_settings.copyWith(quickAllowEnabled: value));
   }
 
   Future<void> _handleAccessibilitySetup() async {
@@ -198,6 +208,8 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                 _masterToggleCard(),
                 const SizedBox(height: 14),
                 _appsCard(),
+                const SizedBox(height: 14),
+                _tempAllowCard(),
               ],
             ),
     );
@@ -376,6 +388,75 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
         ),
       ),
       enabled: false,
+    );
+  }
+
+  Widget _tempAllowCard() {
+    final quickAllowOn = _settings.quickAllowEnabled;
+    final subtitle = quickAllowOn
+        ? 'Overlay will show "Allow ${_settings.tempAllowMinutes} min".'
+        : 'Overlay will only show "Back to YouTube Home".';
+    return Card(
+      elevation: 1.2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              value: quickAllowOn,
+              onChanged: _settings.enabled
+                  ? (v) => _handleQuickAllowToggle(v)
+                  : null,
+              activeThumbColor: AppConstants.brandGreen,
+              title: const Text(
+                'Allow quick bypass',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+              child: Opacity(
+                opacity: quickAllowOn ? 1.0 : 0.45,
+                child: SegmentedButton<int>(
+                  segments: _tempAllowOptions
+                      .map(
+                        (minutes) => ButtonSegment<int>(
+                          value: minutes,
+                          label: Text('$minutes min'),
+                        ),
+                      )
+                      .toList(),
+                  selected: {
+                    FocusGuardSettings.sanitizeTempAllowMinutes(
+                      _settings.tempAllowMinutes,
+                    ),
+                  },
+                  onSelectionChanged: quickAllowOn
+                      ? (set) {
+                          if (set.isEmpty) return;
+                          _handleTempAllowChange(set.first);
+                        }
+                      : null,
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppConstants.brandGreen.withAlpha(40);
+                      }
+                      return null;
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

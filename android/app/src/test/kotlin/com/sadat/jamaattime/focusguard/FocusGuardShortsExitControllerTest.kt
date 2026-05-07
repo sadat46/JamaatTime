@@ -81,6 +81,48 @@ class FocusGuardShortsExitControllerTest {
         assertEquals(listOf(FocusGuardExitLogEvent.FAILED_NO_ACTION), logs)
     }
 
+    @Test fun userExitTap_ignoresRepeatedTapsWhileValidationIsPending() {
+        val logs = mutableListOf<FocusGuardExitLogEvent>()
+        val actions = FakeActions(homeClickResult = true, backResult = true)
+        val controller = FocusGuardShortsExitController(
+            actions = actions,
+            logger = { logs.add(it) },
+        )
+
+        val firstOutcome = controller.onUserExitTap()
+        val secondOutcome = controller.onUserExitTap()
+
+        assertEquals(FocusGuardExitOutcome.CLICKED_HOME_TAB, firstOutcome)
+        assertEquals(FocusGuardExitOutcome.EXIT_IN_PROGRESS, secondOutcome)
+        assertEquals(1, actions.homeAttempts)
+        assertEquals(0, actions.backAttempts)
+        assertEquals(listOf(FocusGuardExitLogEvent.CLICKED_HOME_TAB), logs)
+    }
+
+    @Test fun exitValidationFinished_allowsAnotherUserTap() {
+        val logs = mutableListOf<FocusGuardExitLogEvent>()
+        val actions = FakeActions(homeClickResult = true, backResult = true)
+        val controller = FocusGuardShortsExitController(
+            actions = actions,
+            logger = { logs.add(it) },
+        )
+
+        controller.onUserExitTap()
+        controller.onExitValidationFinished()
+        val nextOutcome = controller.onUserExitTap()
+
+        assertEquals(FocusGuardExitOutcome.CLICKED_HOME_TAB, nextOutcome)
+        assertEquals(2, actions.homeAttempts)
+        assertEquals(0, actions.backAttempts)
+        assertEquals(
+            listOf(
+                FocusGuardExitLogEvent.CLICKED_HOME_TAB,
+                FocusGuardExitLogEvent.CLICKED_HOME_TAB,
+            ),
+            logs,
+        )
+    }
+
     private class FakeActions(
         private val homeClickResult: Boolean?,
         private val backResult: Boolean,

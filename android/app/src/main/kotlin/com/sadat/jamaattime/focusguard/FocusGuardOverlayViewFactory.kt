@@ -17,7 +17,10 @@ internal object FocusGuardOverlayViewFactory {
 
     fun create(
         context: Context,
+        tempAllowMinutes: Int,
+        quickAllowEnabled: Boolean,
         onBackToYoutubeHome: () -> Unit,
+        onAllow: (minutes: Int) -> Unit,
     ): View {
         val root = FrameLayout(context).apply {
             setBackgroundColor(Color.parseColor("#CC000000"))
@@ -79,6 +82,21 @@ internal object FocusGuardOverlayViewFactory {
                 )
             }
         )
+
+        if (quickAllowEnabled) {
+            card.addView(
+                Button(context).apply {
+                    text = "Allow $tempAllowMinutes min"
+                    setOnClickListener { onAllow(tempAllowMinutes) }
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ).apply {
+                        topMargin = dp(context, 8)
+                    }
+                }
+            )
+        }
 
         root.addView(card)
         return root

@@ -26,7 +26,10 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         private const val YOUTUBE_PACKAGE = "com.google.android.youtube"
         private const val DEBOUNCE_MS = 2000L
         private const val EXIT_CHECK_DELAY_MS = 650L
+        private const val EXIT_RECHECK_DELAY_MS = 400L
+        private const val EXIT_CHECK_ATTEMPTS = 4
         private const val MAX_NODE_SEARCH_DEPTH = 25
+        private val TEMP_ALLOW_OPTIONS = setOf(5, 10, 15)
     }
 
     private var lastActionTime = 0L
@@ -86,13 +89,18 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         if (!settings.youtubeBlocked) return
 
         val now = System.currentTimeMillis()
+        val tempAllowed = isTempAllowed(now)
+        if (!settings.quickAllowEnabled && tempAllowed) {
+            clearTempAllow("quick_bypass_disabled")
+        }
+        if (settings.quickAllowEnabled && tempAllowed) return
         if (now - lastActionTime < DEBOUNCE_MS) return
 
         if (!detectShorts(event)) return
 
         lastActionTime = now
         exitController.onShortsDetected()
-        showOverlay()
+        showOverlay(settings)
     }
 
     override fun onInterrupt() {}
@@ -107,33 +115,35 @@ class FocusGuardAccessibilityService : AccessibilityService() {
 
     private fun detectShorts(event: AccessibilityEvent): Boolean {
         val className = event.className?.toString() ?: ""
-        if (className.contains("Shorts", ignoreCase = true) ||
-            className.contains("ReelWatch", ignoreCase = true)) {
+        val root = rootInActiveWindow
+
+        if (root != null && root.packageName?.toString() == YOUTUBE_PACKAGE) {
+            if (isYoutubeHomeSelected(root)) {
+                return false
+            }
+        }
+
+        if (FocusGuardShortsSurfaceMatcher.isShortsClassName(className)) {
             Log.d(TAG, "Shorts hit via className=$className")
             return true
         }
 
-        val root = rootInActiveWindow ?: return false
-        if (findShortsViewId(root, 0)) {
-            Log.d(TAG, "Shorts hit via reel/shorts view id")
+        if (root == null || root.packageName?.toString() != YOUTUBE_PACKAGE) return false
+
+        if (isYoutubeShortsSurface(root)) {
+            Log.d(TAG, "Shorts hit via selected tab/watch surface")
             return true
         }
         return false
     }
 
-    private fun findShortsViewId(node: AccessibilityNodeInfo?, depth: Int): Boolean {
+    private fun findShortsWatchViewId(node: AccessibilityNodeInfo?, depth: Int): Boolean {
         if (node == null || depth > MAX_NODE_SEARCH_DEPTH) return false
-        val id = node.viewIdResourceName
-        if (id != null && (
-                id.contains("reel_", ignoreCase = true) ||
-                id.contains("_reel", ignoreCase = true) ||
-                id.contains("shorts_", ignoreCase = true) ||
-                id.contains("_shorts", ignoreCase = true)
-            )) {
+        if (FocusGuardShortsSurfaceMatcher.isShortsWatchViewId(node.viewIdResourceName)) {
             return true
         }
         for (i in 0 until node.childCount) {
-            if (findShortsViewId(node.getChild(i), depth + 1)) return true
+            if (findShortsWatchViewId(node.getChild(i), depth + 1)) return true
         }
         return false
     }
@@ -143,6 +153,8 @@ class FocusGuardAccessibilityService : AccessibilityService() {
     private data class NativeSettings(
         val enabled: Boolean,
         val youtubeBlocked: Boolean,
+        val tempAllowMinutes: Int,
+        val quickAllowEnabled: Boolean,
     )
 
     private fun readSettings(): NativeSettings? {
@@ -154,15 +166,43 @@ class FocusGuardAccessibilityService : AccessibilityService() {
             NativeSettings(
                 enabled = json.optBoolean("enabled", false),
                 youtubeBlocked = apps?.optBoolean("youtube", false) ?: false,
+                tempAllowMinutes = sanitizeTempAllowMinutes(
+                    json.optInt("tempAllowMinutes", 10),
+                ),
+                quickAllowEnabled = json.optBoolean("quickAllowEnabled", false),
             )
         } catch (_: Throwable) {
             null
         }
     }
 
+    private fun sanitizeTempAllowMinutes(raw: Int): Int {
+        return if (TEMP_ALLOW_OPTIONS.contains(raw)) raw else 10
+    }
+
+    private fun isTempAllowed(now: Long): Boolean {
+        val prefs = getSharedPreferences(FocusGuardChannel.NATIVE_PREFS, Context.MODE_PRIVATE)
+        val expiry = prefs.getLong(FocusGuardChannel.KEY_TEMP_ALLOW_EXPIRY, 0L)
+        return expiry > now
+    }
+
+    private fun setTempAllow(minutes: Int) {
+        val safeMinutes = sanitizeTempAllowMinutes(minutes)
+        val prefs = getSharedPreferences(FocusGuardChannel.NATIVE_PREFS, Context.MODE_PRIVATE)
+        val expiry = System.currentTimeMillis() + safeMinutes * 60_000L
+        prefs.edit().putLong(FocusGuardChannel.KEY_TEMP_ALLOW_EXPIRY, expiry).apply()
+        Log.d(TAG, "Temp allow set for $safeMinutes minutes")
+    }
+
+    private fun clearTempAllow(reason: String) {
+        val prefs = getSharedPreferences(FocusGuardChannel.NATIVE_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().remove(FocusGuardChannel.KEY_TEMP_ALLOW_EXPIRY).apply()
+        Log.d(TAG, "Temp allow revoked due to $reason")
+    }
+
     // --- Overlay ---
 
-    private fun showOverlay() {
+    private fun showOverlay(settings: NativeSettings) {
         if (overlayView != null) return
 
         val context = createOverlayContext()
@@ -182,15 +222,23 @@ class FocusGuardAccessibilityService : AccessibilityService() {
 
         val view = FocusGuardOverlayViewFactory.create(
             context = context,
+            tempAllowMinutes = settings.tempAllowMinutes,
+            quickAllowEnabled = settings.quickAllowEnabled,
             onBackToYoutubeHome = {
                 lastActionTime = System.currentTimeMillis()
                 val outcome = exitController.onUserExitTap()
-                if (outcome != FocusGuardExitOutcome.FAILED_NO_ACTION) {
-                    mainHandler.postDelayed(
-                        { dismissOverlayIfShortsExited() },
-                        EXIT_CHECK_DELAY_MS,
-                    )
+                when (outcome) {
+                    FocusGuardExitOutcome.CLICKED_HOME_TAB,
+                    FocusGuardExitOutcome.USED_BACK_FALLBACK -> {
+                        scheduleExitValidation(1, EXIT_CHECK_DELAY_MS)
+                    }
+                    FocusGuardExitOutcome.FAILED_NO_ACTION,
+                    FocusGuardExitOutcome.EXIT_IN_PROGRESS -> Unit
                 }
+            },
+            onAllow = { minutes ->
+                setTempAllow(minutes)
+                dismissOverlay()
             },
         )
         try {
@@ -232,6 +280,7 @@ class FocusGuardAccessibilityService : AccessibilityService() {
                 text = node.text?.toString(),
                 contentDescription = node.contentDescription?.toString(),
                 viewIdResourceName = node.viewIdResourceName,
+                selected = node.isSelected,
                 visibleToUser = node.isVisibleToUser,
                 enabled = node.isEnabled,
                 clickableTargetAvailable = clickableTarget != null,
@@ -251,6 +300,84 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         return null
     }
 
+    private fun isYoutubeHomeSelected(root: AccessibilityNodeInfo): Boolean {
+        val screenHeight = resources.displayMetrics.heightPixels
+        return findSelectedYoutubeHomeTab(root, 0, screenHeight)
+    }
+
+    private fun findSelectedYoutubeHomeTab(
+        node: AccessibilityNodeInfo?,
+        depth: Int,
+        screenHeight: Int,
+    ): Boolean {
+        if (node == null || depth > MAX_NODE_SEARCH_DEPTH) return false
+
+        val bounds = Rect()
+        node.getBoundsInScreen(bounds)
+        val clickableTarget = findClickableAncestorOrSelf(node)
+        val probe = FocusGuardHomeTabProbe(
+            text = node.text?.toString(),
+            contentDescription = node.contentDescription?.toString(),
+            viewIdResourceName = node.viewIdResourceName,
+            selected = node.isSelected,
+            visibleToUser = node.isVisibleToUser,
+            enabled = node.isEnabled,
+            clickableTargetAvailable = clickableTarget != null,
+            top = bounds.top,
+            bottom = bounds.bottom,
+            screenHeight = screenHeight,
+        )
+        if (FocusGuardHomeTabMatcher.isSelectedHomeTabCandidate(probe)) {
+            return true
+        }
+
+        for (i in 0 until node.childCount) {
+            if (findSelectedYoutubeHomeTab(node.getChild(i), depth + 1, screenHeight)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isYoutubeShortsSurface(root: AccessibilityNodeInfo): Boolean {
+        if (findSelectedYoutubeShortsTab(root, 0, resources.displayMetrics.heightPixels)) {
+            return true
+        }
+        return findShortsWatchViewId(root, 0)
+    }
+
+    private fun findSelectedYoutubeShortsTab(
+        node: AccessibilityNodeInfo?,
+        depth: Int,
+        screenHeight: Int,
+    ): Boolean {
+        if (node == null || depth > MAX_NODE_SEARCH_DEPTH) return false
+
+        val bounds = Rect()
+        node.getBoundsInScreen(bounds)
+        val probe = FocusGuardShortsTabProbe(
+            text = node.text?.toString(),
+            contentDescription = node.contentDescription?.toString(),
+            viewIdResourceName = node.viewIdResourceName,
+            selected = node.isSelected,
+            visibleToUser = node.isVisibleToUser,
+            enabled = node.isEnabled,
+            top = bounds.top,
+            bottom = bounds.bottom,
+            screenHeight = screenHeight,
+        )
+        if (FocusGuardShortsSurfaceMatcher.isSelectedShortsTabCandidate(probe)) {
+            return true
+        }
+
+        for (i in 0 until node.childCount) {
+            if (findSelectedYoutubeShortsTab(node.getChild(i), depth + 1, screenHeight)) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun findClickableAncestorOrSelf(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
         var current: AccessibilityNodeInfo? = node
         var hops = 0
@@ -264,22 +391,35 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         return null
     }
 
-    private fun dismissOverlayIfShortsExited() {
+    private fun scheduleExitValidation(attempt: Int, delayMs: Long) {
+        mainHandler.postDelayed(
+            { validateExitAttempt(attempt) },
+            delayMs,
+        )
+    }
+
+    private fun validateExitAttempt(attempt: Int) {
         if (overlayView == null) return
         if (!isCurrentYoutubeShorts()) {
             dismissOverlay()
+            return
         }
+        if (attempt >= EXIT_CHECK_ATTEMPTS) {
+            exitController.onExitValidationFinished()
+            return
+        }
+        scheduleExitValidation(attempt + 1, EXIT_RECHECK_DELAY_MS)
     }
 
     private fun isCurrentYoutubeShorts(): Boolean {
         val root = rootInActiveWindow ?: return false
         if (root.packageName?.toString() != YOUTUBE_PACKAGE) return false
         val className = root.className?.toString() ?: ""
-        if (className.contains("Shorts", ignoreCase = true) ||
-            className.contains("ReelWatch", ignoreCase = true)) {
+        if (isYoutubeHomeSelected(root)) return false
+        if (FocusGuardShortsSurfaceMatcher.isShortsClassName(className)) {
             return true
         }
-        return findShortsViewId(root, 0)
+        return isYoutubeShortsSurface(root)
     }
 
     private fun logFocusGuardEvent(event: FocusGuardExitLogEvent) {
@@ -310,6 +450,7 @@ class FocusGuardAccessibilityService : AccessibilityService() {
         }
         overlayView = null
         overlayContext = null
+        exitController.onExitValidationFinished()
         blockCountGate.onOverlayDismissed()
     }
 

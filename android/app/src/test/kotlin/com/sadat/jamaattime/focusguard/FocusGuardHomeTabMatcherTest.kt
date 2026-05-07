@@ -27,6 +27,18 @@ class FocusGuardHomeTabMatcherTest {
         assertTrue(FocusGuardHomeTabMatcher.isHomeTabCandidate(probe))
     }
 
+    @Test fun selectedBottomHomeTab_isSelectedCandidate() {
+        val probe = baseProbe(text = "Home", selected = true)
+
+        assertTrue(FocusGuardHomeTabMatcher.isSelectedHomeTabCandidate(probe))
+    }
+
+    @Test fun unselectedBottomHomeTab_isNotSelectedCandidate() {
+        val probe = baseProbe(text = "Home", selected = false)
+
+        assertFalse(FocusGuardHomeTabMatcher.isSelectedHomeTabCandidate(probe))
+    }
+
     @Test fun topHomeLabel_isNotCandidate() {
         val probe = baseProbe(text = "Home", top = 120, bottom = 220)
 
@@ -49,6 +61,7 @@ class FocusGuardHomeTabMatcherTest {
         text: String? = null,
         contentDescription: String? = null,
         viewIdResourceName: String? = null,
+        selected: Boolean = false,
         visibleToUser: Boolean = true,
         enabled: Boolean = true,
         clickableTargetAvailable: Boolean = true,
@@ -59,6 +72,7 @@ class FocusGuardHomeTabMatcherTest {
         text = text,
         contentDescription = contentDescription,
         viewIdResourceName = viewIdResourceName,
+        selected = selected,
         visibleToUser = visibleToUser,
         enabled = enabled,
         clickableTargetAvailable = clickableTargetAvailable,
