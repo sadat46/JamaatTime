@@ -9,6 +9,7 @@ class FamilySafetySectionTile extends StatelessWidget {
     required this.subtitle,
     required this.statusOn,
     required this.onTap,
+    this.showStatus = true,
   });
 
   final IconData icon;
@@ -17,6 +18,7 @@ class FamilySafetySectionTile extends StatelessWidget {
   final String subtitle;
   final bool? statusOn;
   final VoidCallback onTap;
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -52,14 +54,16 @@ class FamilySafetySectionTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (statusOn == null)
-              const SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
-              _StatusPill(on: statusOn!),
-            const SizedBox(width: 6),
+            if (showStatus) ...[
+              if (statusOn == null)
+                const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                _StatusPill(on: statusOn!),
+              const SizedBox(width: 6),
+            ],
             const Icon(Icons.chevron_right),
           ],
         ),

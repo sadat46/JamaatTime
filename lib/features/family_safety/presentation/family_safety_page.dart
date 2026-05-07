@@ -87,6 +87,10 @@ class _FamilySafetyPageState extends State<FamilySafetyPage>
     await _loadStatuses();
   }
 
+  Future<void> _openInfoPage(BuildContext context, Widget page) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
@@ -134,15 +138,6 @@ class _FamilySafetyPageState extends State<FamilySafetyPage>
           ),
           const SizedBox(height: 10),
           FamilySafetySectionTile(
-            icon: Icons.travel_explore_outlined,
-            iconColor: const Color(0xFF00796B),
-            title: strings.safeSearchSetupTitle,
-            subtitle: strings.safeSearchSetupSubtitle,
-            statusOn: false,
-            onTap: () => _open(context, const OtherSafetyGuidePage()),
-          ),
-          const SizedBox(height: 10),
-          FamilySafetySectionTile(
             icon: Icons.lock_outline,
             iconColor: const Color(0xFF6A1B9A),
             title: strings.parentControlTitle,
@@ -161,12 +156,23 @@ class _FamilySafetyPageState extends State<FamilySafetyPage>
           ),
           const SizedBox(height: 10),
           FamilySafetySectionTile(
+            icon: Icons.travel_explore_outlined,
+            iconColor: const Color(0xFF00796B),
+            title: strings.safeSearchSetupTitle,
+            subtitle: strings.safeSearchSetupSubtitle,
+            statusOn: false,
+            showStatus: false,
+            onTap: () => _openInfoPage(context, const OtherSafetyGuidePage()),
+          ),
+          const SizedBox(height: 10),
+          FamilySafetySectionTile(
             icon: Icons.privacy_tip_outlined,
             iconColor: const Color(0xFF455A64),
             title: strings.privacyExplanationTitle,
             subtitle: strings.privacyExplanationSubtitle,
             statusOn: false,
-            onTap: () => _open(context, const PrivacyExplanationPage()),
+            showStatus: false,
+            onTap: () => _openInfoPage(context, const PrivacyExplanationPage()),
           ),
         ],
       ),
