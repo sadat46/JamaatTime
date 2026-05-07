@@ -13,13 +13,9 @@ const profileSectionAdminToolsKey = ValueKey<String>(
 const profileSectionAppKey = ValueKey<String>('profile-section-app-label');
 
 const profileAccountCardKey = ValueKey<String>('profile-card-account');
-const profileBookmarksCardKey = ValueKey<String>('profile-card-bookmarks');
 const profileSettingsCardKey = ValueKey<String>('profile-card-settings');
 const profileAdminToolsCardKey = ValueKey<String>('profile-card-admin-tools');
 
-const profileActionBookmarksKey = ValueKey<String>(
-  'profile-action-my-bookmarks',
-);
 const profileActionSettingsKey = ValueKey<String>('profile-action-settings');
 const profileActionAdminToolsKey = ValueKey<String>(
   'profile-action-admin-tools',
@@ -34,7 +30,6 @@ class ProfileLoggedInContent extends StatelessWidget {
     required this.isAdmin,
     required this.isSuperAdmin,
     required this.onLogout,
-    required this.onBookmarksTap,
     required this.onSettingsTap,
     required this.onAdminToolsTap,
     required this.appInfoCard,
@@ -48,7 +43,6 @@ class ProfileLoggedInContent extends StatelessWidget {
   final bool isAdmin;
   final bool isSuperAdmin;
   final VoidCallback onLogout;
-  final VoidCallback onBookmarksTap;
   final VoidCallback onSettingsTap;
   final VoidCallback onAdminToolsTap;
   final Widget appInfoCard;
@@ -208,21 +202,6 @@ class ProfileLoggedInContent extends StatelessWidget {
             context.tr(bn: 'প্রধান অপশন', en: 'Main Options'),
             profileSectionMainOptionsKey,
           ),
-          _buildSingleActionCard(
-            cardKey: profileBookmarksCardKey,
-            child: _buildActionTile(
-              tileKey: profileActionBookmarksKey,
-              icon: Icons.bookmark,
-              iconColor: brandGreen,
-              title: context.tr(bn: 'আমার বুকমার্ক', en: 'My Bookmarks'),
-              subtitle: context.tr(
-                bn: 'দ্রুত পড়ার জন্য সংরক্ষিত আয়াত ও দোয়া',
-                en: 'Saved ayat and dua for quick reading',
-              ),
-              onTap: onBookmarksTap,
-            ),
-          ),
-          const SizedBox(height: 10),
           _buildSingleActionCard(
             cardKey: profileSettingsCardKey,
             child: _buildActionTile(

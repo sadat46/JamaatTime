@@ -6,7 +6,6 @@ Widget _buildSubject({
   bool isAdmin = false,
   bool isSuperAdmin = false,
   VoidCallback? onLogout,
-  VoidCallback? onBookmarksTap,
   VoidCallback? onSettingsTap,
   VoidCallback? onAdminToolsTap,
 }) {
@@ -19,7 +18,6 @@ Widget _buildSubject({
         isAdmin: isAdmin,
         isSuperAdmin: isSuperAdmin,
         onLogout: onLogout ?? () {},
-        onBookmarksTap: onBookmarksTap ?? () {},
         onSettingsTap: onSettingsTap ?? () {},
         onAdminToolsTap: onAdminToolsTap ?? () {},
         appInfoCard: const SizedBox(
@@ -32,7 +30,7 @@ Widget _buildSubject({
 }
 
 void main() {
-  testWidgets('keeps bookmarks first in main options after account section', (
+  testWidgets('keeps settings in main options after account section', (
     tester,
   ) async {
     await tester.pumpWidget(_buildSubject());
@@ -46,18 +44,13 @@ void main() {
     final accountCardDy = tester
         .getTopLeft(find.byKey(profileAccountCardKey))
         .dy;
-    final bookmarksTileDy = tester
-        .getTopLeft(find.byKey(profileActionBookmarksKey))
-        .dy;
     final settingsTileDy = tester
         .getTopLeft(find.byKey(profileActionSettingsKey))
         .dy;
 
-    expect(find.byKey(profileBookmarksCardKey), findsOneWidget);
     expect(find.byKey(profileSettingsCardKey), findsOneWidget);
     expect(accountLabelDy, lessThan(mainOptionsLabelDy));
-    expect(accountCardDy, lessThan(bookmarksTileDy));
-    expect(bookmarksTileDy, lessThan(settingsTileDy));
+    expect(accountCardDy, lessThan(settingsTileDy));
     expect(find.byKey(profileSectionAdminToolsKey), findsNothing);
   });
 
@@ -99,27 +92,20 @@ void main() {
     expect(tapCount, 1);
   });
 
-  testWidgets('invokes main option callbacks on tap', (tester) async {
-    var bookmarkTapCount = 0;
+  testWidgets('invokes settings callback on tap', (tester) async {
     var settingsTapCount = 0;
 
     await tester.pumpWidget(
       _buildSubject(
-        onBookmarksTap: () {
-          bookmarkTapCount++;
-        },
         onSettingsTap: () {
           settingsTapCount++;
         },
       ),
     );
 
-    await tester.tap(find.byKey(profileActionBookmarksKey));
-    await tester.pump();
     await tester.tap(find.byKey(profileActionSettingsKey));
     await tester.pump();
 
-    expect(bookmarkTapCount, 1);
     expect(settingsTapCount, 1);
   });
 }

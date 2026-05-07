@@ -4,6 +4,7 @@ import '../../core/locale_text.dart';
 import '../../models/ebadat_topic.dart';
 import '../../services/bookmark_service.dart';
 import '../../widgets/ebadat/ebadat_topic_card.dart';
+import '../bookmarks_screen.dart';
 import 'topics/monajat_list_screen.dart';
 import 'topics/umrah_list_screen.dart';
 import 'topics/ayat_list_screen.dart';
@@ -18,7 +19,6 @@ import '../../data/tahajjud_data.dart';
 import '../../data/witr_data.dart';
 import '../../data/janazah_data.dart';
 import '../../data/qasr_data.dart';
-import '../../data/attahiyatu_data.dart';
 import '../../data/tahiyyatul_masjid_data.dart';
 import '../../data/eman_data.dart';
 import '../../data/namaz_data.dart';
@@ -55,6 +55,16 @@ class _EbadatScreenState extends State<EbadatScreen> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         foregroundColor: theme.appBarTheme.foregroundColor,
         elevation: 2,
+        actions: [
+          IconButton(
+            tooltip: 'Saved Ebadat',
+            icon: const Icon(
+              Icons.bookmarks_outlined,
+              semanticLabel: 'Bookmarks',
+            ),
+            onPressed: _openBookmarks,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -96,6 +106,13 @@ class _EbadatScreenState extends State<EbadatScreen> {
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  void _openBookmarks() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BookmarksScreen()),
     );
   }
 
@@ -155,9 +172,6 @@ class _EbadatScreenState extends State<EbadatScreen> {
         screen = TopicPlaceholderScreen(topic: topic);
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => screen),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
   }
 }

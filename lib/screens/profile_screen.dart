@@ -9,7 +9,6 @@ import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
 import '../widgets/profile/profile_logged_in_content.dart';
 import 'admin_tools_screen.dart';
-import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -277,35 +276,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _openBookmarksOrRedirectToLogin() async {
-    if (_authService.currentUser != null) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const BookmarksScreen()),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _showRegister = false;
-      _error = 'Sign in to access My Bookmarks';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign in to access My Bookmarks')),
-    );
-
-    if (_authScrollController.hasClients) {
-      await _authScrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
   Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -353,17 +323,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
-    );
-  }
-
-  Widget _buildLoggedOutBookmarksCard() {
-    return _buildLoggedOutActionCard(
-      icon: Icons.bookmark,
-      title: 'My Bookmarks',
-      subtitle: 'Saved ayat and dua for quick reading',
-      onTap: () {
-        _openBookmarksOrRedirectToLogin();
-      },
     );
   }
 
@@ -478,9 +437,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isSuperAdmin: _isSuperAdmin,
       onLogout: () {
         _handleLogout();
-      },
-      onBookmarksTap: () {
-        _openBookmarksOrRedirectToLogin();
       },
       onSettingsTap: () {
         Navigator.push(
@@ -676,8 +632,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
             _buildSectionLabel('Main Options'),
-            _buildLoggedOutBookmarksCard(),
-            const SizedBox(height: 10),
             _buildLoggedOutSettingsCard(),
             const SizedBox(height: 14),
             _buildSectionLabel('App'),
