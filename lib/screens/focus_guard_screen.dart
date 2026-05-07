@@ -21,8 +21,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
   bool _accessibilityDisclosureAccepted = false;
   bool _loading = true;
 
-  static const List<int> _tempAllowOptions = [5, 10, 15];
-
   @override
   void initState() {
     super.initState();
@@ -92,14 +90,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     await _save(_settings.copyWith(blockedApps: next));
   }
 
-  Future<void> _handleTempAllowChange(int minutes) async {
-    await _save(_settings.copyWith(tempAllowMinutes: minutes));
-  }
-
-  Future<void> _handleQuickAllowToggle(bool value) async {
-    await _save(_settings.copyWith(quickAllowEnabled: value));
-  }
-
   Future<void> _handleAccessibilitySetup() async {
     if (!_accessibilityDisclosureAccepted) {
       final accepted = await _showAccessibilityDisclosureDialog();
@@ -129,14 +119,16 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                     const Text(
                       'Focus Guard uses Android Accessibility to inspect the '
                       'current YouTube screen only enough to detect Shorts or '
-                      'Reels. Accessibility data is processed on this device '
-                      'and is not sent from the app.',
+                      'Reels and, after you tap the block screen button, find '
+                      'YouTube\'s visible Home navigation control. '
+                      'Accessibility data is processed on this device and is '
+                      'not sent from the app.',
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'When Shorts is detected, Focus Guard shows a blocking '
-                      'overlay. It will use the Back action only after you tap '
-                      'Go Back in that overlay.',
+                      'It does not collect messages, search text, passwords, '
+                      'or unrelated screen content, and it does not log raw '
+                      'screen text.',
                     ),
                     const SizedBox(height: 12),
                     CheckboxListTile(
@@ -189,14 +181,16 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
               children: [
                 Text(
                   'Block short-video feeds (YouTube Shorts) to stay focused. '
-                  'No data leaves your device.',
+                  'Screen text is checked only to detect Shorts/Reels and '
+                  'find YouTube\'s visible Home control after your tap.',
                   style: TextStyle(color: Colors.grey[700], height: 1.35),
                 ),
                 const SizedBox(height: 16),
                 _permissionCard(
                   icon: Icons.accessibility_new,
                   title: 'Accessibility Service',
-                  subtitle: 'Required to detect when YouTube Shorts is opened.',
+                  subtitle:
+                      'Required to detect YouTube Shorts and show the block screen.',
                   granted: _accessibilityEnabled,
                   onSetup: _handleAccessibilitySetup,
                 ),
@@ -204,8 +198,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                 _masterToggleCard(),
                 const SizedBox(height: 14),
                 _appsCard(),
-                const SizedBox(height: 14),
-                _tempAllowCard(),
               ],
             ),
     );
@@ -384,69 +376,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
         ),
       ),
       enabled: false,
-    );
-  }
-
-  Widget _tempAllowCard() {
-    final quickAllowOn = _settings.quickAllowEnabled;
-    final subtitle = quickAllowOn
-        ? 'Overlay will show "Allow ${_settings.tempAllowMinutes} min".'
-        : 'Overlay will only show "Go Back".';
-    return Card(
-      elevation: 1.2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile(
-              value: quickAllowOn,
-              onChanged: _settings.enabled
-                  ? (v) => _handleQuickAllowToggle(v)
-                  : null,
-              activeThumbColor: AppConstants.brandGreen,
-              title: const Text(
-                'Allow quick bypass',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-              subtitle: Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-              child: Opacity(
-                opacity: quickAllowOn ? 1.0 : 0.45,
-                child: SegmentedButton<int>(
-                  segments: _tempAllowOptions
-                      .map(
-                        (m) =>
-                            ButtonSegment<int>(value: m, label: Text('$m min')),
-                      )
-                      .toList(),
-                  selected: {_settings.tempAllowMinutes},
-                  onSelectionChanged: quickAllowOn
-                      ? (set) {
-                          if (set.isEmpty) return;
-                          _handleTempAllowChange(set.first);
-                        }
-                      : null,
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return AppConstants.brandGreen.withAlpha(40);
-                      }
-                      return null;
-                    }),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
