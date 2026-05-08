@@ -276,6 +276,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  String _authFailureMessage(Object error, {required bool isRegistration}) {
+    final action = isRegistration ? 'Registration' : 'Login';
+
+    if (error is FirebaseAuthException) {
+      final message = switch (error.code) {
+        'invalid-email' => 'Enter a valid email address.',
+        'user-disabled' => 'This account has been disabled.',
+        'user-not-found' => 'No account was found for this email.',
+        'wrong-password' ||
+        'invalid-credential' => 'The email or password is incorrect.',
+        'email-already-in-use' => 'An account already exists for this email.',
+        'weak-password' => 'Use a stronger password.',
+        'network-request-failed' =>
+          'Could not reach Firebase. Check your internet connection.',
+        'too-many-requests' => 'Too many attempts. Please wait and try again.',
+        'operation-not-allowed' =>
+          'Email/password sign-in is not enabled for this Firebase project.',
+        'invalid-api-key' =>
+          'Firebase is not configured correctly for this platform.',
+        'unknown-error' =>
+          'Firebase returned an internal error. Check this platform\'s Firebase configuration.',
+        _ =>
+          error.message?.trim().isNotEmpty == true
+              ? error.message!.trim()
+              : 'Authentication failed.',
+      };
+
+      return '$action failed: $message';
+    }
+
+    return '$action failed: $error';
+  }
+
   Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -583,8 +616,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 await _checkAdmin();
                               } catch (e) {
                                 setState(() {
-                                  _error =
-                                      "${_showRegister ? 'Registration' : 'Login'} failed: ${e.toString()}";
+                                  _error = _authFailureMessage(
+                                    e,
+                                    isRegistration: _showRegister,
+                                  );
                                 });
                               } finally {
                                 if (mounted) {

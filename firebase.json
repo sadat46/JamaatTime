@@ -12,7 +12,8 @@
         "lib/firebase_options.dart": {
           "projectId": "jaamattime",
           "configurations": {
-            "android": "1:148161891333:android:ead88c67f231a4d9f8e06c"
+            "android": "1:148161891333:android:ead88c67f231a4d9f8e06c",
+            "windows": "1:148161891333:web:89892e9de4b4de09f8e06c"
           }
         }
       }
