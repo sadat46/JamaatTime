@@ -59,30 +59,36 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         try {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val now = System.currentTimeMillis()
-            val raw = readRawSchedule(prefs)
+            val storedRaw = readRawSchedule(prefs)
+            var raw = storedRaw
             val todayMidnight = WidgetState.localMidnightEpoch(now)
 
-            val rolledOver = WidgetState.isNewLocalDay(raw.computeDay, todayMidnight)
+            val rolledOver = WidgetState.isNewLocalDay(storedRaw.computeDay, todayMidnight)
             if (rolledOver) {
-                logd("day rollover detected: lastComputeDay=${raw.computeDay} todayMidnight=$todayMidnight")
+                Log.i(
+                    TAG,
+                    "JT_WIDGET rollover_refresh requested " +
+                        "lastComputeDay=${storedRaw.computeDay} todayMidnight=$todayMidnight"
+                )
                 triggerDartRefresh(context)
+                val promoted = WidgetState.promoteNextDayIfAvailable(storedRaw, todayMidnight)
+                if (promoted != null) {
+                    raw = promoted
+                    Log.i(
+                        TAG,
+                        "JT_WIDGET promoted_next_day computeDay=${promoted.computeDay} " +
+                            "fajr=${promoted.today["Fajr"] ?: 0L}"
+                    )
+                } else {
+                    Log.i(TAG, "JT_WIDGET promoted_next_day unavailable")
+                }
             }
 
             val state = WidgetState.compute(now, raw)
             val islamicDate = prefs.getString("islamic_date", "-") ?: "-"
             val location = prefs.getString("location", "-") ?: "-"
-            val rowLabels = arrayOf(
-                prefs.getString("row_label_1", "-") ?: "-",
-                prefs.getString("row_label_2", "-") ?: "-",
-                prefs.getString("row_label_3", "-") ?: "-",
-                prefs.getString("row_label_4", "-") ?: "-",
-            )
-            val rowTimes = arrayOf(
-                prefs.getString("row_time_1", "-") ?: "-",
-                prefs.getString("row_time_2", "-") ?: "-",
-                prefs.getString("row_time_3", "-") ?: "-",
-                prefs.getString("row_time_4", "-") ?: "-",
-            )
+            val rowLabels = WidgetState.rowLabels(now, raw)
+            val rowTimes = WidgetState.rowTimes(now, raw)
 
             for (id in appWidgetIds) {
                 val views = RemoteViews(context.packageName, R.layout.prayer_widget)
@@ -256,12 +262,27 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             "Maghrib" to readEpoch(prefs, "epoch_maghrib_today"),
             "Isha" to readEpoch(prefs, "epoch_isha_today"),
         )
+        val tomorrow = mapOf(
+            "Fajr" to readEpoch(prefs, "epoch_fajr_tomorrow"),
+            "Sunrise" to readEpoch(prefs, "epoch_sunrise_tomorrow"),
+            "Dhuhr" to readEpoch(prefs, "epoch_dhuhr_tomorrow"),
+            "Asr" to readEpoch(prefs, "epoch_asr_tomorrow"),
+            "Maghrib" to readEpoch(prefs, "epoch_maghrib_tomorrow"),
+            "Isha" to readEpoch(prefs, "epoch_isha_tomorrow"),
+        )
         val jamaat = mapOf(
             "Fajr" to readEpoch(prefs, "jamaat_epoch_fajr_today"),
             "Dhuhr" to readEpoch(prefs, "jamaat_epoch_dhuhr_today"),
             "Asr" to readEpoch(prefs, "jamaat_epoch_asr_today"),
             "Maghrib" to readEpoch(prefs, "jamaat_epoch_maghrib_today"),
             "Isha" to readEpoch(prefs, "jamaat_epoch_isha_today"),
+        )
+        val jamaatTomorrow = mapOf(
+            "Fajr" to readEpoch(prefs, "jamaat_epoch_fajr_tomorrow"),
+            "Dhuhr" to readEpoch(prefs, "jamaat_epoch_dhuhr_tomorrow"),
+            "Asr" to readEpoch(prefs, "jamaat_epoch_asr_tomorrow"),
+            "Maghrib" to readEpoch(prefs, "jamaat_epoch_maghrib_tomorrow"),
+            "Isha" to readEpoch(prefs, "jamaat_epoch_isha_tomorrow"),
         )
         val localeCode = prefs.getString("locale_code", "en") ?: "en"
         val pattern = prefs.getString("time_format_pattern", "HH:mm") ?: "HH:mm"
@@ -293,6 +314,10 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             computeDay = readEpoch(prefs, "last_compute_day_epoch"),
             locale = loc,
             timeFormatPattern = pattern,
+            tomorrow = tomorrow,
+            jamaatTomorrow = jamaatTomorrow,
+            nextComputeDay = readEpoch(prefs, "next_compute_day_epoch"),
+            fajrDayAfterTomorrow = readEpoch(prefs, "epoch_fajr_day_after_tomorrow"),
         )
     }
 

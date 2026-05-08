@@ -96,30 +96,30 @@ Future<void> backgroundCallback(Uri? uri) async {
       precision: true,
     );
     final tomorrowMap = calcService.createPrayerTimesMap(tomorrowTimes);
-    Map<String, dynamic>? widgetJamaatTimes;
+    final dayAfterTomorrow = tomorrow.add(const Duration(days: 1));
+    final dayAfterTomorrowTimes = PrayerTimes(
+      coordinates: coords,
+      date: dayAfterTomorrow,
+      calculationParameters: params,
+      precision: true,
+    );
+    final dayAfterTomorrowMap = calcService.createPrayerTimesMap(
+      dayAfterTomorrowTimes,
+    );
 
-    if (config.jamaatSource == JamaatSource.localOffset) {
-      widgetJamaatTimes = PrayerAuxCalculator.instance.buildOffsetJamaatTimes(
-        prayerTimes: times,
-        offsets: config.jamaatOffsets,
-      );
-    } else if (config.jamaatSource == JamaatSource.server) {
-      final cityForJamaat = savedCity ?? config.cityName;
-      final serverTimes = await JamaatService()
-          .getJamaatTimes(city: cityForJamaat, date: now)
-          .timeout(const Duration(seconds: 5), onTimeout: () => null);
-      if (serverTimes != null) {
-        widgetJamaatTimes = Map<String, dynamic>.from(serverTimes);
-        final maghribJamaat = PrayerAuxCalculator.instance
-            .calculateMaghribJamaatTime(
-              maghribPrayerTime: times['Maghrib'],
-              selectedCity: cityForJamaat,
-            );
-        if (maghribJamaat != '-') {
-          widgetJamaatTimes['maghrib'] = maghribJamaat;
-        }
-      }
-    }
+    final cityForJamaat = savedCity ?? config.cityName;
+    final widgetJamaatTimes = await WidgetService.resolveWidgetJamaatTimes(
+      config: config,
+      cityForJamaat: cityForJamaat,
+      date: now,
+      prayerTimes: times,
+    );
+    final tomorrowJamaatTimes = await WidgetService.resolveWidgetJamaatTimes(
+      config: config,
+      cityForJamaat: cityForJamaat,
+      date: tomorrow,
+      prayerTimes: tomorrowMap,
+    );
 
     final placeName = prefs.getString('last_location_name');
     await WidgetService.updateWidgetData(
@@ -129,6 +129,9 @@ Future<void> backgroundCallback(Uri? uri) async {
       date: now,
       hijriOffsetDays: effectiveHijriOffset,
       tomorrowFajr: tomorrowMap['Fajr'],
+      tomorrowTimes: tomorrowMap,
+      tomorrowJamaatTimes: tomorrowJamaatTimes,
+      dayAfterTomorrowFajr: dayAfterTomorrowMap['Fajr'],
       jamaatTimes: widgetJamaatTimes,
     );
   } catch (e, st) {
@@ -175,6 +178,9 @@ class WidgetService {
     required DateTime date,
     required int hijriOffsetDays,
     DateTime? tomorrowFajr,
+    Map<String, DateTime?>? tomorrowTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
+    DateTime? dayAfterTomorrowFajr,
     Map<String, dynamic>? jamaatTimes,
   }) async {
     try {
@@ -203,16 +209,32 @@ class WidgetService {
 
       final strings = AppText.of(locale);
       final localMidnight = DateTime(date.year, date.month, date.day);
-      final tomorrowFajrMillis = tomorrowFajr?.millisecondsSinceEpoch ?? 0;
+      final nextLocalMidnight = localMidnight.add(const Duration(days: 1));
+      final resolvedTomorrowFajr = tomorrowTimes?['Fajr'] ?? tomorrowFajr;
+      final tomorrowFajrMillis =
+          resolvedTomorrowFajr?.millisecondsSinceEpoch ?? 0;
+      final dayAfterTomorrowFajrMillis =
+          dayAfterTomorrowFajr?.millisecondsSinceEpoch ?? 0;
 
-      int epochOf(String key) =>
-          times[key]?.millisecondsSinceEpoch ?? 0;
+      int epochOf(String key) => times[key]?.millisecondsSinceEpoch ?? 0;
+
+      int tomorrowEpochOf(String key) =>
+          tomorrowTimes?[key]?.millisecondsSinceEpoch ??
+          (key == 'Fajr' ? tomorrowFajrMillis : 0);
 
       int jamaatEpochOf(String prayerName) =>
           resolveTodayJamaatTime(
             now: date,
             prayerName: prayerName,
             jamaatTimes: jamaatTimes,
+          )?.millisecondsSinceEpoch ??
+          0;
+
+      int tomorrowJamaatEpochOf(String prayerName) =>
+          resolveTodayJamaatTime(
+            now: nextLocalMidnight,
+            prayerName: prayerName,
+            jamaatTimes: tomorrowJamaatTimes,
           )?.millisecondsSinceEpoch ??
           0;
 
@@ -297,6 +319,30 @@ class WidgetService {
           tomorrowFajrMillis,
         ),
         HomeWidget.saveWidgetData<int>(
+          'epoch_sunrise_tomorrow',
+          tomorrowEpochOf('Sunrise'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_dhuhr_tomorrow',
+          tomorrowEpochOf('Dhuhr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_asr_tomorrow',
+          tomorrowEpochOf('Asr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_maghrib_tomorrow',
+          tomorrowEpochOf('Maghrib'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_isha_tomorrow',
+          tomorrowEpochOf('Isha'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'epoch_fajr_day_after_tomorrow',
+          dayAfterTomorrowFajrMillis,
+        ),
+        HomeWidget.saveWidgetData<int>(
           'jamaat_epoch_fajr_today',
           jamaatEpochOf('Fajr'),
         ),
@@ -317,8 +363,32 @@ class WidgetService {
           jamaatEpochOf('Isha'),
         ),
         HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_fajr_tomorrow',
+          tomorrowJamaatEpochOf('Fajr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_dhuhr_tomorrow',
+          tomorrowJamaatEpochOf('Dhuhr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_asr_tomorrow',
+          tomorrowJamaatEpochOf('Asr'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_maghrib_tomorrow',
+          tomorrowJamaatEpochOf('Maghrib'),
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'jamaat_epoch_isha_tomorrow',
+          tomorrowJamaatEpochOf('Isha'),
+        ),
+        HomeWidget.saveWidgetData<int>(
           'last_compute_day_epoch',
           localMidnight.millisecondsSinceEpoch,
+        ),
+        HomeWidget.saveWidgetData<int>(
+          'next_compute_day_epoch',
+          nextLocalMidnight.millisecondsSinceEpoch,
         ),
         // Localization payload consumed by the native Kotlin state machine.
         HomeWidget.saveWidgetData<String>(
@@ -391,6 +461,9 @@ class WidgetService {
     required DateTime date,
     required int hijriOffsetDays,
     DateTime? tomorrowFajr,
+    Map<String, DateTime?>? tomorrowTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
+    DateTime? dayAfterTomorrowFajr,
     Map<String, dynamic>? jamaatTimes,
   }) async {
     Locale locale;
@@ -408,8 +481,44 @@ class WidgetService {
       date: date,
       hijriOffsetDays: hijriOffsetDays,
       tomorrowFajr: tomorrowFajr,
+      tomorrowTimes: tomorrowTimes,
+      tomorrowJamaatTimes: tomorrowJamaatTimes,
+      dayAfterTomorrowFajr: dayAfterTomorrowFajr,
       jamaatTimes: jamaatTimes,
     );
+  }
+
+  static Future<Map<String, dynamic>?> resolveWidgetJamaatTimes({
+    required LocationConfig config,
+    required String? cityForJamaat,
+    required DateTime date,
+    required Map<String, DateTime?> prayerTimes,
+  }) async {
+    switch (config.jamaatSource) {
+      case JamaatSource.localOffset:
+        return PrayerAuxCalculator.instance.buildOffsetJamaatTimes(
+          prayerTimes: prayerTimes,
+          offsets: config.jamaatOffsets,
+        );
+      case JamaatSource.server:
+        final city = cityForJamaat ?? config.cityName;
+        final serverTimes = await JamaatService()
+            .getJamaatTimes(city: city, date: date)
+            .timeout(const Duration(seconds: 5), onTimeout: () => null);
+        if (serverTimes == null) return null;
+        final resolved = Map<String, dynamic>.from(serverTimes);
+        final maghribJamaat = PrayerAuxCalculator.instance
+            .calculateMaghribJamaatTime(
+              maghribPrayerTime: prayerTimes['Maghrib'],
+              selectedCity: city,
+            );
+        if (maghribJamaat != '-') {
+          resolved['maghrib'] = maghribJamaat;
+        }
+        return resolved;
+      case JamaatSource.none:
+        return null;
+    }
   }
 
   @visibleForTesting
@@ -591,7 +700,9 @@ class WidgetService {
         epochMillis: jamaatTime.millisecondsSinceEpoch,
         countdownRunning: true,
         textUsesTimeStyle: false,
-        overEpochMillis: jamaatTime.add(_jamaatOngoingWindow).millisecondsSinceEpoch,
+        overEpochMillis: jamaatTime
+            .add(_jamaatOngoingWindow)
+            .millisecondsSinceEpoch,
       );
     }
 

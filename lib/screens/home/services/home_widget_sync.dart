@@ -52,20 +52,64 @@ class HomeWidgetSync {
       calculationParameters: calculationParameters,
       precision: true,
     );
-    final tomorrowFajr = PrayerTimeEngine.instance.createPrayerTimesMap(
+    final tomorrowMap = PrayerTimeEngine.instance.createPrayerTimesMap(
       tomorrowTimes,
-    )['Fajr'];
+    );
+    final dayAfterTomorrow = tomorrow.add(const Duration(days: 1));
+    final dayAfterTomorrowTimes = PrayerTimes(
+      coordinates: resolvedCoords,
+      date: dayAfterTomorrow,
+      calculationParameters: calculationParameters,
+      precision: true,
+    );
+    final dayAfterTomorrowMap = PrayerTimeEngine.instance.createPrayerTimesMap(
+      dayAfterTomorrowTimes,
+    );
 
     unawaited(
-      WidgetService.updateWidgetData(
+      _updateWithNextDayPayload(
         times: times,
-        locale: AppLocaleController.instance.current,
-        locationName: currentPlaceName ?? locationConfig.cityName,
         date: selectedDate,
+        locationConfig: locationConfig,
+        locationName: currentPlaceName ?? locationConfig.cityName,
         hijriOffsetDays: hijriOffset,
-        tomorrowFajr: tomorrowFajr,
+        tomorrow: tomorrow,
+        tomorrowTimes: tomorrowMap,
+        dayAfterTomorrowFajr: dayAfterTomorrowMap['Fajr'],
         jamaatTimes: jamaatTimes,
       ),
+    );
+  }
+
+  Future<void> _updateWithNextDayPayload({
+    required Map<String, DateTime?> times,
+    required DateTime date,
+    required LocationConfig locationConfig,
+    required String locationName,
+    required int hijriOffsetDays,
+    required DateTime tomorrow,
+    required Map<String, DateTime?> tomorrowTimes,
+    required DateTime? dayAfterTomorrowFajr,
+    required Map<String, dynamic>? jamaatTimes,
+  }) async {
+    final tomorrowJamaatTimes = await WidgetService.resolveWidgetJamaatTimes(
+      config: locationConfig,
+      cityForJamaat: locationConfig.cityName,
+      date: tomorrow,
+      prayerTimes: tomorrowTimes,
+    );
+
+    await WidgetService.updateWidgetData(
+      times: times,
+      locale: AppLocaleController.instance.current,
+      locationName: locationName,
+      date: date,
+      hijriOffsetDays: hijriOffsetDays,
+      tomorrowFajr: tomorrowTimes['Fajr'],
+      tomorrowTimes: tomorrowTimes,
+      tomorrowJamaatTimes: tomorrowJamaatTimes,
+      dayAfterTomorrowFajr: dayAfterTomorrowFajr,
+      jamaatTimes: jamaatTimes,
     );
   }
 }

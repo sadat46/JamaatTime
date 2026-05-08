@@ -33,6 +33,27 @@ void main() {
     };
   }
 
+  Map<String, DateTime?> buildTomorrowTimes() {
+    return {
+      'Fajr': DateTime(2026, 4, 14, 5, 1),
+      'Sunrise': DateTime(2026, 4, 14, 6, 16),
+      'Dhuhr': DateTime(2026, 4, 14, 12, 11),
+      'Asr': DateTime(2026, 4, 14, 15, 41),
+      'Maghrib': DateTime(2026, 4, 14, 18, 21),
+      'Isha': DateTime(2026, 4, 14, 19, 46),
+    };
+  }
+
+  Map<String, dynamic> buildTomorrowJamaatTimes() {
+    return {
+      'fajr': '05:21',
+      'dhuhr': '12:26',
+      'asr': '15:56',
+      'maghrib': '18:34',
+      'isha': '20:01',
+    };
+  }
+
   group('WidgetService.computeWidgetPreviewData', () {
     test(
       'between Fajr and Sunrise: current is Fajr, next boundary is Sunrise',
@@ -311,22 +332,21 @@ void main() {
       capturedSaves = <String, Object?>{};
       messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(
-        const MethodChannel('home_widget'),
-        (MethodCall call) async {
-          if (call.method == 'saveWidgetData') {
-            final args = call.arguments as Map?;
-            if (args != null) {
-              capturedSaves[args['id'] as String] = args['data'];
-            }
-            return true;
+      messenger.setMockMethodCallHandler(const MethodChannel('home_widget'), (
+        MethodCall call,
+      ) async {
+        if (call.method == 'saveWidgetData') {
+          final args = call.arguments as Map?;
+          if (args != null) {
+            capturedSaves[args['id'] as String] = args['data'];
           }
-          if (call.method == 'updateWidget') {
-            return true;
-          }
-          return null;
-        },
-      );
+          return true;
+        }
+        if (call.method == 'updateWidget') {
+          return true;
+        }
+        return null;
+      });
     });
 
     tearDown(() {
@@ -338,6 +358,9 @@ void main() {
 
     test('writes raw epoch + localization keys (en)', () async {
       final tomorrowFajr = DateTime(2026, 4, 14, 5, 1);
+      final tomorrowTimes = buildTomorrowTimes();
+      final tomorrowJamaatTimes = buildTomorrowJamaatTimes();
+      final dayAfterTomorrowFajr = DateTime(2026, 4, 15, 5, 2);
       await WidgetService.updateWidgetData(
         times: buildTimes(),
         locale: const Locale('en'),
@@ -345,6 +368,9 @@ void main() {
         date: DateTime(2026, 4, 13, 8, 30),
         hijriOffsetDays: 0,
         tomorrowFajr: tomorrowFajr,
+        tomorrowTimes: tomorrowTimes,
+        tomorrowJamaatTimes: tomorrowJamaatTimes,
+        dayAfterTomorrowFajr: dayAfterTomorrowFajr,
         jamaatTimes: buildJamaatTimes(),
       );
 
@@ -369,6 +395,30 @@ void main() {
         tomorrowFajr.millisecondsSinceEpoch,
       );
       expect(
+        capturedSaves['epoch_sunrise_tomorrow'],
+        DateTime(2026, 4, 14, 6, 16).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_dhuhr_tomorrow'],
+        DateTime(2026, 4, 14, 12, 11).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_asr_tomorrow'],
+        DateTime(2026, 4, 14, 15, 41).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_maghrib_tomorrow'],
+        DateTime(2026, 4, 14, 18, 21).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_isha_tomorrow'],
+        DateTime(2026, 4, 14, 19, 46).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_fajr_day_after_tomorrow'],
+        dayAfterTomorrowFajr.millisecondsSinceEpoch,
+      );
+      expect(
         capturedSaves['jamaat_epoch_dhuhr_today'],
         DateTime(2026, 4, 13, 12, 25).millisecondsSinceEpoch,
       );
@@ -377,8 +427,32 @@ void main() {
         DateTime(2026, 4, 13, 5, 20).millisecondsSinceEpoch,
       );
       expect(
+        capturedSaves['jamaat_epoch_fajr_tomorrow'],
+        DateTime(2026, 4, 14, 5, 21).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['jamaat_epoch_dhuhr_tomorrow'],
+        DateTime(2026, 4, 14, 12, 26).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['jamaat_epoch_asr_tomorrow'],
+        DateTime(2026, 4, 14, 15, 56).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['jamaat_epoch_maghrib_tomorrow'],
+        DateTime(2026, 4, 14, 18, 34).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['jamaat_epoch_isha_tomorrow'],
+        DateTime(2026, 4, 14, 20, 1).millisecondsSinceEpoch,
+      );
+      expect(
         capturedSaves['last_compute_day_epoch'],
         DateTime(2026, 4, 13).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['next_compute_day_epoch'],
+        DateTime(2026, 4, 14).millisecondsSinceEpoch,
       );
 
       expect(capturedSaves['loc_prayer_fajr'], 'Fajr');
@@ -437,6 +511,12 @@ void main() {
       expect(capturedSaves['jamaat_epoch_dhuhr_today'], 0);
       expect(capturedSaves['jamaat_epoch_fajr_today'], 0);
       expect(capturedSaves['epoch_fajr_tomorrow'], 0);
+      expect(capturedSaves['epoch_sunrise_tomorrow'], 0);
+      expect(capturedSaves['jamaat_epoch_fajr_tomorrow'], 0);
+      expect(
+        capturedSaves['next_compute_day_epoch'],
+        DateTime(2026, 4, 14).millisecondsSinceEpoch,
+      );
     });
   });
 }

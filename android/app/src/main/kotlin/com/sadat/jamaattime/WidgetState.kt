@@ -17,6 +17,10 @@ data class RawSchedule(
     val computeDay: Long,
     val locale: Localization,
     val timeFormatPattern: String,
+    val tomorrow: Map<String, Long> = emptyMap(),
+    val jamaatTomorrow: Map<String, Long> = emptyMap(),
+    val nextComputeDay: Long = 0L,
+    val fajrDayAfterTomorrow: Long = 0L,
 )
 
 data class Localization(
@@ -122,8 +126,35 @@ object WidgetState {
         return if (candidates.isEmpty()) now + 60_000L else candidates.min()
     }
 
+    fun promoteNextDayIfAvailable(raw: RawSchedule, todayMidnight: Long): RawSchedule? {
+        if (!isNewLocalDay(raw.computeDay, todayMidnight)) return null
+        if (raw.nextComputeDay != todayMidnight) return null
+        if (!hasCompletePeriodPayload(raw.tomorrow)) return null
+        return raw.copy(
+            today = raw.tomorrow,
+            fajrTomorrow = raw.fajrDayAfterTomorrow,
+            jamaatToday = raw.jamaatTomorrow,
+            computeDay = raw.nextComputeDay,
+        )
+    }
+
     fun isNewLocalDay(lastComputeDay: Long, todayMidnight: Long): Boolean =
         lastComputeDay > 0L && todayMidnight != lastComputeDay
+
+    fun rowLabels(now: Long, raw: RawSchedule): List<String> =
+        rowPrayerKeys(now, raw.today).map { name ->
+            if (name == "-") "-" else raw.locale.prayerName[name] ?: name
+        }
+
+    fun rowTimes(now: Long, raw: RawSchedule): List<String> =
+        rowPrayerKeys(now, raw.today).map { name ->
+            val epoch = raw.today[name] ?: 0L
+            if (name == "-" || epoch <= 0L) {
+                "-"
+            } else {
+                formatHm(epoch, raw.timeFormatPattern, raw.locale.localeCode)
+            }
+        }
 
     fun formatHm(epoch: Long, pattern: String, localeCode: String): String {
         val fmt = SimpleDateFormat(pattern, Locale.US)
@@ -275,6 +306,18 @@ object WidgetState {
         }
         return null
     }
+
+    private fun rowPrayerKeys(now: Long, today: Map<String, Long>): List<String> {
+        val rows = MAIN_PRAYER_ORDER
+            .filter { it != currentMainPrayer(now, today) }
+            .take(4)
+            .toMutableList()
+        while (rows.size < 4) rows += "-"
+        return rows
+    }
+
+    private fun hasCompletePeriodPayload(schedule: Map<String, Long>): Boolean =
+        PERIOD_ORDER.all { (schedule[it] ?: 0L) > 0L }
 
     private fun toBanglaDigits(s: String): String = buildString(s.length) {
         for (c in s) {
