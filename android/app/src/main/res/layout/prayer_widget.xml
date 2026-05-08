@@ -5,7 +5,7 @@
     android:background="@drawable/widget_background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="10dp"
+    android:padding="12dp"
     android:clipToOutline="true">
 
     <!-- Row 1: Current prayer + remaining time -->
@@ -27,19 +27,28 @@
                 android:layout_height="wrap_content"
                 android:text="Prayer"
                 android:textColor="#FFFFFF"
-                android:textSize="26sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:maxLines="1"
-                android:ellipsize="end"/>
+                android:ellipsize="end"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="16sp"
+                android:autoSizeMaxTextSize="24sp"
+                android:autoSizeStepGranularity="1sp"/>
             <TextView
                 android:id="@+id/prayer_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--:--"
                 android:textDirection="locale"
-                android:textColor="#FFFFFF"
-                android:textSize="20sp"
-                android:maxLines="1"/>
+                android:textColor="#BFFFFFFF"
+                android:textSize="16sp"
+                android:fontFeatureSettings="tnum"
+                android:maxLines="1"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="12sp"
+                android:autoSizeMaxTextSize="18sp"
+                android:autoSizeStepGranularity="1sp"/>
         </LinearLayout>
 
         <!-- Center-right: Remaining label + countdown -->
@@ -61,9 +70,13 @@
                     android:layout_marginEnd="4dp"
                     android:text="Remaining Time"
                     android:textColor="#B3FFFFFF"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:maxLines="1"
-                    android:gravity="end"/>
+                    android:gravity="end"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="10sp"
+                    android:autoSizeMaxTextSize="14sp"
+                    android:autoSizeStepGranularity="1sp"/>
                 <Chronometer
                     android:id="@+id/remaining_time"
                     android:layout_width="wrap_content"
@@ -71,9 +84,14 @@
                     android:text="--"
                     android:textDirection="locale"
                     android:textColor="#FFFFFF"
-                    android:textSize="30sp"
+                    android:textSize="26sp"
                     android:textStyle="bold"
-                    android:maxLines="1"/>
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="18sp"
+                    android:autoSizeMaxTextSize="28sp"
+                    android:autoSizeStepGranularity="1sp"/>
             </LinearLayout>
 
             <LinearLayout
@@ -90,9 +108,13 @@
                     android:layout_marginEnd="4dp"
                     android:text="Jamaat N/A"
                     android:textColor="#B3FFFFFF"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     android:maxLines="1"
-                    android:gravity="end"/>
+                    android:gravity="end"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="10sp"
+                    android:autoSizeMaxTextSize="13sp"
+                    android:autoSizeStepGranularity="1sp"/>
                 <Chronometer
                     android:id="@+id/jamaat_time"
                     android:layout_width="wrap_content"
@@ -100,10 +122,15 @@
                     android:text="--"
                     android:textDirection="locale"
                     android:textColor="#26A69A"
-                    android:textSize="30sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
+                    android:fontFeatureSettings="tnum"
                     android:maxLines="1"
-                    android:visibility="gone"/>
+                    android:visibility="gone"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeMaxTextSize="24sp"
+                    android:autoSizeStepGranularity="1sp"/>
             </LinearLayout>
         </LinearLayout>
 
@@ -120,11 +147,16 @@
 
         <!-- Slot 1 -->
         <LinearLayout
+            android:id="@+id/row_slot_1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginEnd="2dp"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="@drawable/widget_slot_bg_transparent">
             <TextView
                 android:id="@+id/row_label_1"
                 android:layout_width="match_parent"
@@ -148,6 +180,7 @@
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
                 android:gravity="center"
                 android:maxLines="1"
                 android:autoSizeTextType="uniform"
@@ -158,11 +191,17 @@
 
         <!-- Slot 2 -->
         <LinearLayout
+            android:id="@+id/row_slot_2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="@drawable/widget_slot_bg_transparent">
             <TextView
                 android:id="@+id/row_label_2"
                 android:layout_width="match_parent"
@@ -186,6 +225,7 @@
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
                 android:gravity="center"
                 android:maxLines="1"
                 android:autoSizeTextType="uniform"
@@ -196,11 +236,17 @@
 
         <!-- Slot 3 -->
         <LinearLayout
+            android:id="@+id/row_slot_3"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="@drawable/widget_slot_bg_transparent">
             <TextView
                 android:id="@+id/row_label_3"
                 android:layout_width="match_parent"
@@ -224,6 +270,7 @@
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
                 android:gravity="center"
                 android:maxLines="1"
                 android:autoSizeTextType="uniform"
@@ -234,11 +281,16 @@
 
         <!-- Slot 4 -->
         <LinearLayout
+            android:id="@+id/row_slot_4"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="2dp"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="@drawable/widget_slot_bg_transparent">
             <TextView
                 android:id="@+id/row_label_4"
                 android:layout_width="match_parent"
@@ -262,6 +314,7 @@
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
                 android:gravity="center"
                 android:maxLines="1"
                 android:autoSizeTextType="uniform"

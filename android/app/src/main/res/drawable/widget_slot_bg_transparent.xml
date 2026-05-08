@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Transparent placeholder used to clear the highlight pill on non-next slots. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#00000000" />
+    <corners android:radius="10dp" />
+</shape>

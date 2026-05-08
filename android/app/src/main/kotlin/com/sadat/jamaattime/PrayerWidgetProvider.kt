@@ -135,6 +135,9 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.islamic_date, islamicDate)
                 views.setTextViewText(R.id.location, location)
 
+                // Highlight the next upcoming prayer slot.
+                applyNextPrayerHighlight(views, now, raw)
+
                 val launchIntent = context.packageManager
                     .getLaunchIntentForPackage(context.packageName)
                 if (launchIntent != null) {
@@ -380,6 +383,62 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             logd("triggered Dart refresh")
         } catch (e: PendingIntent.CanceledException) {
             Log.w(TAG, "Dart refresh PI cancelled", e)
+        }
+    }
+
+    /**
+     * Highlights the slot in the bottom row that corresponds to the next
+     * upcoming main prayer. The Dart side builds rowLabels/rowTimes by taking
+     * MAIN_PRAYER_ORDER (Fajr, Dhuhr, Asr, Maghrib, Isha) and excluding the
+     * current main prayer — so the same logic, applied here, identifies the
+     * matching slot index. After Isha (when no future main prayer remains
+     * today) no slot is highlighted.
+     */
+    private fun applyNextPrayerHighlight(
+        views: RemoteViews,
+        now: Long,
+        raw: RawSchedule,
+    ) {
+        val mainOrder = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
+        var currentMain = "Isha"
+        for (name in mainOrder) {
+            val e = raw.today[name] ?: 0L
+            if (e in 1L..now) currentMain = name
+        }
+        val rowOrder = mainOrder.filter { it != currentMain }
+        var nextIdx = -1
+        for ((i, name) in rowOrder.withIndex()) {
+            val e = raw.today[name] ?: 0L
+            if (e > now) {
+                nextIdx = i
+                break
+            }
+        }
+
+        val slotIds = intArrayOf(
+            R.id.row_slot_1, R.id.row_slot_2, R.id.row_slot_3, R.id.row_slot_4,
+        )
+        val labelIds = intArrayOf(
+            R.id.row_label_1, R.id.row_label_2, R.id.row_label_3, R.id.row_label_4,
+        )
+        val timeIds = intArrayOf(
+            R.id.row_time_1, R.id.row_time_2, R.id.row_time_3, R.id.row_time_4,
+        )
+        val highlightLabel = 0xFF26A69A.toInt() // teal
+        val highlightTime = 0xFFFFFFFF.toInt()  // pure white
+        val mutedLabel = 0xB3FFFFFF.toInt()     // 70% white
+        val mutedTime = 0xFFFFFFFF.toInt()      // 100% white (existing tone)
+
+        for (i in slotIds.indices) {
+            val isNext = i == nextIdx
+            views.setInt(
+                slotIds[i],
+                "setBackgroundResource",
+                if (isNext) R.drawable.widget_next_pill_bg
+                else R.drawable.widget_slot_bg_transparent,
+            )
+            views.setTextColor(labelIds[i], if (isNext) highlightLabel else mutedLabel)
+            views.setTextColor(timeIds[i], if (isNext) highlightTime else mutedTime)
         }
     }
 
