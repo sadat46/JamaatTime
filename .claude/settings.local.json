@@ -13,7 +13,17 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(npm --prefix functions run build)",
-      "Bash(npm --prefix functions run lint)"
+      "Bash(npm --prefix functions run lint)",
+      "Bash(flutter gen-l10n *)",
+      "Bash(adb -s R58R74LD90D shell \"dumpsys alarm\")",
+      "Bash(adb -s R58R74LD90D logcat -c)",
+      "Bash(adb -s R58R74LD90D shell am force-stop com.sadat.jamaattime)",
+      "Bash(adb -s R58R74LD90D shell monkey -p com.sadat.jamaattime -c android.intent.category.LAUNCHER 1)",
+      "Bash(timeout 25 adb -s R58R74LD90D logcat *:W)",
+      "Bash(adb *)",
+      "Bash(MSYS_NO_PATHCONV=1 adb -s R58R74LD90D shell \"screencap -p /sdcard/jt_screen.png\")",
+      "Bash(MSYS_NO_PATHCONV=1 adb -s R58R74LD90D pull /sdcard/jt_screen.png .tmp_jt_screen.png)",
+      "PowerShell(flutter analyze *)"
     ]
   }
 }

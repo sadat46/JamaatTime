@@ -1,9 +1,11 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../core/app_locale_controller.dart';
 import '../core/feature_flags.dart';
 import '../features/family_safety/presentation/family_safety_page.dart';
+import '../features/family_safety/presentation/privacy_explanation_page.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auto_vibration_service.dart';
 import '../services/notification_service.dart';
@@ -19,7 +21,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   static const Color _brandGreen = Color(0xFF388E3C);
-  static const double _cardRadius = 18;
 
   final SettingsService _settingsService = SettingsService();
   final NotificationService _notificationService = NotificationService();
@@ -42,16 +43,20 @@ class _SettingsScreenState extends State<SettingsScreen>
       SettingsService.defaultAutoVibrationMinutesAfter;
   bool _autoVibrationPendingEnable = false;
   bool _loading = true;
+  String _appVersion = '';
+  VoidCallback? _activeSubpageRefresh;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadSettings();
+    _loadAppVersion();
   }
 
   @override
   void dispose() {
+    _activeSubpageRefresh = null;
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -76,6 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _autoVibrationEnabled = true;
       _autoVibrationPendingEnable = false;
     });
+    _refreshOpenSubpage();
   }
 
   Future<void> _loadSettings() async {
@@ -113,6 +119,20 @@ class _SettingsScreenState extends State<SettingsScreen>
       _autoVibrationMinutesAfter = autoVibrationAfter;
       _loading = false;
     });
+    _refreshOpenSubpage();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _appVersion = 'v ${info.version} (${info.buildNumber})';
+      });
+      _refreshOpenSubpage();
+    } catch (_) {
+      // Version is supplemental; keep the About page usable if unavailable.
+    }
   }
 
   Future<void> _refreshExactAlarmsStatus() async {
@@ -120,6 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final granted = await _notificationService.refreshExactAlarmsAvailable();
     if (!mounted) return;
     setState(() => _exactAlarmsGranted = granted);
+    _refreshOpenSubpage();
   }
 
   Future<void> _grantExactAlarms() async {
@@ -135,6 +156,25 @@ class _SettingsScreenState extends State<SettingsScreen>
     await AppLocaleController.instance.set(code);
     if (!mounted) return;
     setState(() => _locale = code);
+    _refreshOpenSubpage();
+  }
+
+  void _refreshOpenSubpage() {
+    _activeSubpageRefresh?.call();
+  }
+
+  Future<void> _updateMadhab(String value) async {
+    await _settingsService.setMadhab(value);
+    if (!mounted) return;
+    setState(() => _madhab = value);
+    _refreshOpenSubpage();
+  }
+
+  Future<void> _updateBangladeshHijriOffset(int value) async {
+    await _settingsService.setBangladeshHijriOffsetDays(value);
+    if (!mounted) return;
+    setState(() => _bangladeshHijriOffsetDays = value);
+    _refreshOpenSubpage();
   }
 
   String _tr(String bn, String en) => _locale == 'en' ? en : bn;
@@ -167,11 +207,29 @@ class _SettingsScreenState extends State<SettingsScreen>
     return '$value $suffix';
   }
 
+  String _madhabLabel(String value) {
+    return value == 'shafi' ? _tr('শাফেয়ী', 'Shafi') : _tr('হানাফি', 'Hanafi');
+  }
+
+  String _localeLabel(String value) {
+    return value == 'en'
+        ? AppLocalizations.of(context).settings_languageEnglish
+        : AppLocalizations.of(context).settings_languageBangla;
+  }
+
+  String _autoVibrationWindowLabel() {
+    return _tr(
+      '$_autoVibrationMinutesBefore মিনিট আগে, $_autoVibrationMinutesAfter মিনিট পরে',
+      '${_autoVibrationMinutesBefore}m before, ${_autoVibrationMinutesAfter}m after',
+    );
+  }
+
   Future<void> _updatePrayerSoundMode(int value) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     await _settingsService.setPrayerNotificationSoundMode(value);
     if (!mounted) return;
     setState(() => _prayerNotificationSoundMode = value);
+    _refreshOpenSubpage();
 
     try {
       await _notificationService.handleNotificationSoundModeChange();
@@ -210,6 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     await _settingsService.setJamaatNotificationSoundMode(value);
     if (!mounted) return;
     setState(() => _jamaatNotificationSoundMode = value);
+    _refreshOpenSubpage();
 
     try {
       await _notificationService.handleNotificationSoundModeChange();
@@ -247,6 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     await _settingsService.setFajrVoiceNotificationEnabled(value);
     if (!mounted) return;
     setState(() => _fajrVoiceNotificationEnabled = value);
+    _refreshOpenSubpage();
   }
 
   Future<void> _updateAutoVibrationEnabled(bool value) async {
@@ -258,6 +318,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         _autoVibrationEnabled = false;
         _autoVibrationPendingEnable = false;
       });
+      _refreshOpenSubpage();
       return;
     }
     final granted = await _autoVibrationService.hasDndAccess();
@@ -265,10 +326,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       await _settingsService.setAutoVibrationEnabled(true);
       if (!mounted) return;
       setState(() => _autoVibrationEnabled = true);
+      _refreshOpenSubpage();
       return;
     }
     if (!mounted) return;
     setState(() => _autoVibrationPendingEnable = true);
+    _refreshOpenSubpage();
     final shouldOpen = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -296,21 +359,30 @@ class _SettingsScreenState extends State<SettingsScreen>
     } else {
       if (!mounted) return;
       setState(() => _autoVibrationPendingEnable = false);
+      _refreshOpenSubpage();
     }
   }
 
   Future<void> _updateAutoVibrationMinutesBefore(int value) async {
-    final clamped = value.clamp(0, SettingsService.maxAutoVibrationMinutesBefore);
+    final clamped = value.clamp(
+      0,
+      SettingsService.maxAutoVibrationMinutesBefore,
+    );
     await _settingsService.setAutoVibrationMinutesBefore(clamped);
     if (!mounted) return;
     setState(() => _autoVibrationMinutesBefore = clamped);
+    _refreshOpenSubpage();
   }
 
   Future<void> _updateAutoVibrationMinutesAfter(int value) async {
-    final clamped = value.clamp(0, SettingsService.maxAutoVibrationMinutesAfter);
+    final clamped = value.clamp(
+      0,
+      SettingsService.maxAutoVibrationMinutesAfter,
+    );
     await _settingsService.setAutoVibrationMinutesAfter(clamped);
     if (!mounted) return;
     setState(() => _autoVibrationMinutesAfter = clamped);
+    _refreshOpenSubpage();
   }
 
   Widget _buildSectionCard({
@@ -320,58 +392,30 @@ class _SettingsScreenState extends State<SettingsScreen>
     required String subtitle,
     required List<Widget> children,
   }) {
-    return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(_cardRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(26),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
-        ),
-      ),
+    return SettingsSectionCard(
+      icon: icon,
+      color: color,
+      title: title,
+      subtitle: subtitle,
+      children: children,
+    );
+  }
+
+  Widget _buildMenuCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    String? chip,
+  }) {
+    return SettingsMenuCard(
+      icon: icon,
+      color: color,
+      title: title,
+      subtitle: subtitle,
+      chip: chip,
+      onTap: onTap,
     );
   }
 
@@ -408,11 +452,16 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Row(
                   children: [
-                    Text(
-                      _tr('সঠিক সময়ের নোটিফিকেশন', 'Exact-time notifications'),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        _tr(
+                          'সঠিক সময়ের নোটিফিকেশন',
+                          'Exact-time notifications',
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -544,10 +593,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         _buildStepperRow(
-          label: _tr(
-            'জামাতের আগে (মিনিট)',
-            'Minutes before jamaat',
-          ),
+          label: _tr('জামাতের আগে (মিনিট)', 'Minutes before jamaat'),
           value: _autoVibrationMinutesBefore,
           min: 0,
           max: SettingsService.maxAutoVibrationMinutesBefore,
@@ -555,10 +601,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           onChanged: _updateAutoVibrationMinutesBefore,
         ),
         _buildStepperRow(
-          label: _tr(
-            'জামাতের পরে (মিনিট)',
-            'Minutes after jamaat',
-          ),
+          label: _tr('জামাতের পরে (মিনিট)', 'Minutes after jamaat'),
           value: _autoVibrationMinutesAfter,
           min: 0,
           max: SettingsService.maxAutoVibrationMinutesAfter,
@@ -612,8 +655,323 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Future<void> _openSettingsSubpage(
+    Widget Function(BuildContext context) builder,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StatefulBuilder(
+          builder: (routeContext, setRouteState) {
+            _activeSubpageRefresh = () {
+              if (routeContext.mounted) {
+                setRouteState(() {});
+              }
+            };
+            return builder(routeContext);
+          },
+        ),
+      ),
+    );
+    _activeSubpageRefresh = null;
+    if (!mounted) return;
+    await _loadSettings();
+  }
+
+  Widget _buildSubpageScaffold({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        centerTitle: true,
+        backgroundColor: _brandGreen,
+        foregroundColor: Colors.white,
+      ),
+      backgroundColor: const Color(0xFFFFFCF7),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          children: children,
+        ),
+      ),
+    );
+  }
+
+  List<DropdownMenuItem<int>> _soundModeItems() {
+    return [
+      DropdownMenuItem(value: 0, child: Text(_soundModeLabel(0))),
+      DropdownMenuItem(value: 3, child: Text(_soundModeLabel(3))),
+      DropdownMenuItem(value: 4, child: Text(_soundModeLabel(4))),
+      DropdownMenuItem(value: 1, child: Text(_soundModeLabel(1))),
+      DropdownMenuItem(value: 2, child: Text(_soundModeLabel(2))),
+    ];
+  }
+
+  Widget _buildPrayerDatePage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('নামাজ ও তারিখ', 'Prayer & Date'),
+      children: [
+        _buildSectionCard(
+          icon: Icons.schedule,
+          color: const Color(0xFF2E7D32),
+          title: _tr('নামাজ ও তারিখ', 'Prayer & Date'),
+          subtitle: _tr(
+            'মাযহাব এবং বাংলাদেশের হিজরি তারিখ সমন্বয়।',
+            'Madhab and Bangladesh Hijri date offset.',
+          ),
+          children: [
+            _buildDropdownField<String>(
+              label: _tr('নামাজের মাযহাব', 'Prayer time school'),
+              initialValue: _madhab,
+              items: [
+                DropdownMenuItem(
+                  value: 'hanafi',
+                  child: Text(_madhabLabel('hanafi')),
+                ),
+                DropdownMenuItem(
+                  value: 'shafi',
+                  child: Text(_madhabLabel('shafi')),
+                ),
+              ],
+              onChanged: (val) async {
+                if (val == null) return;
+                await _updateMadhab(val);
+              },
+            ),
+            const SizedBox(height: 14),
+            _buildDropdownField<int>(
+              label: _tr(
+                'বাংলাদেশ হিজরি তারিখ সমন্বয়',
+                'Bangladesh Hijri date offset',
+              ),
+              initialValue: _bangladeshHijriOffsetDays,
+              items: [
+                DropdownMenuItem(value: -2, child: Text(_hijriOffsetLabel(-2))),
+                DropdownMenuItem(value: -1, child: Text(_hijriOffsetLabel(-1))),
+                DropdownMenuItem(value: 0, child: Text(_hijriOffsetLabel(0))),
+                DropdownMenuItem(value: 1, child: Text(_hijriOffsetLabel(1))),
+                DropdownMenuItem(value: 2, child: Text(_hijriOffsetLabel(2))),
+              ],
+              onChanged: (val) async {
+                if (val == null) return;
+                await _updateBangladeshHijriOffset(val);
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLanguagePage(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+
+    return _buildSubpageScaffold(
+      title: strings.settings_languageSection,
+      children: [
+        _buildSectionCard(
+          icon: Icons.language,
+          color: const Color(0xFF6A1B9A),
+          title: strings.settings_languageSection,
+          subtitle: strings.settings_languageSubtitle,
+          children: [
+            _buildDropdownField<String>(
+              label: strings.settings_languageLabel,
+              initialValue: _locale,
+              items: [
+                DropdownMenuItem(
+                  value: 'bn',
+                  child: Text(strings.settings_languageBangla),
+                ),
+                DropdownMenuItem(
+                  value: 'en',
+                  child: Text(strings.settings_languageEnglish),
+                ),
+              ],
+              onChanged: (val) async {
+                if (val == null) return;
+                await _updateLocale(val);
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationsPage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('নোটিফিকেশন', 'Notifications'),
+      children: [
+        _buildSectionCard(
+          icon: Icons.notifications_active,
+          color: const Color(0xFF1565C0),
+          title: _tr('নোটিফিকেশন', 'Notifications'),
+          subtitle: _tr(
+            'নামাজ ও জামাত রিমাইন্ডারের সাউন্ড নির্বাচন করুন।',
+            'Choose sound behavior for prayer and jamaat reminders.',
+          ),
+          children: [
+            _buildDropdownField<int>(
+              label: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
+              initialValue: _prayerNotificationSoundMode,
+              items: _soundModeItems(),
+              onChanged: (val) async {
+                if (val == null) return;
+                await _updatePrayerSoundMode(val);
+              },
+            ),
+            const SizedBox(height: 14),
+            _buildDropdownField<int>(
+              label: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
+              initialValue: _jamaatNotificationSoundMode,
+              items: _soundModeItems(),
+              onChanged: (val) async {
+                if (val == null) return;
+                await _updateJamaatSoundMode(val);
+              },
+            ),
+            const SizedBox(height: 6),
+            SwitchListTile(
+              value: _fajrVoiceNotificationEnabled,
+              onChanged: _updateFajrVoiceNotification,
+              activeTrackColor: _brandGreen,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                _tr('ফজর ভয়েস নোটিফিকেশন', 'Fajr voice notification'),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                _tr(
+                  'ফজরের ওয়াক্ত শুরু হলে ভয়েস রিমাইন্ডার বাজবে।',
+                  'Play voice reminder when Fajr time starts.',
+                ),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+            if (Platform.isAndroid) _buildExactAlarmTile(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAutoVibrationPage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('অটো ভাইব্রেশন', 'Auto Vibration'),
+      children: [_buildAutoVibrationCard()],
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, color: _brandGreen, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, color: Color(0xFF8A8F88)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAboutHelpPage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('পরিচিতি ও সহায়তা', 'About & Help'),
+      children: [
+        _buildSectionCard(
+          icon: Icons.help_outline,
+          color: const Color(0xFF455A64),
+          title: _tr('পরিচিতি ও সহায়তা', 'About & Help'),
+          subtitle: _tr(
+            'অ্যাপের তথ্য, সহায়তা এবং প্রাইভেসি।',
+            'App information, support, and privacy.',
+          ),
+          children: [
+            _buildInfoRow(
+              icon: Icons.info_outline,
+              title: _tr('ভার্সন', 'Version'),
+              subtitle: _appVersion.isEmpty
+                  ? _tr('ভার্সন পাওয়া যায়নি', 'Version unavailable')
+                  : _appVersion,
+            ),
+            const Divider(height: 20),
+            _buildInfoRow(
+              icon: Icons.support_agent,
+              title: _tr('সহায়তা / যোগাযোগ', 'Help / Contact'),
+              subtitle: _tr(
+                'সহায়তার জন্য অ্যাপ মেইনটেইনার বা আপনার স্থানীয় অ্যাডমিনের সঙ্গে যোগাযোগ করুন।',
+                'For support, contact the app maintainer or your local admin.',
+              ),
+            ),
+            const Divider(height: 20),
+            _buildInfoRow(
+              icon: Icons.privacy_tip_outlined,
+              title: _tr('প্রাইভেসি', 'Privacy'),
+              subtitle: _tr(
+                'ফ্যামিলি সেফটি প্রাইভেসি তথ্য দেখুন।',
+                'View Family Safety privacy details.',
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyExplanationPage(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_tr('সেটিংস', 'Settings')),
@@ -621,307 +979,287 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: _brandGreen,
         foregroundColor: Colors.white,
       ),
+      backgroundColor: const Color(0xFFFFFCF7),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
-                Text(
-                  _tr(
-                    'নামাজ গণনা ও রিমাইন্ডার আচরণ ঠিক করুন।',
-                    'Fine-tune prayer calculations and reminder behavior.',
-                  ),
-                  style: TextStyle(color: Colors.grey[700], height: 1.3),
-                ),
-                const SizedBox(height: 14),
-                _buildSectionCard(
+                _buildMenuCard(
                   icon: Icons.schedule,
                   color: const Color(0xFF2E7D32),
-                  title: _tr('নামাজ গণনা', 'Prayer Calculation'),
+                  title: _tr('নামাজ ও তারিখ', 'Prayer & Date'),
                   subtitle: _tr(
-                    'আপনার মাযহাব ও হিজরি তারিখ সমন্বয় ঠিক করুন।',
-                    'Adjust your prayer school and Hijri date alignment.',
+                    'মাযহাব, হিজরি সমন্বয়',
+                    'Madhab, Hijri offset',
                   ),
-                  children: [
-                    _buildDropdownField<String>(
-                      label: _tr('নামাজের মাযহাব', 'Prayer time school'),
-                      initialValue: _madhab,
-                      items: [
-                        DropdownMenuItem(
-                          value: 'hanafi',
-                          child: Text(_tr('হানাফি', 'Hanafi')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'shafi',
-                          child: Text(_tr('শাফেয়ী', 'Shafi')),
-                        ),
-                      ],
-                      onChanged: (val) async {
-                        if (val == null) return;
-                        await _settingsService.setMadhab(val);
-                        if (!mounted) return;
-                        setState(() => _madhab = val);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDropdownField<int>(
-                      label: _tr(
-                        'বাংলাদেশ হিজরি তারিখ সমন্বয়',
-                        'Bangladesh Hijri date offset',
-                      ),
-                      initialValue: _bangladeshHijriOffsetDays,
-                      items: [
-                        DropdownMenuItem(
-                          value: -2,
-                          child: Text(_hijriOffsetLabel(-2)),
-                        ),
-                        DropdownMenuItem(
-                          value: -1,
-                          child: Text(_hijriOffsetLabel(-1)),
-                        ),
-                        DropdownMenuItem(
-                          value: 0,
-                          child: Text(_hijriOffsetLabel(0)),
-                        ),
-                        DropdownMenuItem(
-                          value: 1,
-                          child: Text(_hijriOffsetLabel(1)),
-                        ),
-                        DropdownMenuItem(
-                          value: 2,
-                          child: Text(_hijriOffsetLabel(2)),
-                        ),
-                      ],
-                      onChanged: (val) async {
-                        if (val == null) return;
-                        await _settingsService.setBangladeshHijriOffsetDays(
-                          val,
-                        );
-                        if (!mounted) return;
-                        setState(() => _bangladeshHijriOffsetDays = val);
-                      },
-                    ),
-                  ],
+                  chip:
+                      '${_madhabLabel(_madhab)} · ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)}',
+                  onTap: () => _openSettingsSubpage(_buildPrayerDatePage),
                 ),
                 const SizedBox(height: 12),
                 if (kLanguageSwitchEnabled) ...[
-                  _buildSectionCard(
+                  _buildMenuCard(
                     icon: Icons.language,
                     color: const Color(0xFF6A1B9A),
-                    title: AppLocalizations.of(
-                      context,
-                    ).settings_languageSection,
-                    subtitle: AppLocalizations.of(
-                      context,
-                    ).settings_languageSubtitle,
-                    children: [
-                      _buildDropdownField<String>(
-                        label: AppLocalizations.of(
-                          context,
-                        ).settings_languageLabel,
-                        initialValue: _locale,
-                        items: [
-                          DropdownMenuItem(
-                            value: 'bn',
-                            child: Text(
-                              AppLocalizations.of(
-                                context,
-                              ).settings_languageBangla,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'en',
-                            child: Text(
-                              AppLocalizations.of(
-                                context,
-                              ).settings_languageEnglish,
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) async {
-                          if (val == null) return;
-                          await _updateLocale(val);
-                        },
-                      ),
-                    ],
+                    title: strings.settings_languageSection,
+                    subtitle: _tr(
+                      'অ্যাপের ভাষা: English/বাংলা',
+                      'App language: English/Bangla',
+                    ),
+                    chip: _localeLabel(_locale),
+                    onTap: () => _openSettingsSubpage(_buildLanguagePage),
                   ),
                   const SizedBox(height: 12),
                 ],
-                _buildSectionCard(
+                _buildMenuCard(
                   icon: Icons.notifications_active,
                   color: const Color(0xFF1565C0),
                   title: _tr('নোটিফিকেশন', 'Notifications'),
                   subtitle: _tr(
-                    'নামাজ ও জামাত রিমাইন্ডারের সাউন্ড নির্বাচন করুন।',
-                    'Choose sound behavior for prayer and jamaat reminders.',
+                    'নামাজ সাউন্ড, জামাত সাউন্ড, ফজর ভয়েস',
+                    'Prayer sound, Jamaat sound, Fajr voice',
                   ),
-                  children: [
-                    _buildDropdownField<int>(
-                      label: _tr(
-                        'নামাজ রিমাইন্ডার সাউন্ড',
-                        'Prayer reminder sound',
-                      ),
-                      initialValue: _prayerNotificationSoundMode,
-                      items: [
-                        DropdownMenuItem(
-                          value: 0,
-                          child: Text(_soundModeLabel(0)),
-                        ),
-                        DropdownMenuItem(
-                          value: 3,
-                          child: Text(_soundModeLabel(3)),
-                        ),
-                        DropdownMenuItem(
-                          value: 4,
-                          child: Text(_soundModeLabel(4)),
-                        ),
-                        DropdownMenuItem(
-                          value: 1,
-                          child: Text(_soundModeLabel(1)),
-                        ),
-                        DropdownMenuItem(
-                          value: 2,
-                          child: Text(_soundModeLabel(2)),
-                        ),
-                      ],
-                      onChanged: (val) async {
-                        if (val == null) return;
-                        await _updatePrayerSoundMode(val);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDropdownField<int>(
-                      label: _tr(
-                        'জামাত রিমাইন্ডার সাউন্ড',
-                        'Jamaat reminder sound',
-                      ),
-                      initialValue: _jamaatNotificationSoundMode,
-                      items: [
-                        DropdownMenuItem(
-                          value: 0,
-                          child: Text(_soundModeLabel(0)),
-                        ),
-                        DropdownMenuItem(
-                          value: 3,
-                          child: Text(_soundModeLabel(3)),
-                        ),
-                        DropdownMenuItem(
-                          value: 4,
-                          child: Text(_soundModeLabel(4)),
-                        ),
-                        DropdownMenuItem(
-                          value: 1,
-                          child: Text(_soundModeLabel(1)),
-                        ),
-                        DropdownMenuItem(
-                          value: 2,
-                          child: Text(_soundModeLabel(2)),
-                        ),
-                      ],
-                      onChanged: (val) async {
-                        if (val == null) return;
-                        await _updateJamaatSoundMode(val);
-                      },
-                    ),
-                    const SizedBox(height: 4),
-                    SwitchListTile(
-                      value: _fajrVoiceNotificationEnabled,
-                      onChanged: _updateFajrVoiceNotification,
-                      activeTrackColor: _brandGreen,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        _tr(
-                          'ফজর ভয়েস নোটিফিকেশন',
-                          'Fajr voice notification',
-                        ),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        _tr(
-                          'ফজরের ওয়াক্ত শুরু হলে ভয়েস রিমাইন্ডার বাজবে।',
-                          'Play voice reminder when Fajr time starts.',
-                        ),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    if (Platform.isAndroid) _buildExactAlarmTile(),
-                  ],
+                  onTap: () => _openSettingsSubpage(_buildNotificationsPage),
                 ),
                 if (Platform.isAndroid) ...[
                   const SizedBox(height: 12),
-                  _buildAutoVibrationCard(),
+                  _buildMenuCard(
+                    icon: Icons.vibration,
+                    color: const Color(0xFF6D4C41),
+                    title: _tr('অটো ভাইব্রেশন মোড', 'Auto Vibration Mode'),
+                    subtitle: _tr(
+                      'জামাতের সময়ের আশেপাশে',
+                      'Around Jamaat times',
+                    ),
+                    chip: _autoVibrationWindowLabel(),
+                    onTap: () => _openSettingsSubpage(_buildAutoVibrationPage),
+                  ),
                 ],
                 const SizedBox(height: 12),
-                Card(
-                  elevation: 1.5,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(_cardRadius),
+                _buildMenuCard(
+                  icon: Icons.family_restroom_outlined,
+                  color: const Color(0xFF00897B),
+                  title: strings.familySafetyTitle,
+                  subtitle: _tr(
+                    'ওয়েবসাইট সুরক্ষা, ডিজিটাল ওয়েলবিয়িং',
+                    'Website protection, digital wellbeing',
                   ),
-                  child: ListTile(
-                    leading: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00897B).withAlpha(26),
-                        borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FamilySafetyPage(),
                       ),
-                      child: const Icon(
-                        Icons.family_restroom_outlined,
-                        color: Color(0xFF00897B),
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      AppLocalizations.of(context).familySafetyTitle,
-                      style: const TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      AppLocalizations.of(context).familySafetySubtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        height: 1.35,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const FamilySafetyPage(),
-                        ),
-                      );
-                    },
-                  ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 12),
+                _buildMenuCard(
+                  icon: Icons.help_outline,
+                  color: const Color(0xFF455A64),
+                  title: _tr('পরিচিতি ও সহায়তা', 'About & Help'),
+                  subtitle: _tr(
+                    'ভার্সন, প্রাইভেসি, সাপোর্ট',
+                    'Version, privacy, support',
                   ),
-                  child: Text(
-                    _tr(
-                      'বর্তমান সেটআপ: ${_madhab.toUpperCase()} · '
-                          'হিজরি ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
-                          'নামাজ ${_soundModeLabel(_prayerNotificationSoundMode)} · '
-                          'জামাত ${_soundModeLabel(_jamaatNotificationSoundMode)}',
-                      'Current setup: ${_madhab.toUpperCase()} · '
-                          'Hijri ${_hijriOffsetLabel(_bangladeshHijriOffsetDays)} · '
-                          'Prayer ${_soundModeLabel(_prayerNotificationSoundMode)} · '
-                          'Jamaat ${_soundModeLabel(_jamaatNotificationSoundMode)}',
+                  chip: _appVersion.isEmpty ? null : _appVersion,
+                  onTap: () => _openSettingsSubpage(_buildAboutHelpPage),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class SettingsMenuCard extends StatelessWidget {
+  const SettingsMenuCard({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.chip,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String? chip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 2.5,
+      shadowColor: Colors.black.withAlpha(18),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFEAF0E7)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(24),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 23),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1D251E),
+                      ),
                     ),
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.25,
+                        color: Color(0xFF667067),
+                      ),
+                    ),
+                    if (chip != null && chip!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 190),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withAlpha(18),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: color.withAlpha(36)),
+                          ),
+                          child: Text(
+                            chip!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, color: Color(0xFF8A8F88)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SettingsSectionCard extends StatelessWidget {
+  const SettingsSectionCard({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 2,
+      shadowColor: Colors.black.withAlpha(16),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEAF0E7)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(24),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1D251E),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          height: 1.3,
+                          color: Color(0xFF667067),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 18),
+            ...children,
+          ],
+        ),
+      ),
     );
   }
 }

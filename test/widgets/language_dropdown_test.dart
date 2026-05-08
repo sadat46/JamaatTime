@@ -20,6 +20,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ভাষা'), findsOneWidget);
+    await tester.tap(find.text('ভাষা'));
+    await tester.pumpAndSettle();
+
     expect(find.text('অ্যাপের ভাষা'), findsOneWidget);
   });
 
@@ -32,6 +35,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(AppLocaleController.instance.current, const Locale('bn'));
+
+    await tester.tap(find.text('ভাষা'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('বাংলা').last);
     await tester.pumpAndSettle();
