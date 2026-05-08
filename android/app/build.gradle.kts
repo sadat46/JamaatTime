@@ -132,6 +132,42 @@ val copyPrayerOnlyReleaseForFlutter by tasks.registering(Copy::class) {
     }
 }
 
+val copyPrayerOnlyDebugForFlutter by tasks.registering(Copy::class) {
+    dependsOn("assemblePrayerOnlyDebug")
+    from(layout.buildDirectory.dir("outputs/apk/prayerOnly/debug")) {
+        include("app-prayerOnly-debug.apk")
+        include("app-prayerOnly-*-debug.apk")
+    }
+    into(layout.buildDirectory.dir("outputs/flutter-apk"))
+    rename { fileName ->
+        fileName
+            .replace("app-prayerOnly-debug.apk", "app-debug.apk")
+            .replace("app-prayerOnly-", "app-")
+    }
+}
+
+val copyPrayerOnlyProfileForFlutter by tasks.registering(Copy::class) {
+    dependsOn("assemblePrayerOnlyProfile")
+    from(layout.buildDirectory.dir("outputs/apk/prayerOnly/profile")) {
+        include("app-prayerOnly-profile.apk")
+        include("app-prayerOnly-*-profile.apk")
+    }
+    into(layout.buildDirectory.dir("outputs/flutter-apk"))
+    rename { fileName ->
+        fileName
+            .replace("app-prayerOnly-profile.apk", "app-profile.apk")
+            .replace("app-prayerOnly-", "app-")
+    }
+}
+
 tasks.matching { it.name == "assembleRelease" }.configureEach {
     finalizedBy(copyPrayerOnlyReleaseForFlutter)
+}
+
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+    finalizedBy(copyPrayerOnlyDebugForFlutter)
+}
+
+tasks.matching { it.name == "assembleProfile" }.configureEach {
+    finalizedBy(copyPrayerOnlyProfileForFlutter)
 }
