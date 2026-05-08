@@ -1019,16 +1019,12 @@ class NotificationService {
       }
 
       final location = _getLocation();
-      final fajrLocal = tz.TZDateTime.from(fajrTime, location);
       final now = tz.TZDateTime.now(location);
-
-      if (!fajrLocal.isAfter(now)) {
-        developer.log(
-          'JT_NOTIFY skipped id=$_fajrVoiceNotificationId reason=in_past',
-          name: 'NotificationService',
-        );
-        return;
-      }
+      final fajrLocal = nextFajrVoiceNotificationTime(
+        fajrTime: fajrTime,
+        now: now,
+        location: location,
+      );
 
       final locale = await _resolveLocale();
       final strings = AppText.of(locale);
@@ -1074,6 +1070,18 @@ class NotificationService {
         error: e,
       );
     }
+  }
+
+  @visibleForTesting
+  static tz.TZDateTime nextFajrVoiceNotificationTime({
+    required DateTime fajrTime,
+    required tz.TZDateTime now,
+    required tz.Location location,
+  }) {
+    final fajrLocal = tz.TZDateTime.from(fajrTime, location);
+    return fajrLocal.isAfter(now)
+        ? fajrLocal
+        : fajrLocal.add(const Duration(days: 1));
   }
 
   /// Schedule all notifications (prayer and Jamaat)
