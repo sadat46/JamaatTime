@@ -5,11 +5,13 @@ import '../../models/ebadat_topic.dart';
 class EbadatTopicCard extends StatelessWidget {
   final EbadatTopic topic;
   final VoidCallback? onTap;
+  final bool isLocked;
 
   const EbadatTopicCard({
     super.key,
     required this.topic,
     this.onTap,
+    this.isLocked = false,
   });
 
   @override
@@ -30,40 +32,55 @@ class EbadatTopicCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         splashColor: primaryColor.withValues(alpha: 0.2),
         highlightColor: primaryColor.withValues(alpha: 0.1),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Icon Container
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Opacity(
+              opacity: isLocked ? 0.4 : 1.0,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        topic.icon,
+                        size: 32,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      topic.getTitle(locale),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
+            if (isLocked)
+              Positioned(
+                top: 8,
+                right: 8,
                 child: Icon(
-                  topic.icon,
-                  size: 32,
-                  color: primaryColor,
+                  Icons.lock_outline,
+                  size: 16,
+                  color: theme.disabledColor,
                 ),
               ),
-              const SizedBox(height: 16),
-              // Title
-              Text(
-                topic.getTitle(locale),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: theme.textTheme.bodyLarge?.color,
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );

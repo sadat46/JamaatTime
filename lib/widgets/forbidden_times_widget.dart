@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:adhan_dart/adhan_dart.dart';
+import '../core/app_theme_tokens.dart';
 import '../core/locale_text.dart';
 import '../services/prayer_time_engine.dart';
 import '../utils/locale_digits.dart';
@@ -10,14 +11,14 @@ class _ForbiddenVisualSpec {
   final Color panelBorder;
   final Color panelShadow;
   final Color titleText;
-  final Color countChipFill;
-  final Color countChipText;
-  final Color countChipIcon;
+  final Color noteFill;
+  final Color noteBorder;
+  final Color noteText;
+  final Color noteIcon;
   final Color itemFill;
   final Color itemBorder;
   final Color itemPrimaryText;
   final Color itemSecondaryText;
-  final Color itemTertiaryText;
   final Color itemIconTint;
   final Color itemIconAccent;
   final Color activeFill;
@@ -36,14 +37,14 @@ class _ForbiddenVisualSpec {
     required this.panelBorder,
     required this.panelShadow,
     required this.titleText,
-    required this.countChipFill,
-    required this.countChipText,
-    required this.countChipIcon,
+    required this.noteFill,
+    required this.noteBorder,
+    required this.noteText,
+    required this.noteIcon,
     required this.itemFill,
     required this.itemBorder,
     required this.itemPrimaryText,
     required this.itemSecondaryText,
-    required this.itemTertiaryText,
     required this.itemIconTint,
     required this.itemIconAccent,
     required this.activeFill,
@@ -59,57 +60,57 @@ class _ForbiddenVisualSpec {
   });
 
   static const _ForbiddenVisualSpec _light = _ForbiddenVisualSpec(
-    panelColors: [Color(0xFFFDF9F8), Color(0xFFF7F2EF)],
-    panelBorder: Color(0x7AFFFFFF),
-    panelShadow: Color(0x1A6C3B2B),
-    titleText: Color(0xFF2C3036),
-    countChipFill: Color(0xFFEFE5DF),
-    countChipText: Color(0xFF735748),
-    countChipIcon: Color(0xFF8E6650),
-    itemFill: Color(0xCCFFFFFF),
-    itemBorder: Color(0xFFD8CFC9),
-    itemPrimaryText: Color(0xFF2C3036),
-    itemSecondaryText: Color(0xFF5F6672),
-    itemTertiaryText: Color(0xFF77808A),
-    itemIconTint: Color(0xFFFAECE6),
-    itemIconAccent: Color(0xFFA95C3A),
-    activeFill: Color(0xFFFBEFE8),
-    activeBorder: Color(0xFFC56D49),
-    activeGlow: Color(0xFFA95C3A),
-    activeTitle: Color(0xFF7C311B),
-    activeChipFill: Color(0xFFF7DDD2),
-    activeChipText: Color(0xFF8A3C23),
-    activeChipBorder: Color(0xFFE6B39E),
-    upcomingChipFill: Color(0xFFECEFF4),
-    upcomingChipText: Color(0xFF5D6674),
-    upcomingChipBorder: Color(0xFFD6DDE7),
+    panelColors: [Color(0xFFFFFCF8), Color(0xFFFFF5EF)],
+    panelBorder: Color(0xFFEEDFD4),
+    panelShadow: Color(0x10684632),
+    titleText: AppColors.textPrimary,
+    noteFill: Color(0xFFFFF8F2),
+    noteBorder: Color(0xFFEADBCD),
+    noteText: Color(0xFF7C6658),
+    noteIcon: Color(0xFFB36C3B),
+    itemFill: Color(0xFFFFFEFC),
+    itemBorder: Color(0xFFECE1D8),
+    itemPrimaryText: AppColors.textPrimary,
+    itemSecondaryText: Color(0xFF69756F),
+    itemIconTint: Color(0xFFFFF0E6),
+    itemIconAccent: Color(0xFFB36C3B),
+    activeFill: Color(0xFFFFF4ED),
+    activeBorder: Color(0xFFC98258),
+    activeGlow: Color(0xFFB36C3B),
+    activeTitle: Color(0xFF6F321D),
+    activeChipFill: Color(0xFFFFE8DA),
+    activeChipText: Color(0xFF7A3E25),
+    activeChipBorder: Color(0xFFE8BEA7),
+    upcomingChipFill: Color(0xFFFAF6F2),
+    upcomingChipText: Color(0xFF66584E),
+    upcomingChipBorder: Color(0xFFE6DDD5),
   );
 
   static const _ForbiddenVisualSpec _dark = _ForbiddenVisualSpec(
-    panelColors: [Color(0xFF2D2523), Color(0xFF231D1B)],
-    panelBorder: Color(0x3FD5C4B8),
-    panelShadow: Color(0x6B000000),
-    titleText: Color(0xFFEFE7E3),
-    countChipFill: Color(0x33433734),
-    countChipText: Color(0xFFE3C8B7),
-    countChipIcon: Color(0xFFD4A48D),
-    itemFill: Color(0x402F2725),
-    itemBorder: Color(0x66453C38),
-    itemPrimaryText: Color(0xFFF2E9E5),
-    itemSecondaryText: Color(0xFFD7C9C1),
-    itemTertiaryText: Color(0xFFB8AAA2),
-    itemIconTint: Color(0x3347302B),
-    itemIconAccent: Color(0xFFEFB39A),
-    activeFill: Color(0x554B2B24),
-    activeBorder: Color(0xFFE29B78),
-    activeGlow: Color(0xFFD48059),
-    activeTitle: Color(0xFFFFD8C5),
-    activeChipFill: Color(0x554D2D26),
-    activeChipText: Color(0xFFF9CBB3),
-    activeChipBorder: Color(0x77825F52),
-    upcomingChipFill: Color(0x3A3F3A37),
-    upcomingChipText: Color(0xFFC7BDB6),
-    upcomingChipBorder: Color(0x66504743),
+    panelColors: [Color(0xFF2A2421), Color(0xFF211C1A)],
+    panelBorder: Color(0x4AD6C4B8),
+    panelShadow: Color(0x59000000),
+    titleText: Color(0xFFF4ECE7),
+    noteFill: Color(0x38413734),
+    noteBorder: Color(0x58594D47),
+    noteText: Color(0xFFD4C6BE),
+    noteIcon: Color(0xFFE6A583),
+    itemFill: Color(0x4A302825),
+    itemBorder: Color(0x5C5C4C43),
+    itemPrimaryText: Color(0xFFF4ECE8),
+    itemSecondaryText: Color(0xFFD1C4BC),
+    itemIconTint: Color(0x3D54342B),
+    itemIconAccent: Color(0xFFF0B394),
+    activeFill: Color(0x62472B24),
+    activeBorder: Color(0xFFE0A07F),
+    activeGlow: Color(0xFFD08A62),
+    activeTitle: Color(0xFFFFD9C7),
+    activeChipFill: Color(0x604C2C25),
+    activeChipText: Color(0xFFFFD0B8),
+    activeChipBorder: Color(0x80825F52),
+    upcomingChipFill: Color(0x42413B37),
+    upcomingChipText: Color(0xFFD0C5BE),
+    upcomingChipBorder: Color(0x70554A45),
   );
 
   static _ForbiddenVisualSpec from(Brightness brightness) {
@@ -127,8 +128,13 @@ class _ForbiddenVisualSpec {
 /// with a pulsing border on the active window.
 class ForbiddenTimesWidget extends StatefulWidget {
   final PrayerTimes? prayerTimes;
+  final bool isActive;
 
-  const ForbiddenTimesWidget({super.key, required this.prayerTimes});
+  const ForbiddenTimesWidget({
+    super.key,
+    required this.prayerTimes,
+    this.isActive = true,
+  });
 
   @override
   State<ForbiddenTimesWidget> createState() => _ForbiddenTimesWidgetState();
@@ -147,15 +153,55 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
     _pulseAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Refresh every minute so isActive stays current
+    _syncRefreshTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant ForbiddenTimesWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive ||
+        oldWidget.prayerTimes != widget.prayerTimes) {
+      _syncRefreshTimer();
+      if (!widget.isActive) {
+        _setPulseActive(false);
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  void _syncRefreshTimer() {
+    if (!widget.isActive) {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+      return;
+    }
+    if (_refreshTimer?.isActive ?? false) {
+      return;
+    }
+    // Refresh every minute so active windows stay current.
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && widget.isActive) setState(() {});
     });
+  }
+
+  void _setPulseActive(bool enabled) {
+    if (enabled) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+      return;
+    }
+    if (_pulseController.isAnimating) {
+      _pulseController.stop();
+    }
+    _pulseController.reset();
   }
 
   @override
@@ -199,17 +245,25 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     final now = DateTime.now();
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final hasActiveWindow = forbiddenWindows.any((window) {
+      return window.isActive(now);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _setPulseActive(widget.isActive && hasActiveWindow && !reduceMotion);
+      }
+    });
 
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: spec.panelGradient,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: spec.panelBorder),
         boxShadow: [
           BoxShadow(
             color: spec.panelShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
@@ -218,7 +272,9 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(context, spec, forbiddenWindows.length),
+            _buildSectionHeader(context, spec),
+            const SizedBox(height: 6),
+            _buildAreaNote(context, spec),
             const SizedBox(height: 8),
             for (int i = 0; i < forbiddenWindows.length; i++) ...[
               _buildWindowCard(
@@ -235,17 +291,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     );
   }
 
-  Widget _buildSectionHeader(
-    BuildContext context,
-    _ForbiddenVisualSpec spec,
-    int windowCount,
-  ) {
-    final localizedCount = _localizeDigits(context, '$windowCount');
-    final windowLabel = context.isEnglish
-        ? (windowCount == 1
-            ? '$localizedCount window'
-            : '$localizedCount windows')
-        : '$localizedCount টি সময়কাল';
+  Widget _buildSectionHeader(BuildContext context, _ForbiddenVisualSpec spec) {
     return Row(
       children: [
         Container(
@@ -254,7 +300,14 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
           decoration: BoxDecoration(
             color: spec.itemIconTint,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.48)),
+            boxShadow: [
+              BoxShadow(
+                color: spec.itemIconAccent.withValues(alpha: 0.07),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Icon(
             Icons.warning_amber_rounded,
@@ -269,42 +322,48 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
               bn: 'নিষিদ্ধ নামাজের সময়',
               en: 'Forbidden Prayer Times',
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               color: spec.titleText,
               height: 1.2,
             ),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: spec.countChipFill,
-            borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.schedule_rounded,
-                size: 11.5,
-                color: spec.countChipIcon,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                windowLabel,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: spec.countChipText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildAreaNote(BuildContext context, _ForbiddenVisualSpec spec) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: spec.noteFill,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        border: Border.all(color: spec.noteBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 12, color: spec.noteIcon),
+          const SizedBox(width: 4),
+          Text(
+            context.tr(bn: 'হারাম এলাকা ব্যতীত', en: 'Except Haram area'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: spec.noteText,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -314,7 +373,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     required _ForbiddenVisualSpec spec,
     required bool reduceMotion,
   }) {
-    if (isActive && !reduceMotion) {
+    if (widget.isActive && isActive && !reduceMotion) {
       return AnimatedBuilder(
         animation: _pulseAnimation,
         builder: (context, child) {
@@ -350,6 +409,9 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
       '$durationMinutes',
     );
     final localizedRange = _localizeDigits(context, window.toRangeString());
+    final durationLabel = context.isEnglish
+        ? '$localizedDurationMinutes min'
+        : '$localizedDurationMinutes মিনিট';
     final animatedBorder = isActive
         ? Color.lerp(
             spec.activeBorder.withValues(alpha: 0.72),
@@ -360,8 +422,8 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     final borderColor = animatedBorder ?? spec.activeBorder;
 
     final shadowStrength = isActive && !reduceMotion
-        ? (0.12 + (0.10 * pulseValue))
-        : (isActive ? 0.14 : 0.06);
+        ? (0.08 + (0.06 * pulseValue))
+        : (isActive ? 0.10 : 0.035);
 
     return AnimatedContainer(
       duration: reduceMotion
@@ -369,16 +431,16 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
           : const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(AppRadius.row),
         color: isActive ? spec.activeFill : spec.itemFill,
-        border: Border.all(color: borderColor, width: isActive ? 1.4 : 1.0),
+        border: Border.all(color: borderColor, width: isActive ? 1.25 : 1.0),
         boxShadow: [
           BoxShadow(
             color: isActive
                 ? spec.activeGlow.withValues(alpha: shadowStrength)
                 : Colors.black.withValues(alpha: shadowStrength),
-            blurRadius: isActive ? 10 : 6,
-            offset: const Offset(0, 3),
+            blurRadius: isActive ? 8 : 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -402,59 +464,40 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _localizedWindowName(context, window.name),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isActive
-                                ? spec.activeTitle
-                                : spec.itemPrimaryText,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildStatusChip(isActive: isActive, spec: spec),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          localizedRange,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: spec.itemSecondaryText,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        context.isEnglish
-                            ? '$localizedDurationMinutes min'
-                            : '$localizedDurationMinutes মিনিট',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: spec.itemTertiaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              flex: 5,
+              child: Text(
+                _localizedWindowName(context, window.name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isActive ? spec.activeTitle : spec.itemPrimaryText,
+                ),
               ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              flex: 4,
+              child: Text(
+                localizedRange,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: spec.itemSecondaryText,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            _buildDurationChip(
+              label: durationLabel,
+              isActive: isActive,
+              spec: spec,
             ),
           ],
         ),
@@ -462,7 +505,8 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     );
   }
 
-  Widget _buildStatusChip({
+  Widget _buildDurationChip({
+    required String label,
     required bool isActive,
     required _ForbiddenVisualSpec spec,
   }) {
@@ -476,13 +520,14 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: chipFill,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.chip),
         border: Border.all(color: chipBorder),
       ),
       child: Text(
-        isActive
-            ? context.tr(bn: 'চলমান', en: 'Active')
-            : context.tr(bn: 'পরবর্তী', en: 'Next'),
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.clip,
+        softWrap: false,
         style: TextStyle(
           fontSize: 9.5,
           fontWeight: FontWeight.w700,
@@ -492,4 +537,3 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     );
   }
 }
-

@@ -8,11 +8,13 @@ import '../utils/locale_digits.dart';
 class LiveClockWidget extends StatefulWidget {
   final TextStyle? textStyle;
   final String format;
+  final bool isActive;
 
   const LiveClockWidget({
     super.key,
     this.textStyle,
     this.format = 'HH:mm',
+    this.isActive = true,
   });
 
   @override
@@ -21,11 +23,34 @@ class LiveClockWidget extends StatefulWidget {
 
 class _LiveClockWidgetState extends State<LiveClockWidget> {
   Timer? _timer;
+  Timer? _syncTimer;
   DateTime _currentTime = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _syncClockTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant LiveClockWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive ||
+        oldWidget.format != widget.format) {
+      _syncClockTimer();
+    }
+  }
+
+  void _syncClockTimer() {
+    _timer?.cancel();
+    _timer = null;
+    _syncTimer?.cancel();
+    _syncTimer = null;
+
+    if (!widget.isActive) {
+      return;
+    }
+
     _currentTime = DateTime.now();
 
     // Calculate delay to sync with the start of the next minute
@@ -33,7 +58,7 @@ class _LiveClockWidgetState extends State<LiveClockWidget> {
     final secondsUntilNextMinute = 60 - now.second;
 
     // First, set a one-time timer to sync to the minute boundary
-    Future.delayed(Duration(seconds: secondsUntilNextMinute), () {
+    _syncTimer = Timer(Duration(seconds: secondsUntilNextMinute), () {
       if (mounted) {
         setState(() {
           _currentTime = DateTime.now();
@@ -45,6 +70,7 @@ class _LiveClockWidgetState extends State<LiveClockWidget> {
   }
 
   void _startPeriodicTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 60), (timer) {
       if (mounted) {
         setState(() {
@@ -56,6 +82,7 @@ class _LiveClockWidgetState extends State<LiveClockWidget> {
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
     _timer?.cancel();
     super.dispose();
   }
@@ -70,10 +97,11 @@ class _LiveClockWidgetState extends State<LiveClockWidget> {
 
     return Text(
       timeStr,
-      style: widget.textStyle ??
-          Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+      style:
+          widget.textStyle ??
+          Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 }

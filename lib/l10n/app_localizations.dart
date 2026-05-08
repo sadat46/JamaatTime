@@ -254,6 +254,12 @@ abstract class AppLocalizations {
   /// **'{prayer} time remaining 20 minutes.'**
   String notification_prayerBody(String prayer);
 
+  /// Body for the Fajr-start voice notification (id=3101)
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s time for {prayer} prayer.'**
+  String notification_fajrStartBody(String prayer);
+
   /// Jamaat notification title
   ///
   /// In en, this message translates to:
@@ -331,6 +337,756 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'References'**
   String get ebadat_referencesTitle;
+
+  /// Settings entry and page title for Family Safety
+  ///
+  /// In en, this message translates to:
+  /// **'Family Safety'**
+  String get familySafetyTitle;
+
+  /// Settings entry subtitle for Family Safety
+  ///
+  /// In en, this message translates to:
+  /// **'Help protect your family from harmful and distracting online content.'**
+  String get familySafetySubtitle;
+
+  /// Intro text on the Family Safety landing page
+  ///
+  /// In en, this message translates to:
+  /// **'Optional on-device tools for family-friendly browsing habits and safer setup guidance.'**
+  String get familySafetyIntro;
+
+  /// Family Safety section title for Private DNS based basic website protection
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Website Protection'**
+  String get basicWebsiteProtectionTitle;
+
+  /// Subtitle for Basic Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Set up family-friendly Private DNS for basic website filtering.'**
+  String get basicWebsiteProtectionSubtitle;
+
+  /// Family Safety section title for VPN-based advanced website protection
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Website Protection'**
+  String get websiteProtectionTitle;
+
+  /// Subtitle for Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Use optional local VPN filtering for stronger website protection.'**
+  String get websiteProtectionSubtitle;
+
+  /// Status text for Website Protection before filtering is implemented
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection permission setup is available now. Filtering starts in a later phase.'**
+  String get websiteProtectionPlaceholder;
+
+  /// CTA to enable Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Website Protection'**
+  String get websiteProtectionEnableCta;
+
+  /// Status title when Android VPN permission is already granted
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission ready'**
+  String get websiteProtectionVpnPermissionReadyTitle;
+
+  /// Status body for granted VPN permission before filtering is implemented
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection will not start until filtering is added in the next phase.'**
+  String get websiteProtectionVpnPermissionReadyBody;
+
+  /// Status title when Android VPN permission is not granted
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission required'**
+  String get websiteProtectionVpnPermissionNeededTitle;
+
+  /// Status body before requesting Android VPN permission
+  ///
+  /// In en, this message translates to:
+  /// **'Review the disclosure, then Android will ask for VPN permission. Protection will not start in this phase.'**
+  String get websiteProtectionVpnPermissionNeededBody;
+
+  /// Snackbar after Android VPN permission is granted
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission granted. Website Protection will not start until the next setup phase.'**
+  String get websiteProtectionVpnPermissionGranted;
+
+  /// Snackbar after Android VPN permission is denied or dismissed
+  ///
+  /// In en, this message translates to:
+  /// **'You can enable this anytime later.'**
+  String get websiteProtectionVpnPermissionDenied;
+
+  /// Disclosure dialog title shown before Android VPN consent
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Website Protection?'**
+  String get websiteProtectionVpnDisclosureTitle;
+
+  /// Disclosure dialog body shown before Android VPN consent
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection helps block harmful website categories (such as adult\ncontent, gambling, and proxy-bypass sites) for everyone using this device.\n\nTo do this, the app uses Android\'s VPN system locally on your device to\ninspect website addresses (domain names) and block selected categories.\n\nWhat this feature does NOT do:\n• It does not read messages, passwords, or payment details.\n• It does not inspect the contents of secure (HTTPS) pages.\n• It does not install any certificates.\n• It does not upload your browsing to any server.\n\nActivity summaries (counts only) are stored on your device and you can\nclear them at any time. You can disable Website Protection from this\nscreen whenever you want.'**
+  String get websiteProtectionVpnDisclosureBody;
+
+  /// Family Safety section title for Digital Wellbeing
+  ///
+  /// In en, this message translates to:
+  /// **'Digital Wellbeing'**
+  String get digitalWellbeingTitle;
+
+  /// Subtitle for Digital Wellbeing
+  ///
+  /// In en, this message translates to:
+  /// **'View current Focus Guard and distracting-content protection.'**
+  String get digitalWellbeingSubtitle;
+
+  /// Placeholder text for Digital Wellbeing during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Digital Wellbeing status will connect to the existing Focus Guard feature in a later phase.'**
+  String get digitalWellbeingPlaceholder;
+
+  /// Family Safety section title for Parent Control
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control'**
+  String get parentControlTitle;
+
+  /// Subtitle for Parent Control
+  ///
+  /// In en, this message translates to:
+  /// **'Use a local PIN to guard Family Safety settings.'**
+  String get parentControlSubtitle;
+
+  /// Button label to set a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Set PIN'**
+  String get parentControlSetPin;
+
+  /// Button label to change a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get parentControlChangePin;
+
+  /// Warning copy for forgotten Parent Control PIN reset
+  ///
+  /// In en, this message translates to:
+  /// **'This will reset your PIN and disable Website Protection. To reset, type the word DISABLE.'**
+  String get parentControlForgotPinWarning;
+
+  /// Placeholder text for Parent Control during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'PIN setup will be added in a later phase. It will guard only Family Safety settings.'**
+  String get parentControlPlaceholder;
+
+  /// Status title when a Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'PIN is active'**
+  String get parentControlPinActiveTitle;
+
+  /// Status title when no Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'No PIN set'**
+  String get parentControlPinInactiveTitle;
+
+  /// Status body when a Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'Changing protected Family Safety settings will require this PIN.'**
+  String get parentControlPinActiveBody;
+
+  /// Status body when no Parent Control PIN exists
+  ///
+  /// In en, this message translates to:
+  /// **'Set a local PIN before enabling protected Family Safety settings.'**
+  String get parentControlPinInactiveBody;
+
+  /// Explains the local PIN scope
+  ///
+  /// In en, this message translates to:
+  /// **'This PIN protects Family Safety settings only. It never locks the rest of the app.'**
+  String get parentControlPinScope;
+
+  /// Dialog title for creating a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Create Parent Control PIN'**
+  String get parentControlCreatePinTitle;
+
+  /// Dialog title for changing a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Change Parent Control PIN'**
+  String get parentControlChangePinTitle;
+
+  /// Input label for the current Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Current PIN'**
+  String get parentControlCurrentPin;
+
+  /// Input label for a new Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'New PIN'**
+  String get parentControlNewPin;
+
+  /// Input label for confirming a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm PIN'**
+  String get parentControlConfirmPin;
+
+  /// Helper text for Parent Control PIN fields
+  ///
+  /// In en, this message translates to:
+  /// **'Use 4 to 8 digits.'**
+  String get parentControlPinHint;
+
+  /// Dialog action for saving a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Save PIN'**
+  String get parentControlSavePin;
+
+  /// Dialog action for updating a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Update PIN'**
+  String get parentControlUpdatePin;
+
+  /// Dialog cancel action in Parent Control
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get parentControlCancel;
+
+  /// Button label for forgotten Parent Control PIN flow
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot PIN'**
+  String get parentControlForgotPin;
+
+  /// Dialog title for resetting a forgotten Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Parent Control PIN'**
+  String get parentControlResetPinTitle;
+
+  /// Input label for reset confirmation word
+  ///
+  /// In en, this message translates to:
+  /// **'Type DISABLE'**
+  String get parentControlResetPinInputLabel;
+
+  /// Dialog action to reset PIN and disable Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Reset and disable'**
+  String get parentControlResetPinCta;
+
+  /// Snackbar shown after saving a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control PIN saved.'**
+  String get parentControlPinSaved;
+
+  /// Snackbar shown after changing a Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control PIN changed.'**
+  String get parentControlPinChanged;
+
+  /// Snackbar shown after resetting a forgotten Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'PIN reset and Website Protection disabled.'**
+  String get parentControlPinReset;
+
+  /// Validation message for invalid Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a PIN with 4 to 8 digits.'**
+  String get parentControlPinInvalid;
+
+  /// Validation message for mismatched Parent Control PIN confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'PINs do not match.'**
+  String get parentControlPinMismatch;
+
+  /// Snackbar shown after an incorrect Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN.'**
+  String get parentControlPinIncorrect;
+
+  /// Snackbar/status message shown during Parent Control PIN cooldown
+  ///
+  /// In en, this message translates to:
+  /// **'Too many incorrect attempts. Try again after the cooldown.'**
+  String get parentControlPinLocked;
+
+  /// Generic error message for Parent Control PIN actions
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Control PIN could not be updated.'**
+  String get parentControlPinError;
+
+  /// Dialog title shown when verifying the Parent Control PIN to access protected Family Safety settings
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Parent Control PIN'**
+  String get parentControlVerifyPinTitle;
+
+  /// Dialog body shown when verifying the Parent Control PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your PIN to continue.'**
+  String get parentControlVerifyPinBody;
+
+  /// Dialog action to verify the Parent Control PIN and continue
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get parentControlVerifyCta;
+
+  /// Family Safety section title for Other Safety Guide
+  ///
+  /// In en, this message translates to:
+  /// **'Other Safety Guide'**
+  String get safeSearchSetupTitle;
+
+  /// Subtitle for Other Safety Guide
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Google SafeSearch, YouTube Restricted Mode, and browser safety settings.'**
+  String get safeSearchSetupSubtitle;
+
+  /// Placeholder text for Safe Search Setup during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Search and Private DNS guidance will be added in the next phase.'**
+  String get safeSearchSetupPlaceholder;
+
+  /// Intro text on the Safe Search Setup page
+  ///
+  /// In en, this message translates to:
+  /// **'Use these device and account settings to make search, video, and browsing safer for family use.'**
+  String get safeSearchSetupIntro;
+
+  /// Guide card title for Google SafeSearch
+  ///
+  /// In en, this message translates to:
+  /// **'Google SafeSearch'**
+  String get safeSearchGoogleTitle;
+
+  /// Guide text for Google SafeSearch
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on SafeSearch in Google Search settings for each signed-in account and browser profile your family uses.'**
+  String get safeSearchGoogleBody;
+
+  /// Guide card title for YouTube Restricted Mode
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Restricted Mode'**
+  String get safeSearchYoutubeTitle;
+
+  /// Guide text for YouTube Restricted Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Open YouTube settings and enable Restricted Mode. Repeat this for each browser, app profile, and child account.'**
+  String get safeSearchYoutubeBody;
+
+  /// Guide card title for Android Private DNS
+  ///
+  /// In en, this message translates to:
+  /// **'Android Private DNS'**
+  String get safeSearchPrivateDnsTitle;
+
+  /// Guide text for Android Private DNS
+  ///
+  /// In en, this message translates to:
+  /// **'For stronger family filtering, set Android Private DNS to the CleanBrowsing family host shown below. This app only opens the settings screen; it does not change the system setting.'**
+  String get safeSearchPrivateDnsBody;
+
+  /// Guide card title for browser safe-mode tips
+  ///
+  /// In en, this message translates to:
+  /// **'Browser Safe Mode'**
+  String get safeSearchBrowserTitle;
+
+  /// Guide text for browser safe-mode tips
+  ///
+  /// In en, this message translates to:
+  /// **'Use child profiles, disable private browsing where your browser allows it, and keep safe browsing protection enabled.'**
+  String get safeSearchBrowserBody;
+
+  /// Private DNS status card title
+  ///
+  /// In en, this message translates to:
+  /// **'Current Private DNS'**
+  String get privateDnsStatusTitle;
+
+  /// Loading text while reading Private DNS state
+  ///
+  /// In en, this message translates to:
+  /// **'Checking Private DNS status...'**
+  String get privateDnsLoading;
+
+  /// Label for Private DNS mode
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get privateDnsModeLabel;
+
+  /// Label for Private DNS host
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get privateDnsHostLabel;
+
+  /// Private DNS host value when no hostname is configured
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get privateDnsHostNotSet;
+
+  /// Private DNS mode value for off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get privateDnsModeOff;
+
+  /// Private DNS mode value for opportunistic/automatic
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get privateDnsModeAutomatic;
+
+  /// Private DNS mode value for hostname mode
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS provider hostname'**
+  String get privateDnsModeHostname;
+
+  /// Private DNS mode value when platform channel is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable on this platform'**
+  String get privateDnsModeUnsupported;
+
+  /// Private DNS mode value when Android returns no recognized mode
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get privateDnsModeUnknown;
+
+  /// Warning shown when Private DNS uses a known DoH/DoT provider hostname
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS is set to a DoH provider. Website Protection (when enabled later) cannot inspect DoH traffic — consider switching Private DNS to Off or to family-filter-dns.cleanbrowsing.org for stronger filtering.'**
+  String get privateDnsDohProviderWarning;
+
+  /// Private DNS status unavailable message
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS status is unavailable on this device.'**
+  String get privateDnsStatusUnavailable;
+
+  /// Label before the recommended CleanBrowsing family DNS hostname
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended family DNS host'**
+  String get privateDnsRecommendedHostLabel;
+
+  /// Button label for copying the recommended family DNS host
+  ///
+  /// In en, this message translates to:
+  /// **'Copy DNS host'**
+  String get safeSearchCopyDnsHostCta;
+
+  /// Button label for opening Android network settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Network Settings'**
+  String get safeSearchOpenNetworkSettingsCta;
+
+  /// Tooltip for refreshing Private DNS status
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh status'**
+  String get safeSearchRefreshStatusCta;
+
+  /// Snackbar message after copying DNS host
+  ///
+  /// In en, this message translates to:
+  /// **'DNS host copied to clipboard.'**
+  String get safeSearchCopiedDnsHostMessage;
+
+  /// Snackbar message when network settings intent is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Network settings could not be opened on this device.'**
+  String get safeSearchNetworkSettingsUnavailable;
+
+  /// Family Safety section title for Safety Summary
+  ///
+  /// In en, this message translates to:
+  /// **'Safety Summary'**
+  String get activitySummaryTitle;
+
+  /// Subtitle for Safety Summary
+  ///
+  /// In en, this message translates to:
+  /// **'View local protection counts without storing browsing history.'**
+  String get activitySummarySubtitle;
+
+  /// Placeholder text for Safety Summary during the UI shell phase
+  ///
+  /// In en, this message translates to:
+  /// **'Safety Summary shows local protection counts only.'**
+  String get activitySummaryPlaceholder;
+
+  /// Family Safety privacy explanation page title
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get privacyExplanationTitle;
+
+  /// Family Safety privacy explanation tile subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Understand what Family Safety does locally on this device.'**
+  String get privacyExplanationSubtitle;
+
+  /// Privacy explanation for the Family Safety section
+  ///
+  /// In en, this message translates to:
+  /// **'Family Safety is optional and off by default. This phase adds only guidance and placeholder screens. It does not add a VPN, Accessibility changes, overlays, DNS upload, HTTPS interception, or new permissions.'**
+  String get familySafetyPrivacyExplanation;
+
+  /// Negative action on Family Safety disclosure dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get familySafetyNotNowCta;
+
+  /// Positive action on Website Protection VPN disclosure dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Continue and grant permission'**
+  String get familySafetyContinueGrantPermissionCta;
+
+  /// Action to start the Website Protection VPN
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on protection'**
+  String get websiteProtectionTurnOnCta;
+
+  /// Action to stop the Website Protection VPN
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off protection'**
+  String get websiteProtectionTurnOffCta;
+
+  /// Status title when the VPN filter is running
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection is on'**
+  String get websiteProtectionRunningTitle;
+
+  /// Status body when the VPN filter is running
+  ///
+  /// In en, this message translates to:
+  /// **'Blocking selected categories. Open this screen to turn it off.'**
+  String get websiteProtectionRunningBody;
+
+  /// Snackbar after a failed start of Website Protection
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start protection.'**
+  String get websiteProtectionStartFailed;
+
+  /// Snackbar after Website Protection starts
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection is on.'**
+  String get websiteProtectionStarted;
+
+  /// Snackbar after Website Protection stops
+  ///
+  /// In en, this message translates to:
+  /// **'Website Protection is off.'**
+  String get websiteProtectionStopped;
+
+  /// Banner title shown when Private DNS is set to a DoH host
+  ///
+  /// In en, this message translates to:
+  /// **'Private DNS is using a DoH provider'**
+  String get websiteProtectionDohBannerTitle;
+
+  /// Banner body explaining the DoH limitation
+  ///
+  /// In en, this message translates to:
+  /// **'Some queries cannot be filtered while Private DNS is set to a DoH provider. For best results, set Private DNS to Off in system settings.'**
+  String get websiteProtectionDohBannerBody;
+
+  /// Button to open Android network settings from the DoH banner
+  ///
+  /// In en, this message translates to:
+  /// **'Open network settings'**
+  String get websiteProtectionOpenNetworkSettings;
+
+  /// Heading for the honesty paragraph on the privacy explanation page
+  ///
+  /// In en, this message translates to:
+  /// **'Limits of Website Protection'**
+  String get websiteProtectionLimitsTitle;
+
+  /// Bullet list of Website Protection limitations
+  ///
+  /// In en, this message translates to:
+  /// **'• HTTPS DNS (DoH) inside browsers like Firefox or Brave cannot be filtered.\n• Some apps with hardcoded DoH (for example, certain smart-TV or game-console apps when tethered) cannot be filtered.\n• Apps explicitly excluded from VPN by Android, or running on another network, are not filtered.\n• Disabling Wi-Fi or mobile data disables filtering.\nThis is a helpful guard, not a guarantee.'**
+  String get websiteProtectionLimitsBullets;
+
+  /// Empty state on the Safety Summary page
+  ///
+  /// In en, this message translates to:
+  /// **'No website blocks yet. Counts will appear here once protection blocks a category.'**
+  String get activitySummaryEmpty;
+
+  /// Button to wipe the local safety summary
+  ///
+  /// In en, this message translates to:
+  /// **'Clear summary'**
+  String get activitySummaryClearCta;
+
+  /// Snackbar after the safety summary is cleared
+  ///
+  /// In en, this message translates to:
+  /// **'Safety summary cleared.'**
+  String get activitySummaryClearedSnack;
+
+  /// Label for the time range used by the safety summary
+  ///
+  /// In en, this message translates to:
+  /// **'Last {days} days'**
+  String activitySummaryRangeLabel(int days);
+
+  /// Count label for website blocks on the current day
+  ///
+  /// In en, this message translates to:
+  /// **'Website blocks today'**
+  String get activitySummaryWebsiteBlocksToday;
+
+  /// Count label for Focus Guard short-video blocks on the current day
+  ///
+  /// In en, this message translates to:
+  /// **'Short-video blocks today'**
+  String get activitySummaryShortVideoBlocksToday;
+
+  /// Privacy note shown on the Safety Summary page
+  ///
+  /// In en, this message translates to:
+  /// **'Safety Summary stores only local protection counts. It does not store websites, search terms, or full app usage history.'**
+  String get activitySummaryPrivacyNote;
+
+  /// Category label for adult-content blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Adult content'**
+  String get activitySummaryCategoryAdult;
+
+  /// Category label for gambling blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Gambling'**
+  String get activitySummaryCategoryGambling;
+
+  /// Category label for proxy/bypass blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy / DNS bypass'**
+  String get activitySummaryCategoryProxyBypass;
+
+  /// Count label for blocked queries per category
+  ///
+  /// In en, this message translates to:
+  /// **'{count} blocked'**
+  String activitySummaryBlockedCount(int count);
+
+  /// Confirmation dialog title before wiping the safety summary
+  ///
+  /// In en, this message translates to:
+  /// **'Clear summary?'**
+  String get activitySummaryClearConfirmTitle;
+
+  /// Confirmation dialog body before wiping the safety summary
+  ///
+  /// In en, this message translates to:
+  /// **'All on-device counts will be deleted. This cannot be undone.'**
+  String get activitySummaryClearConfirmBody;
+
+  /// Confirm button on the clear-activity-summary dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get activitySummaryClearConfirmCta;
+
+  /// Cancel button on confirmation dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get activitySummaryCancelCta;
+
+  /// Action that exports activity-summary counts to a CSV file
+  ///
+  /// In en, this message translates to:
+  /// **'Export as CSV'**
+  String get activitySummaryExportCta;
+
+  /// Snackbar shown when the user taps Export with an empty summary
+  ///
+  /// In en, this message translates to:
+  /// **'No counts to export yet.'**
+  String get activitySummaryExportNothing;
+
+  /// Snackbar shown when CSV export succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Activity summary exported.'**
+  String get activitySummaryExportSuccess;
+
+  /// Snackbar shown when CSV export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export activity summary.'**
+  String get activitySummaryExportFailed;
+
+  /// Footnote describing the activity-summary retention window
+  ///
+  /// In en, this message translates to:
+  /// **'Counts older than {days} days are removed automatically.'**
+  String activitySummaryRetentionNote(int days);
 }
 
 class _AppLocalizationsDelegate

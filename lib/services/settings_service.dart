@@ -15,10 +15,21 @@ class SettingsService {
       'prayer_notification_sound_mode';
   static const String _keyJamaatNotificationSoundMode =
       'jamaat_notification_sound_mode';
+  static const String _keyFajrVoiceNotificationEnabled =
+      'fajr_voice_notification_enabled';
   static const String _keyNotificationSoundDefaultMigratedV2 =
       'notification_sound_default_migrated_v2';
   static const String _keyBangladeshHijriOffsetDays =
       'bangladesh_hijri_offset_days';
+  static const String _keyAutoVibrationEnabled = 'auto_vibration_enabled';
+  static const String _keyAutoVibrationMinutesBefore =
+      'auto_vibration_minutes_before';
+  static const String _keyAutoVibrationMinutesAfter =
+      'auto_vibration_minutes_after';
+  static const int defaultAutoVibrationMinutesBefore = 5;
+  static const int defaultAutoVibrationMinutesAfter = 15;
+  static const int maxAutoVibrationMinutesBefore = 20;
+  static const int maxAutoVibrationMinutesAfter = 25;
   static const int _defaultNotificationSoundMode = 3; // Custom 2 sound
   final StreamController<void> _controller = StreamController.broadcast();
 
@@ -119,6 +130,17 @@ class SettingsService {
     _controller.add(null);
   }
 
+  Future<bool> getFajrVoiceNotificationEnabled() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_keyFajrVoiceNotificationEnabled) ?? false;
+  }
+
+  Future<void> setFajrVoiceNotificationEnabled(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_keyFajrVoiceNotificationEnabled, enabled);
+    _controller.add(null);
+  }
+
   /// One-time migration to switch default notification sound to Custom 2.
   Future<void> migrateNotificationSoundDefaultsToCustom2() async {
     final prefs = await _prefs;
@@ -153,6 +175,43 @@ class SettingsService {
   Future<void> setBangladeshHijriOffsetDays(int days) async {
     final prefs = await _prefs;
     await prefs.setInt(_keyBangladeshHijriOffsetDays, days);
+    _controller.add(null);
+  }
+
+  Future<bool> getAutoVibrationEnabled() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_keyAutoVibrationEnabled) ?? false;
+  }
+
+  Future<void> setAutoVibrationEnabled(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_keyAutoVibrationEnabled, enabled);
+    _controller.add(null);
+  }
+
+  Future<int> getAutoVibrationMinutesBefore() async {
+    final prefs = await _prefs;
+    return prefs.getInt(_keyAutoVibrationMinutesBefore) ??
+        defaultAutoVibrationMinutesBefore;
+  }
+
+  Future<void> setAutoVibrationMinutesBefore(int minutes) async {
+    final clamped = minutes.clamp(0, maxAutoVibrationMinutesBefore);
+    final prefs = await _prefs;
+    await prefs.setInt(_keyAutoVibrationMinutesBefore, clamped);
+    _controller.add(null);
+  }
+
+  Future<int> getAutoVibrationMinutesAfter() async {
+    final prefs = await _prefs;
+    return prefs.getInt(_keyAutoVibrationMinutesAfter) ??
+        defaultAutoVibrationMinutesAfter;
+  }
+
+  Future<void> setAutoVibrationMinutesAfter(int minutes) async {
+    final clamped = minutes.clamp(0, maxAutoVibrationMinutesAfter);
+    final prefs = await _prefs;
+    await prefs.setInt(_keyAutoVibrationMinutesAfter, clamped);
     _controller.add(null);
   }
 }

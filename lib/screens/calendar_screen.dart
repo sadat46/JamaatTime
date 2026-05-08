@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -18,6 +23,7 @@ import '../services/settings_service.dart';
 import '../utils/bangla_calendar.dart';
 import '../utils/locale_digits.dart';
 import '../widgets/calendar_selected_date_card.dart';
+import '../widgets/calendar_share_card.dart';
 
 class _SelectedDateCardData {
   const _SelectedDateCardData({
@@ -83,6 +89,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final PrayerAuxCalculator _jamaatTimeUtility = PrayerAuxCalculator.instance;
   final LocationConfigService _locationConfigService = LocationConfigService();
   final SettingsService _settingsService = SettingsService();
+  final ScreenshotController _shareScreenshotController = ScreenshotController();
 
   late DateTime _focusedDay;
   late DateTime _selectedDay;
@@ -399,6 +406,59 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  CalendarShareCard _buildShareCard(BuildContext context) {
+    final dateData = _selectedDateCardData(_selectedDay);
+    return CalendarShareCard(
+      locationLabel: _locationLabel,
+      gregorianDate: dateData.gregorianDate,
+      weekday: dateData.weekday,
+      hijriDate: dateData.hijriDate,
+      banglaDate: dateData.banglaDate,
+      rows: _prayerOrder
+          .map(
+            (prayerName) => CalendarShareRow(
+              name: _prayerDisplayName(context, prayerName),
+              prayer: _displayPrayerTimeForPrayer(prayerName),
+              jamaat: _displayJamaatTimeForPrayer(prayerName),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<void> _shareSelectedDateInfo(BuildContext context) async {
+    try {
+      final bytes = await _shareScreenshotController.captureFromWidget(
+        _buildShareCard(context),
+        pixelRatio: 3.0,
+        context: context,
+      );
+
+      final dir = await getTemporaryDirectory();
+      final dateStamp = _selectedDay.toIso8601String().split('T').first;
+      final file = await File(
+        '${dir.path}/jamaat_time_$dateStamp.png',
+      ).writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Prayer + Jamaat Time for $_locationLabel',
+        text: 'Prayer + Jamaat Time for $_locationLabel',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr(bn: 'শেয়ার করতে সমস্যা হয়েছে', en: 'Failed to share'),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   String _timesSourceCaption(BuildContext context) {
     if (_locationConfig?.jamaatSource == JamaatSource.none) {
       return context.tr(
@@ -414,7 +474,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
     return context.tr(
       bn: 'নির্বাচিত তারিখের নামাজ ও জামাতের সময়',
-      en: 'Prayer + Jamaat Time for Selected Date',
+      en: 'Prayer + Jamaat Time for',
     );
   }
 
@@ -624,7 +684,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 3,
             child: Text(
-              context.tr(bn: 'নামাজ', en: 'Prayer'),
+              context.tr(bn: 'নামাজ', en: 'Name'),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -635,7 +695,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              context.tr(bn: 'নামাজের সময়', en: 'Prayer Time'),
+              context.tr(bn: 'নামাজের সময়', en: 'Prayer'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -647,7 +707,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              context.tr(bn: 'জামাতের সময়', en: 'Jamaat Time'),
+              context.tr(bn: 'জামাতের সময়', en: 'Jamaat'),
               textAlign: TextAlign.end,
               style: TextStyle(
                 fontSize: 12,
@@ -774,48 +834,84 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 24,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  _timesSourceCaption(context),
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: isDarkMode
-                        ? Colors.white
-                        : AppConstants.brandGreenDark,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 3,
+                child: SizedBox(
+                  height: 24,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _timesSourceCaption(context),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode
+                              ? Colors.white
+                              : AppConstants.brandGreenDark,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_outlined,
-                size: 14,
-                color: isDarkMode ? Colors.white60 : Colors.black54,
+              const SizedBox(width: 10),
+              Flexible(
+                flex: 2,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: isDarkMode ? Colors.white60 : Colors.black54,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _locationLabel,
+                        maxLines: 1,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode ? Colors.white60 : Colors.black54,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  _locationLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.white60 : Colors.black54,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              IconButton(
+                onPressed: () => _shareSelectedDateInfo(context),
+                icon: const Icon(Icons.share_outlined),
+                iconSize: 18,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
                 ),
+                tooltip: context.tr(bn: 'শেয়ার', en: 'Share'),
+                color: isDarkMode ? Colors.white70 : AppConstants.brandGreen,
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          _buildSelectedDateCard(
+            context,
+            cardBackground: isDarkMode
+                ? const Color(0xFF1E2B22)
+                : AppConstants.brandGreen.withValues(alpha: 0.04),
+            borderColor: borderColor,
           ),
           const SizedBox(height: 12),
           _buildTimesHeader(context),
@@ -1016,13 +1112,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildSelectedDateCard(
-                    context,
-                    cardBackground: cardBackground,
-                    borderColor: borderColor,
                   ),
                   const SizedBox(height: 16),
 

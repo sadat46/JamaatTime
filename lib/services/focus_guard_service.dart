@@ -14,6 +14,8 @@ class FocusGuardService {
   FocusGuardService._internal();
 
   static const String _prefsKey = 'focus_guard_settings';
+  static const String _accessibilityDisclosureKey =
+      'focus_guard_accessibility_disclosure_accepted';
   static const MethodChannel _channel = MethodChannel(
     'jamaat_time/focus_guard',
   );
@@ -40,6 +42,16 @@ class FocusGuardService {
     await syncSettingsToNative(settings);
   }
 
+  Future<bool> hasAccessibilityDisclosureConsent() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_accessibilityDisclosureKey) ?? false;
+  }
+
+  Future<void> setAccessibilityDisclosureConsent(bool accepted) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_accessibilityDisclosureKey, accepted);
+  }
+
   Future<void> syncSettingsToNative(FocusGuardSettings settings) async {
     try {
       await _channel.invokeMethod<void>('updateSettings', {
@@ -54,33 +66,19 @@ class FocusGuardService {
 
   Future<Map<String, bool>> getPermissionStatus() async {
     try {
-      final accessibility = await _channel.invokeMethod<bool>(
-            'isAccessibilityEnabled',
-          ) ??
-          false;
-      final overlay =
-          await _channel.invokeMethod<bool>('isOverlayEnabled') ?? false;
-      return {'accessibility': accessibility, 'overlay': overlay};
+      final accessibility =
+          await _channel.invokeMethod<bool>('isAccessibilityEnabled') ?? false;
+      return {'accessibility': accessibility};
     } on MissingPluginException {
-      return {'accessibility': false, 'overlay': false};
+      return {'accessibility': false};
     } on PlatformException {
-      return {'accessibility': false, 'overlay': false};
+      return {'accessibility': false};
     }
   }
 
   Future<void> openAccessibilitySettings() async {
     try {
       await _channel.invokeMethod<void>('openAccessibilitySettings');
-    } on MissingPluginException {
-      // No-op.
-    } on PlatformException {
-      // No-op.
-    }
-  }
-
-  Future<void> openOverlaySettings() async {
-    try {
-      await _channel.invokeMethod<void>('openOverlaySettings');
     } on MissingPluginException {
       // No-op.
     } on PlatformException {

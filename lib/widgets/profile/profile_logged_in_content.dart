@@ -13,19 +13,12 @@ const profileSectionAdminToolsKey = ValueKey<String>(
 const profileSectionAppKey = ValueKey<String>('profile-section-app-label');
 
 const profileAccountCardKey = ValueKey<String>('profile-card-account');
-const profileBookmarksCardKey = ValueKey<String>('profile-card-bookmarks');
 const profileSettingsCardKey = ValueKey<String>('profile-card-settings');
 const profileAdminToolsCardKey = ValueKey<String>('profile-card-admin-tools');
 
-const profileActionBookmarksKey = ValueKey<String>(
-  'profile-action-my-bookmarks',
-);
 const profileActionSettingsKey = ValueKey<String>('profile-action-settings');
-const profileActionManageUsersKey = ValueKey<String>(
-  'profile-action-manage-users',
-);
-const profileActionEditImportKey = ValueKey<String>(
-  'profile-action-edit-import',
+const profileActionAdminToolsKey = ValueKey<String>(
+  'profile-action-admin-tools',
 );
 
 class ProfileLoggedInContent extends StatelessWidget {
@@ -37,10 +30,8 @@ class ProfileLoggedInContent extends StatelessWidget {
     required this.isAdmin,
     required this.isSuperAdmin,
     required this.onLogout,
-    required this.onBookmarksTap,
     required this.onSettingsTap,
-    required this.onManageUsersTap,
-    required this.onEditImportTap,
+    required this.onAdminToolsTap,
     required this.appInfoCard,
     this.brandGreen = const Color(0xFF388E3C),
     this.cardRadius = 18,
@@ -52,10 +43,8 @@ class ProfileLoggedInContent extends StatelessWidget {
   final bool isAdmin;
   final bool isSuperAdmin;
   final VoidCallback onLogout;
-  final VoidCallback onBookmarksTap;
   final VoidCallback onSettingsTap;
-  final VoidCallback onManageUsersTap;
-  final VoidCallback onEditImportTap;
+  final VoidCallback onAdminToolsTap;
   final Widget appInfoCard;
   final Color brandGreen;
   final double cardRadius;
@@ -106,17 +95,6 @@ class ProfileLoggedInContent extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
-  }
-
-  List<Widget> _tilesWithDividers(List<Widget> tiles) {
-    final children = <Widget>[];
-    for (var i = 0; i < tiles.length; i++) {
-      if (i > 0) {
-        children.add(Divider(height: 1, color: Colors.grey[200]));
-      }
-      children.add(tiles[i]);
-    }
-    return children;
   }
 
   Widget _buildSingleActionCard({required Key cardKey, required Widget child}) {
@@ -225,21 +203,6 @@ class ProfileLoggedInContent extends StatelessWidget {
             profileSectionMainOptionsKey,
           ),
           _buildSingleActionCard(
-            cardKey: profileBookmarksCardKey,
-            child: _buildActionTile(
-              tileKey: profileActionBookmarksKey,
-              icon: Icons.bookmark,
-              iconColor: brandGreen,
-              title: context.tr(bn: 'আমার বুকমার্ক', en: 'My Bookmarks'),
-              subtitle: context.tr(
-                bn: 'দ্রুত পড়ার জন্য সংরক্ষিত আয়াত ও দোয়া',
-                en: 'Saved ayat and dua for quick reading',
-              ),
-              onTap: onBookmarksTap,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildSingleActionCard(
             cardKey: profileSettingsCardKey,
             child: _buildActionTile(
               tileKey: profileActionSettingsKey,
@@ -259,44 +222,30 @@ class ProfileLoggedInContent extends StatelessWidget {
               context.tr(bn: 'অ্যাডমিন টুলস', en: 'Admin Tools'),
               profileSectionAdminToolsKey,
             ),
-            Card(
-              key: profileAdminToolsCardKey,
-              elevation: 1.5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(cardRadius),
-              ),
-              child: Column(
-                children: _tilesWithDividers([
-                  if (isSuperAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionManageUsersKey,
-                      icon: Icons.admin_panel_settings,
-                      iconColor: Colors.red,
-                      title: context.tr(bn: 'ব্যবহারকারী ব্যবস্থাপনা', en: 'Manage Users'),
-                      subtitle: context.tr(
-                        bn: 'রোল, অনুমতি এবং অ্যাকাউন্ট অ্যাক্সেস',
-                        en: 'Roles, permissions, and account access',
-                      ),
-                      onTap: onManageUsersTap,
-                    ),
-                  if (isAdmin)
-                    _buildActionTile(
-                      tileKey: profileActionEditImportKey,
-                      icon: Icons.file_upload,
-                      iconColor: Colors.orange,
-                      title: context.tr(bn: 'ডেটা সম্পাদনা/ইমপোর্ট', en: 'Edit/Import Data'),
-                      subtitle: context.tr(
-                        bn: 'সময়সূচি ইমপোর্ট ও বার্ষিক জামাত ডেটা ব্যবস্থাপনা',
-                        en: 'Import schedules and manage yearly jamaat data',
-                      ),
-                      onTap: onEditImportTap,
-                    ),
-                ]),
+            _buildSingleActionCard(
+              cardKey: profileAdminToolsCardKey,
+              child: _buildActionTile(
+                tileKey: profileActionAdminToolsKey,
+                icon: Icons.admin_panel_settings,
+                iconColor: isSuperAdmin ? Colors.red : Colors.orange,
+                title: context.tr(bn: 'অ্যাডমিন টুলস', en: 'Admin Tools'),
+                subtitle: context.tr(
+                  bn: isSuperAdmin
+                      ? 'ব্যবহারকারী, ব্রডকাস্ট ও জামাত ডেটা ম্যানেজ করুন'
+                      : 'জামাত সময়সূচি ইমপোর্ট ও ম্যানেজ করুন',
+                  en: isSuperAdmin
+                      ? 'Manage users, broadcasts, and jamaat data'
+                      : 'Import and manage jamaat schedules',
+                ),
+                onTap: onAdminToolsTap,
               ),
             ),
           ],
           const SizedBox(height: 16),
-          _buildSectionLabel(context.tr(bn: 'অ্যাপ', en: 'App'), profileSectionAppKey),
+          _buildSectionLabel(
+            context.tr(bn: 'অ্যাপ', en: 'App'),
+            profileSectionAppKey,
+          ),
           appInfoCard,
         ],
       ),

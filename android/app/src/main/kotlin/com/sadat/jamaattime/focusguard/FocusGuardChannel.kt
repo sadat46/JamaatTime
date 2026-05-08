@@ -2,7 +2,6 @@ package com.sadat.jamaattime.focusguard
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import android.text.TextUtils
 import android.util.Log
@@ -26,18 +25,8 @@ class FocusGuardChannel(messenger: BinaryMessenger, private val context: Context
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "isAccessibilityEnabled" -> result.success(isAccessibilityEnabled())
-                "isOverlayEnabled" -> result.success(Settings.canDrawOverlays(context))
                 "openAccessibilitySettings" -> {
                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
-                    result.success(null)
-                }
-                "openOverlaySettings" -> {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${context.packageName}")
-                    )
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(intent)
                     result.success(null)

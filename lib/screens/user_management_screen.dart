@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/firebase_callable_service.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -24,8 +25,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   bool _isLoading = true;
   bool _isSuperAdmin = false;
-  bool _isMigrating = false;
-  bool _advancedExpanded = false;
+  bool _isBootstrapping = false;
   String _roleFilter = 'all';
   String _searchQuery = '';
   String? _error;
@@ -111,212 +111,50 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
-  Future<void> _migrateExistingUsers() async {
-    if (_isMigrating) return;
+  Future<void> _bootstrapSuperadmin() async {
+    if (_isBootstrapping) return;
 
     setState(() {
-      _isMigrating = true;
+      _isBootstrapping = true;
     });
 
+    String? failureMessage;
+    var succeeded = false;
     try {
-      await _authService.migrateExistingUsers();
-      await _fetchUsersAndStats(showLoader: false);
-      if (!mounted) return;
+      await _authService.bootstrapSuperadminRole();
+      await _authService.currentUser?.getIdToken(true);
+      succeeded = true;
+    } on FirebaseCallableException catch (e) {
+      failureMessage = e.code == 'permission-denied'
+          ? 'Not authorized. Contact an existing superadmin.'
+          : 'Bootstrap failed: ${e.displayMessage}';
+    } catch (e) {
+      failureMessage = 'Bootstrap failed: $e';
+    }
 
+    if (!mounted) return;
+
+    if (succeeded) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Users synced successfully.'),
+          content: Text('Superadmin role granted. Loading user data…'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),
       );
-    } catch (e) {
-      if (!mounted) return;
+      await _checkSuperAdminAndLoadData();
+    } else {
+      setState(() {
+        _isBootstrapping = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Sync failed: $e'),
+          content: Text(failureMessage ?? 'Bootstrap failed.'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isMigrating = false;
-        });
-      }
     }
-  }
-
-  Future<void> _showManualMigrationDialog() async {
-    final userIdController = TextEditingController();
-    final emailController = TextEditingController();
-    var selectedRole = 'user';
-    var isSubmitting = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> submit() async {
-              final userId = userIdController.text.trim();
-              final email = emailController.text.trim();
-
-              if (userId.isEmpty || email.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please fill in UID and email.'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              setDialogState(() {
-                isSubmitting = true;
-              });
-
-              try {
-                await _authService.addUserToFirestore(
-                  userId,
-                  email,
-                  selectedRole,
-                );
-                if (!mounted) return;
-
-                // ignore: use_build_context_synchronously
-                Navigator.of(dialogContext).pop();
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text('User $email added successfully.'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-
-                await _fetchUsersAndStats(showLoader: false);
-              } catch (e) {
-                setDialogState(() {
-                  isSubmitting = false;
-                });
-                if (!mounted) return;
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error adding user: $e'),
-                    backgroundColor: Colors.red,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('Add Missing User'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Use this when an authenticated account is not present in Firestore.\n\n'
-                      'Firebase Console: Authentication > Users > Copy UID',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: Colors.grey[700],
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: userIdController,
-                      enabled: !isSubmitting,
-                      decoration: const InputDecoration(
-                        labelText: 'User ID (UID)',
-                        hintText: 'e.g. abc123def456',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: emailController,
-                      enabled: !isSubmitting,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email Address',
-                        hintText: 'e.g. user@example.com',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Role',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        isDense: true,
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedRole,
-                          isExpanded: true,
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'user',
-                              child: Text('User'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'admin',
-                              child: Text('Admin'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'superadmin',
-                              child: Text('Superadmin'),
-                            ),
-                          ],
-                          onChanged: isSubmitting
-                              ? null
-                              : (value) {
-                                  if (value == null) return;
-                                  setDialogState(() {
-                                    selectedRole = value;
-                                  });
-                                },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: isSubmitting ? null : submit,
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Add User'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    userIdController.dispose();
-    emailController.dispose();
   }
 
   Future<void> _saveRoleChange(Map<String, dynamic> user) async {
@@ -1157,146 +995,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  Widget _buildAdvancedActionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String buttonText,
-    required VoidCallback? onPressed,
-    bool isBusy = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: _brandGreen.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, size: 18, color: _brandGreen),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 12.5,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            height: 36,
-            child: OutlinedButton(
-              onPressed: onPressed,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _brandGreen,
-                side: BorderSide(color: _brandGreen.withValues(alpha: 0.45)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: isBusy
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(buttonText),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdvancedSection() {
-    return Card(
-      elevation: 1.2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(_cardRadius),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          key: const PageStorageKey('user-management-advanced'),
-          initiallyExpanded: _advancedExpanded,
-          onExpansionChanged: (expanded) {
-            setState(() {
-              _advancedExpanded = expanded;
-            });
-          },
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          leading: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: const Color(0xFF6D4C41).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.build_circle_outlined,
-              color: Color(0xFF6D4C41),
-              size: 20,
-            ),
-          ),
-          title: const Text(
-            'Migration & Recovery',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-          ),
-          subtitle: Text(
-            'Rare maintenance actions for account sync.',
-            style: TextStyle(color: Colors.grey[700], fontSize: 12.5),
-          ),
-          children: [
-            _buildAdvancedActionTile(
-              icon: Icons.sync_rounded,
-              title: 'Sync Users',
-              subtitle: 'Populate missing Firestore user records.',
-              buttonText: _isMigrating ? 'Syncing...' : 'Sync Users',
-              onPressed: _isMigrating ? null : _migrateExistingUsers,
-              isBusy: _isMigrating,
-            ),
-            const SizedBox(height: 10),
-            _buildAdvancedActionTile(
-              icon: Icons.person_add_alt_1_rounded,
-              title: 'Add Missing User',
-              subtitle: 'Manually add a user by UID, email, and role.',
-              buttonText: 'Add User',
-              onPressed: _showManualMigrationDialog,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAccessDeniedState() {
+    final isSignedIn = _authService.currentUser != null;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -1320,6 +1021,34 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 context,
               ).textTheme.bodyMedium?.copyWith(height: 1.4),
             ),
+            if (isSignedIn) ...[
+              const SizedBox(height: 20),
+              Text(
+                'First-time setup? If your email is on the server-side allowlist, '
+                'you can claim the superadmin role once.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[700],
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _isBootstrapping ? null : _bootstrapSuperadmin,
+                icon: _isBootstrapping
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.vpn_key_rounded),
+                label: Text(
+                  _isBootstrapping
+                      ? 'Contacting server…'
+                      : 'Complete admin setup',
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1388,8 +1117,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           _buildStatsSection(),
           const SizedBox(height: 14),
           _buildUsersSection(),
-          const SizedBox(height: 14),
-          _buildAdvancedSection(),
         ],
       ),
     );

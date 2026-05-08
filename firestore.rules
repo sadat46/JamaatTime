@@ -1,0 +1,134 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdminOrAbove() {
+      return isSignedIn() && userRole() in ['admin', 'superadmin'];
+    }
+    function isSuperAdmin() {
+      return isSignedIn() && userRole() == 'superadmin';
+    }
+    function publicNoticeKeys() {
+      return [
+        'schemaVersion',
+        'notifId',
+        'type',
+        'category',
+        'title',
+        'body',
+        'imageUrl',
+        'imageWidth',
+        'imageHeight',
+        'imageBlurHash',
+        'imageFallback',
+        'deepLink',
+        'locale',
+        'localizedVariants',
+        'status',
+        'publicVisible',
+        'priority',
+        'pinned',
+        'expiresAt',
+        'archivedAt',
+        'triggerSource',
+        'audience',
+        'createdAt',
+        'scheduledFor',
+        'sentAt',
+        'publishedAt',
+        'updatedAt',
+      ];
+    }
+    function isVisiblePublicNotice() {
+      return resource.data.publicVisible == true
+             && resource.data.status in ['sent', 'fallback_text']
+             && (!('expiresAt' in resource.data)
+                 || resource.data.expiresAt == null
+                 || resource.data.expiresAt > request.time)
+             && resource.data.keys().hasOnly(publicNoticeKeys());
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdminOrAbove());
+      allow create: if isSignedIn()
+                    && request.auth.uid == uid
+                    && !('role' in request.resource.data.keys());
+      allow update: if isSignedIn()
+                    && request.auth.uid == uid
+                    && !('role' in request.resource.data.diff(resource.data).affectedKeys());
+      allow delete: if false;
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAdminOrAbove() || isVisiblePublicNotice();
+      allow write: if false;
+
+      match /admin_meta/{doc} {
+        allow read: if isAdminOrAbove();
+        allow write: if false;
+      }
+
+      match /{subcollection=**} {
+        allow read: if isAdminOrAbove();
+        allow write: if false;
+      }
+    }
+
+    match /notification_rules/{doc} {
+      allow read: if isAdminOrAbove();
+      allow write: if isSuperAdmin();
+    }
+
+    match /user_tokens/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /device_tokens/{installationId} {
+      allow create, update: if true;
+      allow read, delete: if false;
+    }
+
+    match /scheduled_notifications/{notifId} {
+      allow read, write: if false;
+    }
+
+    match /admin_rate_limits/{doc} {
+      allow read, write: if false;
+    }
+
+    match /notification_cooldowns/{city} {
+      allow read, write: if false;
+    }
+
+    match /system_config/{doc} {
+      allow read, write: if false;
+    }
+
+    match /role_audit/{entryId} {
+      allow read: if isAdminOrAbove();
+      allow write: if false;
+    }
+
+    match /jamaat_times/{city}/daily_times/{date} {
+      allow read: if true;
+      allow write: if isAdminOrAbove()
+                   && request.resource.data.updatedBy == request.auth.uid
+                   && request.resource.data.writeSource == 'admin_panel';
+    }
+    match /jamaat_times/{city} {
+      allow read: if true;
+      allow write: if isAdminOrAbove();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

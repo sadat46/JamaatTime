@@ -8,10 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
 import '../widgets/profile/profile_logged_in_content.dart';
-import 'admin_jamaat_panel.dart';
-import 'bookmarks_screen.dart';
+import 'admin_tools_screen.dart';
 import 'settings_screen.dart';
-import 'user_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -278,33 +276,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _openBookmarksOrRedirectToLogin() async {
-    if (_authService.currentUser != null) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const BookmarksScreen()),
-      );
-      return;
+  String _authFailureMessage(Object error, {required bool isRegistration}) {
+    final action = isRegistration ? 'Registration' : 'Login';
+
+    if (error is FirebaseAuthException) {
+      final message = switch (error.code) {
+        'invalid-email' => 'Enter a valid email address.',
+        'user-disabled' => 'This account has been disabled.',
+        'user-not-found' => 'No account was found for this email.',
+        'wrong-password' ||
+        'invalid-credential' => 'The email or password is incorrect.',
+        'email-already-in-use' => 'An account already exists for this email.',
+        'weak-password' => 'Use a stronger password.',
+        'network-request-failed' =>
+          'Could not reach Firebase. Check your internet connection.',
+        'too-many-requests' => 'Too many attempts. Please wait and try again.',
+        'operation-not-allowed' =>
+          'Email/password sign-in is not enabled for this Firebase project.',
+        'invalid-api-key' =>
+          'Firebase is not configured correctly for this platform.',
+        'unknown-error' =>
+          'Firebase returned an internal error. Check this platform\'s Firebase configuration.',
+        _ =>
+          error.message?.trim().isNotEmpty == true
+              ? error.message!.trim()
+              : 'Authentication failed.',
+      };
+
+      return '$action failed: $message';
     }
 
-    if (!mounted) return;
-    setState(() {
-      _showRegister = false;
-      _error = 'Sign in to access My Bookmarks';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign in to access My Bookmarks')),
-    );
-
-    if (_authScrollController.hasClients) {
-      await _authScrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOut,
-      );
-    }
+    return '$action failed: $error';
   }
 
   Widget _buildSectionLabel(String text) {
@@ -354,17 +356,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
-    );
-  }
-
-  Widget _buildLoggedOutBookmarksCard() {
-    return _buildLoggedOutActionCard(
-      icon: Icons.bookmark,
-      title: 'My Bookmarks',
-      subtitle: 'Saved ayat and dua for quick reading',
-      onTap: () {
-        _openBookmarksOrRedirectToLogin();
-      },
     );
   }
 
@@ -480,23 +471,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onLogout: () {
         _handleLogout();
       },
-      onBookmarksTap: () {
-        _openBookmarksOrRedirectToLogin();
-      },
       onSettingsTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SettingsScreen()),
         );
       },
-      onManageUsersTap: () {
+      onAdminToolsTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
-        );
-      },
-      onEditImportTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const AdminJamaatPanel()),
+          MaterialPageRoute(
+            builder: (context) => AdminToolsScreen(
+              isAdmin: _isAdmin,
+              isSuperAdmin: _isSuperAdmin,
+              brandGreen: _brandGreen,
+              cardRadius: _cardRadius,
+            ),
+          ),
         );
       },
       appInfoCard: _buildAppInfoCard(),
@@ -626,8 +616,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 await _checkAdmin();
                               } catch (e) {
                                 setState(() {
-                                  _error =
-                                      "${_showRegister ? 'Registration' : 'Login'} failed: ${e.toString()}";
+                                  _error = _authFailureMessage(
+                                    e,
+                                    isRegistration: _showRegister,
+                                  );
                                 });
                               } finally {
                                 if (mounted) {
@@ -675,8 +667,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
             _buildSectionLabel('Main Options'),
-            _buildLoggedOutBookmarksCard(),
-            const SizedBox(height: 10),
             _buildLoggedOutSettingsCard(),
             const SizedBox(height: 14),
             _buildSectionLabel('App'),

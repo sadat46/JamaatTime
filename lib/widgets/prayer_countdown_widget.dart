@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
@@ -17,6 +16,7 @@ class PrayerCountdownWidget extends StatefulWidget {
   final CalculationParameters? calculationParams;
   final TextStyle? textStyle;
   final TextStyle? specialTextStyle;
+  final bool isActive;
 
   const PrayerCountdownWidget({
     super.key,
@@ -26,6 +26,7 @@ class PrayerCountdownWidget extends StatefulWidget {
     this.calculationParams,
     this.textStyle,
     this.specialTextStyle,
+    this.isActive = true,
   });
 
   @override
@@ -38,11 +39,16 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   String _countdownTimeStr = '';
   bool _isSpecialPrayer = false;
   double _progressValue = 0.0;
+  DateTime? _cachedTomorrowFajrDay;
+  double? _cachedTomorrowFajrLatitude;
+  double? _cachedTomorrowFajrLongitude;
+  CalculationParameters? _cachedTomorrowFajrParams;
+  DateTime? _cachedTomorrowFajr;
 
   @override
   void initState() {
     super.initState();
-    _startTimer();
+    _syncTimer();
   }
 
   @override
@@ -58,17 +64,42 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     // Recalculate immediately when props change
     if (oldWidget.prayerTimes != widget.prayerTimes ||
         oldWidget.selectedDate != widget.selectedDate ||
-        oldWidget.coordinates != widget.coordinates) {
+        oldWidget.coordinates != widget.coordinates ||
+        oldWidget.calculationParams != widget.calculationParams) {
+      _clearTomorrowFajrCache();
       _calculateCountdown();
+    }
+    if (oldWidget.isActive != widget.isActive) {
+      _syncTimer();
     }
   }
 
+  void _syncTimer() {
+    if (!widget.isActive) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    _startTimer();
+  }
+
   void _startTimer() {
+    if (_timer?.isActive ?? false) {
+      return;
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         _calculateCountdown();
       }
     });
+  }
+
+  void _clearTomorrowFajrCache() {
+    _cachedTomorrowFajrDay = null;
+    _cachedTomorrowFajrLatitude = null;
+    _cachedTomorrowFajrLongitude = null;
+    _cachedTomorrowFajrParams = null;
+    _cachedTomorrowFajr = null;
   }
 
   bool get _isEnglish => Localizations.localeOf(context).languageCode == 'en';
@@ -160,8 +191,8 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       periodName = currentPeriod == 'Sunrise'
           ? (_isEnglish ? 'Coming Dhuhr' : 'আসছে যোহর')
           : (_isEnglish
-              ? '$localizedPeriod time remaining'
-              : '$localizedPeriod বাকি');
+                ? '$localizedPeriod time remaining'
+                : '$localizedPeriod বাকি');
       isSpecial = false;
     }
 
@@ -177,14 +208,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
 
   double _calculateProgress(DateTime now) {
     final times = widget.prayerTimes;
-    final order = [
-      'Fajr',
-      'Sunrise',
-      'Dhuhr',
-      'Asr',
-      'Maghrib',
-      'Isha',
-    ];
+    final order = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
     DateTime? periodStart;
     DateTime? periodEnd;
@@ -208,16 +232,8 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     if (periodStart == null || periodEnd == null) {
       periodStart = times['Isha'];
 
-      // Get tomorrow's Fajr
-      if (periodStart != null && widget.coordinates != null && widget.calculationParams != null) {
-        final tomorrow = now.add(const Duration(days: 1));
-        final tomorrowPrayerTimes = PrayerTimes(
-          coordinates: widget.coordinates!,
-          date: tomorrow,
-          calculationParameters: widget.calculationParams!,
-          precision: true,
-        );
-        periodEnd = tomorrowPrayerTimes.fajr;
+      if (periodStart != null) {
+        periodEnd = _tomorrowFajr(now);
       }
     }
 
@@ -235,6 +251,39 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     return 0.0;
   }
 
+  DateTime? _tomorrowFajr(DateTime now) {
+    final coordinates = widget.coordinates;
+    final params = widget.calculationParams;
+    if (coordinates == null || params == null) {
+      return null;
+    }
+
+    final tomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(const Duration(days: 1));
+    if (_cachedTomorrowFajrDay == tomorrow &&
+        _cachedTomorrowFajrLatitude == coordinates.latitude &&
+        _cachedTomorrowFajrLongitude == coordinates.longitude &&
+        identical(_cachedTomorrowFajrParams, params)) {
+      return _cachedTomorrowFajr;
+    }
+
+    final tomorrowPrayerTimes = PrayerTimes(
+      coordinates: coordinates,
+      date: tomorrow,
+      calculationParameters: params,
+      precision: true,
+    );
+    _cachedTomorrowFajrDay = tomorrow;
+    _cachedTomorrowFajrLatitude = coordinates.latitude;
+    _cachedTomorrowFajrLongitude = coordinates.longitude;
+    _cachedTomorrowFajrParams = params;
+    _cachedTomorrowFajr = tomorrowPrayerTimes.fajr;
+    return _cachedTomorrowFajr;
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -247,11 +296,13 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       // Special state (past/future date): text-only display
       return Text(
         _periodName,
-        style: widget.specialTextStyle ?? TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: AppConstants.brandGreenDark,
-        ),
+        style:
+            widget.specialTextStyle ??
+            TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppConstants.brandGreenDark,
+            ),
         textAlign: TextAlign.center,
       );
     }
@@ -275,7 +326,10 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
             ),
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: MediaQuery.withClampedTextScaling(
@@ -284,13 +338,18 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
                       _countdownTimeStr,
                       maxLines: 1,
                       softWrap: false,
-                      style: (widget.textStyle ?? const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      )).copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                      style:
+                          (widget.textStyle ??
+                                  const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ))
+                              .copyWith(
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
                     ),
                   ),
                 ),
@@ -320,26 +379,25 @@ class _CircularProgressPainter extends CustomPainter {
   final Color startColor;
   final Color endColor;
   final Color trackColor;
-  final double strokeWidth;
+  static const double _strokeWidth = 10.0;
 
   const _CircularProgressPainter({
     required this.progress,
     required this.startColor,
     required this.endColor,
     required this.trackColor,
-    this.strokeWidth = 10.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
+    final radius = (math.min(size.width, size.height) - _strokeWidth) / 2;
     final rect = Rect.fromCircle(center: center, radius: radius);
 
     // Draw track
     final trackPaint = Paint()
       ..color = trackColor
-      ..strokeWidth = strokeWidth
+      ..strokeWidth = _strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, trackPaint);
@@ -355,17 +413,11 @@ class _CircularProgressPainter extends CustomPainter {
       );
       final progressPaint = Paint()
         ..shader = gradient.createShader(rect)
-        ..strokeWidth = strokeWidth
+        ..strokeWidth = _strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        sweepAngle,
-        false,
-        progressPaint,
-      );
+      canvas.drawArc(rect, -math.pi / 2, sweepAngle, false, progressPaint);
     }
   }
 

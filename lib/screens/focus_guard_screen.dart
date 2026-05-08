@@ -18,7 +18,7 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
 
   FocusGuardSettings _settings = const FocusGuardSettings();
   bool _accessibilityEnabled = false;
-  bool _overlayEnabled = false;
+  bool _accessibilityDisclosureAccepted = false;
   bool _loading = true;
 
   static const List<int> _tempAllowOptions = [5, 10, 15];
@@ -46,11 +46,13 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
   Future<void> _bootstrap() async {
     final settings = await _service.loadSettings();
     final perms = await _service.getPermissionStatus();
+    final disclosureAccepted = await _service
+        .hasAccessibilityDisclosureConsent();
     if (!mounted) return;
     setState(() {
       _settings = settings;
       _accessibilityEnabled = perms['accessibility'] ?? false;
-      _overlayEnabled = perms['overlay'] ?? false;
+      _accessibilityDisclosureAccepted = disclosureAccepted;
       _loading = false;
     });
   }
@@ -60,7 +62,6 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     if (!mounted) return;
     setState(() {
       _accessibilityEnabled = perms['accessibility'] ?? false;
-      _overlayEnabled = perms['overlay'] ?? false;
     });
   }
 
@@ -99,6 +100,81 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     await _save(_settings.copyWith(quickAllowEnabled: value));
   }
 
+  Future<void> _handleAccessibilitySetup() async {
+    if (!_accessibilityDisclosureAccepted) {
+      final accepted = await _showAccessibilityDisclosureDialog();
+      if (accepted != true) return;
+      await _service.setAccessibilityDisclosureConsent(true);
+      if (!mounted) return;
+      setState(() => _accessibilityDisclosureAccepted = true);
+    }
+    await _service.openAccessibilitySettings();
+  }
+
+  Future<bool?> _showAccessibilityDisclosureDialog() {
+    var checked = false;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Accessibility Disclosure'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Focus Guard uses Android Accessibility to inspect the '
+                      'current YouTube screen only enough to detect Shorts or '
+                      'Reels and, after you tap the block screen button, find '
+                      'YouTube\'s visible Home navigation control. '
+                      'Accessibility data is processed on this device and is '
+                      'not sent from the app.',
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'It does not collect messages, search text, passwords, '
+                      'or unrelated screen content, and it does not log raw '
+                      'screen text.',
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      value: checked,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text(
+                        'I understand and agree to enable Accessibility for '
+                        'Focus Guard.',
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() => checked = value ?? false);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: checked
+                      ? () => Navigator.of(context).pop(true)
+                      : null,
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,7 +191,8 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
               children: [
                 Text(
                   'Block short-video feeds (YouTube Shorts) to stay focused. '
-                  'No data leaves your device.',
+                  'Screen text is checked only to detect Shorts/Reels and '
+                  'find YouTube\'s visible Home control after your tap.',
                   style: TextStyle(color: Colors.grey[700], height: 1.35),
                 ),
                 const SizedBox(height: 16),
@@ -123,18 +200,9 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                   icon: Icons.accessibility_new,
                   title: 'Accessibility Service',
                   subtitle:
-                      'Required to detect when YouTube Shorts is opened.',
+                      'Required to detect YouTube Shorts and show the block screen.',
                   granted: _accessibilityEnabled,
-                  onSetup: _service.openAccessibilitySettings,
-                ),
-                const SizedBox(height: 10),
-                _permissionCard(
-                  icon: Icons.layers,
-                  title: 'Display over other apps',
-                  subtitle:
-                      'Required to show the focus reminder overlay.',
-                  granted: _overlayEnabled,
-                  onSetup: _service.openOverlaySettings,
+                  onSetup: _handleAccessibilitySetup,
                 ),
                 const SizedBox(height: 18),
                 _masterToggleCard(),
@@ -262,8 +330,9 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
           children: [
             SwitchListTile(
               value: youtubeOn,
-              onChanged:
-                  _settings.enabled ? (v) => _handleYouTubeToggle(v) : null,
+              onChanged: _settings.enabled
+                  ? (v) => _handleYouTubeToggle(v)
+                  : null,
               activeThumbColor: AppConstants.brandGreen,
               secondary: const Icon(Icons.smart_display, color: Colors.red),
               title: const Text(
@@ -326,7 +395,7 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
     final quickAllowOn = _settings.quickAllowEnabled;
     final subtitle = quickAllowOn
         ? 'Overlay will show "Allow ${_settings.tempAllowMinutes} min".'
-        : 'Overlay will only show "Go Back".';
+        : 'Overlay will only show "Back to YouTube Home".';
     return Card(
       elevation: 1.2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -337,8 +406,9 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
           children: [
             SwitchListTile(
               value: quickAllowOn,
-              onChanged:
-                  _settings.enabled ? (v) => _handleQuickAllowToggle(v) : null,
+              onChanged: _settings.enabled
+                  ? (v) => _handleQuickAllowToggle(v)
+                  : null,
               activeThumbColor: AppConstants.brandGreen,
               title: const Text(
                 'Allow quick bypass',
@@ -356,13 +426,17 @@ class _FocusGuardScreenState extends State<FocusGuardScreen>
                 child: SegmentedButton<int>(
                   segments: _tempAllowOptions
                       .map(
-                        (m) => ButtonSegment<int>(
-                          value: m,
-                          label: Text('$m min'),
+                        (minutes) => ButtonSegment<int>(
+                          value: minutes,
+                          label: Text('$minutes min'),
                         ),
                       )
                       .toList(),
-                  selected: {_settings.tempAllowMinutes},
+                  selected: {
+                    FocusGuardSettings.sanitizeTempAllowMinutes(
+                      _settings.tempAllowMinutes,
+                    ),
+                  },
                   onSelectionChanged: quickAllowOn
                       ? (set) {
                           if (set.isEmpty) return;

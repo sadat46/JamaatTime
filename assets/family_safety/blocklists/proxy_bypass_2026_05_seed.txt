@@ -1,0 +1,9 @@
+1dot1dot1dot1.cloudflare-dns.com
+cloudflare-dns.com
+dns.adguard.com
+dns.google
+dns.quad9.net
+doh.opendns.com
+family.cloudflare-dns.com
+one.one.one.one
+security.cloudflare-dns.com

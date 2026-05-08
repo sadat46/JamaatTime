@@ -1,9 +1,10 @@
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:jamaat_time/core/app_text.dart';
 import 'package:jamaat_time/services/widget_service.dart';
 import 'package:jamaat_time/utils/bangla_calendar.dart';
-import 'package:flutter/widgets.dart';
 
 void main() {
   setUpAll(() async {
@@ -134,6 +135,10 @@ void main() {
         data.jamaatEpochMillis,
         DateTime(2026, 4, 13, 5, 20).millisecondsSinceEpoch,
       );
+      expect(
+        data.jamaatOverEpochMillis,
+        DateTime(2026, 4, 13, 5, 30).millisecondsSinceEpoch,
+      );
     });
 
     test('during jamaat: shows jamaat ongoing without countdown', () {
@@ -150,6 +155,7 @@ void main() {
       expect(data.jamaatCountdownRunning, isFalse);
       expect(data.jamaatTextUsesTimeStyle, isTrue);
       expect(data.jamaatEpochMillis, 0);
+      expect(data.jamaatOverEpochMillis, 0);
     });
 
     test('after jamaat: shows jamaat ended', () {
@@ -166,6 +172,7 @@ void main() {
       expect(data.jamaatCountdownRunning, isFalse);
       expect(data.jamaatTextUsesTimeStyle, isTrue);
       expect(data.jamaatEpochMillis, 0);
+      expect(data.jamaatOverEpochMillis, 0);
     });
 
     test('sunrise period shows next jamaat static time line', () {
@@ -270,6 +277,166 @@ void main() {
       expect(data.countdownRunning, isFalse);
       expect(data.rowLabels.length, 4);
       expect(data.rowTimes.length, 4);
+    });
+  });
+
+  group('WidgetService.resolveTodayJamaatTime', () {
+    test('returns parsed DateTime for known prayer key', () {
+      final now = DateTime(2026, 4, 13, 12, 0);
+      final result = WidgetService.resolveTodayJamaatTime(
+        now: now,
+        prayerName: 'Dhuhr',
+        jamaatTimes: buildJamaatTimes(),
+      );
+      expect(result, DateTime(2026, 4, 13, 12, 25));
+    });
+
+    test('returns null for missing jamaat data', () {
+      final now = DateTime(2026, 4, 13, 12, 0);
+      final result = WidgetService.resolveTodayJamaatTime(
+        now: now,
+        prayerName: 'Dhuhr',
+        jamaatTimes: null,
+      );
+      expect(result, isNull);
+    });
+  });
+
+  group('WidgetService.updateWidgetData payload', () {
+    late TestDefaultBinaryMessenger messenger;
+    late Map<String, Object?> capturedSaves;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      capturedSaves = <String, Object?>{};
+      messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('home_widget'),
+        (MethodCall call) async {
+          if (call.method == 'saveWidgetData') {
+            final args = call.arguments as Map?;
+            if (args != null) {
+              capturedSaves[args['id'] as String] = args['data'];
+            }
+            return true;
+          }
+          if (call.method == 'updateWidget') {
+            return true;
+          }
+          return null;
+        },
+      );
+    });
+
+    tearDown(() {
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('home_widget'),
+        null,
+      );
+    });
+
+    test('writes raw epoch + localization keys (en)', () async {
+      final tomorrowFajr = DateTime(2026, 4, 14, 5, 1);
+      await WidgetService.updateWidgetData(
+        times: buildTimes(),
+        locale: const Locale('en'),
+        locationName: 'Dhaka',
+        date: DateTime(2026, 4, 13, 8, 30),
+        hijriOffsetDays: 0,
+        tomorrowFajr: tomorrowFajr,
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(
+        capturedSaves['epoch_fajr_today'],
+        DateTime(2026, 4, 13, 5, 0).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_sunrise_today'],
+        DateTime(2026, 4, 13, 6, 15).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_dhuhr_today'],
+        DateTime(2026, 4, 13, 12, 10).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_isha_today'],
+        DateTime(2026, 4, 13, 19, 45).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['epoch_fajr_tomorrow'],
+        tomorrowFajr.millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['jamaat_epoch_dhuhr_today'],
+        DateTime(2026, 4, 13, 12, 25).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['jamaat_epoch_fajr_today'],
+        DateTime(2026, 4, 13, 5, 20).millisecondsSinceEpoch,
+      );
+      expect(
+        capturedSaves['last_compute_day_epoch'],
+        DateTime(2026, 4, 13).millisecondsSinceEpoch,
+      );
+
+      expect(capturedSaves['loc_prayer_fajr'], 'Fajr');
+      expect(capturedSaves['loc_prayer_dhuhr'], 'Dhuhr');
+      expect(capturedSaves['loc_jamaat_in_suffix'], 'Jamaat in');
+      expect(capturedSaves['loc_jamaat_ongoing'], 'Jamaat ongoing');
+      expect(capturedSaves['loc_jamaat_over'], 'Jamaat ended');
+      expect(capturedSaves['loc_jamaat_na'], 'Jamaat N/A');
+      expect(capturedSaves['loc_prayer_ends_in'], 'Prayer ends in');
+      expect(capturedSaves['loc_next_prayer_in_template'], '{0} in');
+      expect(
+        capturedSaves['loc_next_prayer_jamaat_template'],
+        '{0} Jamaat at {1}',
+      );
+      expect(capturedSaves['time_format_pattern'], 'HH:mm');
+      expect(capturedSaves['locale_code'], 'en');
+    });
+
+    test('writes Bangla localization templates', () async {
+      await WidgetService.updateWidgetData(
+        times: buildTimes(),
+        locale: const Locale('bn'),
+        locationName: 'Dhaka',
+        date: DateTime(2026, 4, 13, 8, 30),
+        hijriOffsetDays: 0,
+        tomorrowFajr: DateTime(2026, 4, 14, 5, 1),
+        jamaatTimes: buildJamaatTimes(),
+      );
+
+      expect(capturedSaves['loc_next_prayer_in_template'], '{0} শুরু হবে');
+      expect(capturedSaves['loc_next_prayer_jamaat_template'], '{0} জামাত {1}');
+      expect(
+        (capturedSaves['loc_next_prayer_jamaat_template'] as String).contains(
+          '{0}',
+        ),
+        isTrue,
+      );
+      expect(
+        (capturedSaves['loc_next_prayer_jamaat_template'] as String).contains(
+          '{1}',
+        ),
+        isTrue,
+      );
+      expect(capturedSaves['locale_code'], 'bn');
+    });
+
+    test('writes 0 for missing jamaat entries', () async {
+      await WidgetService.updateWidgetData(
+        times: buildTimes(),
+        locale: const Locale('en'),
+        locationName: 'Dhaka',
+        date: DateTime(2026, 4, 13, 8, 30),
+        hijriOffsetDays: 0,
+      );
+
+      expect(capturedSaves['jamaat_epoch_dhuhr_today'], 0);
+      expect(capturedSaves['jamaat_epoch_fajr_today'], 0);
+      expect(capturedSaves['epoch_fajr_tomorrow'], 0);
     });
   });
 }

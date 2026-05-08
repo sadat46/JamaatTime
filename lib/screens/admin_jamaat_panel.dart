@@ -8,6 +8,7 @@ import '../services/prayer_aux_calculator.dart';
 import '../models/location_config.dart';
 import '../core/constants.dart';
 import '../core/locale_text.dart';
+import '../utils/jamaat_time_input_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 
@@ -927,8 +928,11 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
               controller: _jamaatControllers[prayer],
               decoration: InputDecoration(
                 labelText: context.tr(bn: 'সময়', en: 'Time'),
+                hintText: 'HH:mm',
                 isDense: true,
               ),
+              keyboardType: TextInputType.number,
+              inputFormatters: const [JamaatTimeInputFormatter()],
               enabled: isEditingPrayer,
             ),
           ),

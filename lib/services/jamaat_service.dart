@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
 import '../core/constants.dart';
 
@@ -8,6 +9,19 @@ class JamaatService {
   JamaatService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // P9: every jamaat write stamps identity into the doc body so the
+  // onJamaatChange Firestore trigger can verify the caller (triggers run as
+  // the service account and cannot read context.auth). P11 rules enforce
+  // updatedBy == request.auth.uid and writeSource == 'admin_panel'.
+  Map<String, dynamic> _identityStamp() {
+    final user = FirebaseAuth.instance.currentUser;
+    return {
+      'updatedBy': user?.uid,
+      'updatedByEmail': user?.email,
+      'writeSource': 'admin_panel',
+    };
+  }
 
   // Mock storage for testing when Firebase is not available
   static final Map<String, Map<String, Map<String, String>>> _mockStorage = {};
@@ -56,6 +70,7 @@ class JamaatService {
           'times': times,
           'created_at': FieldValue.serverTimestamp(),
           'updated_at': FieldValue.serverTimestamp(),
+          ..._identityStamp(),
         });
 
         developer.log(
@@ -205,6 +220,7 @@ class JamaatService {
         .set({
       'times': {prayerName.toLowerCase(): time},
       'updated_at': FieldValue.serverTimestamp(),
+      ..._identityStamp(),
     }, SetOptions(merge: true));
 
     developer.log(
@@ -279,6 +295,7 @@ class JamaatService {
             'times': times,
             'created_at': FieldValue.serverTimestamp(),
             'updated_at': FieldValue.serverTimestamp(),
+            ..._identityStamp(),
           });
         }
         

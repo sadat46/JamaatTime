@@ -19,7 +19,7 @@ internal object FocusGuardOverlayViewFactory {
         context: Context,
         tempAllowMinutes: Int,
         quickAllowEnabled: Boolean,
-        onGoBack: () -> Unit,
+        onBackToYoutubeHome: () -> Unit,
         onAllow: (minutes: Int) -> Unit,
     ): View {
         val root = FrameLayout(context).apply {
@@ -44,7 +44,7 @@ internal object FocusGuardOverlayViewFactory {
 
         card.addView(
             TextView(context).apply {
-                text = "Focus Guard Active"
+                text = "Shorts blocked for focus"
                 setTextColor(Color.WHITE)
                 textSize = 24f
                 setTypeface(typeface, Typeface.BOLD)
@@ -74,8 +74,8 @@ internal object FocusGuardOverlayViewFactory {
 
         card.addView(
             Button(context).apply {
-                text = "Go Back"
-                setOnClickListener { onGoBack() }
+                text = "Back to YouTube Home"
+                setOnClickListener { onBackToYoutubeHome() }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
