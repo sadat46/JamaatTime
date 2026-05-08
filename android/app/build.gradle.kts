@@ -17,6 +17,17 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+gradle.taskGraph.whenReady {
+    val releaseRequested = allTasks.any { task ->
+        task.path.contains("Release", ignoreCase = true)
+    }
+    if (releaseRequested && !keystorePropertiesFile.exists()) {
+        throw GradleException(
+            "Missing android/key.properties; release builds must use the production signing key."
+        )
+    }
+}
+
 android {
     namespace = "com.sadat.jamaattime"
     compileSdk = flutter.compileSdkVersion
@@ -40,6 +51,20 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "appMode"
+
+    productFlavors {
+        create("prayerOnly") {
+            dimension = "appMode"
+            applicationId = "com.sadat.jamaattime"
+            isDefault = true
+        }
+        create("familySafetyFull") {
+            dimension = "appMode"
+            applicationId = "com.sadat.jamaattime.safety"
+        }
+    }
+
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
@@ -53,11 +78,8 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                // Fallback for local dev builds only. Play Store / update signatures require a real keystore.
-                signingConfigs.getByName("debug")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true
             isShrinkResources = true
@@ -66,6 +88,16 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+}
+
+androidComponents {
+    beforeVariants(
+        selector()
+            .withBuildType("release")
+            .withFlavor("appMode" to "familySafetyFull")
+    ) { variantBuilder ->
+        variantBuilder.enable = false
     }
 }
 
@@ -84,4 +116,22 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {
         jvmTarget = "11"
     }
+}
+
+val copyPrayerOnlyReleaseForFlutter by tasks.registering(Copy::class) {
+    dependsOn("assemblePrayerOnlyRelease")
+    from(layout.buildDirectory.dir("outputs/apk/prayerOnly/release")) {
+        include("app-prayerOnly-release.apk")
+        include("app-prayerOnly-*-release.apk")
+    }
+    into(layout.buildDirectory.dir("outputs/flutter-apk"))
+    rename { fileName ->
+        fileName
+            .replace("app-prayerOnly-release.apk", "app-release.apk")
+            .replace("app-prayerOnly-", "app-")
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy(copyPrayerOnlyReleaseForFlutter)
 }

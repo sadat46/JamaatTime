@@ -8,3 +8,9 @@ const bool kLanguageSwitchEnabled = true;
 const bool kNoticeBoardEnabled = true;
 const String kNoticeBoardMinAppVersion = '2.0.20';
 const int kNoticeBoardPinLimit = 5;
+
+/// Enables the internal Family Safety build surfaces that require sensitive
+/// Android service declarations.
+const bool kFamilySafetyFull = bool.fromEnvironment(
+  'FAMILY_SAFETY_FULL',
+);

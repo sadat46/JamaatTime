@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/feature_flags.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/focus_guard_service.dart';
 import '../data/parent_control_storage.dart';
@@ -61,20 +62,28 @@ class _FamilySafetyPageState extends State<FamilySafetyPage>
 
   Future<void> _loadStatuses() async {
     final dns = await _familySafetyChannel.getPrivateDnsState();
-    final vpn = await _familySafetyChannel.getVpnStatus();
-    final focusGuard = await _focusGuardService.loadSettings();
-    final parentControl = await _parentControlStorage.loadStatus();
-    final activitySummary = await _familySafetyChannel.getActivitySummary(
-      rangeDays: _activitySummaryRangeDays,
-    );
+    final vpn = kFamilySafetyFull
+        ? await _familySafetyChannel.getVpnStatus()
+        : VpnStatus.unsupported();
+    final focusGuard = kFamilySafetyFull
+        ? await _focusGuardService.loadSettings()
+        : null;
+    final parentControl = kFamilySafetyFull
+        ? await _parentControlStorage.loadStatus()
+        : null;
+    final activitySummary = kFamilySafetyFull
+        ? await _familySafetyChannel.getActivitySummary(
+            rangeDays: _activitySummaryRangeDays,
+          )
+        : const <Object?>[];
     if (!mounted) return;
     setState(() {
       _basicProtectionOn =
           dns.isHostnameMode &&
           dns.host?.trim().toLowerCase() == _familyDnsHost;
-      _digitalWellbeingOn = focusGuard.enabled;
+      _digitalWellbeingOn = focusGuard?.enabled;
       _advancedProtectionOn = vpn.running;
-      _parentControlOn = parentControl.hasPin;
+      _parentControlOn = parentControl?.hasPin;
       _activitySummaryOn = activitySummary.isNotEmpty;
     });
   }
@@ -118,42 +127,44 @@ class _FamilySafetyPageState extends State<FamilySafetyPage>
             statusOn: _basicProtectionOn,
             onTap: () => _open(context, const BasicWebsiteProtectionPage()),
           ),
-          const SizedBox(height: 10),
-          FamilySafetySectionTile(
-            icon: Icons.self_improvement_outlined,
-            iconColor: const Color(0xFF1565C0),
-            title: strings.digitalWellbeingTitle,
-            subtitle: strings.digitalWellbeingSubtitle,
-            statusOn: _digitalWellbeingOn,
-            onTap: () => _open(context, const DigitalWellbeingPage()),
-          ),
-          const SizedBox(height: 10),
-          FamilySafetySectionTile(
-            icon: Icons.shield_outlined,
-            iconColor: const Color(0xFF00897B),
-            title: strings.websiteProtectionTitle,
-            subtitle: strings.websiteProtectionSubtitle,
-            statusOn: _advancedProtectionOn,
-            onTap: () => _open(context, const WebsiteProtectionPage()),
-          ),
-          const SizedBox(height: 10),
-          FamilySafetySectionTile(
-            icon: Icons.lock_outline,
-            iconColor: const Color(0xFF6A1B9A),
-            title: strings.parentControlTitle,
-            subtitle: strings.parentControlSubtitle,
-            statusOn: _parentControlOn,
-            onTap: () => _open(context, const ParentControlPage()),
-          ),
-          const SizedBox(height: 10),
-          FamilySafetySectionTile(
-            icon: Icons.insights_outlined,
-            iconColor: const Color(0xFFEF6C00),
-            title: strings.activitySummaryTitle,
-            subtitle: strings.activitySummarySubtitle,
-            statusOn: _activitySummaryOn,
-            onTap: () => _openInfoPage(context, const ActivitySummaryPage()),
-          ),
+          if (kFamilySafetyFull) ...[
+            const SizedBox(height: 10),
+            FamilySafetySectionTile(
+              icon: Icons.self_improvement_outlined,
+              iconColor: const Color(0xFF1565C0),
+              title: strings.digitalWellbeingTitle,
+              subtitle: strings.digitalWellbeingSubtitle,
+              statusOn: _digitalWellbeingOn,
+              onTap: () => _open(context, const DigitalWellbeingPage()),
+            ),
+            const SizedBox(height: 10),
+            FamilySafetySectionTile(
+              icon: Icons.shield_outlined,
+              iconColor: const Color(0xFF00897B),
+              title: strings.websiteProtectionTitle,
+              subtitle: strings.websiteProtectionSubtitle,
+              statusOn: _advancedProtectionOn,
+              onTap: () => _open(context, const WebsiteProtectionPage()),
+            ),
+            const SizedBox(height: 10),
+            FamilySafetySectionTile(
+              icon: Icons.lock_outline,
+              iconColor: const Color(0xFF6A1B9A),
+              title: strings.parentControlTitle,
+              subtitle: strings.parentControlSubtitle,
+              statusOn: _parentControlOn,
+              onTap: () => _open(context, const ParentControlPage()),
+            ),
+            const SizedBox(height: 10),
+            FamilySafetySectionTile(
+              icon: Icons.insights_outlined,
+              iconColor: const Color(0xFFEF6C00),
+              title: strings.activitySummaryTitle,
+              subtitle: strings.activitySummarySubtitle,
+              statusOn: _activitySummaryOn,
+              onTap: () => _openInfoPage(context, const ActivitySummaryPage()),
+            ),
+          ],
           const SizedBox(height: 10),
           FamilySafetySectionTile(
             icon: Icons.travel_explore_outlined,

@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
     <application
@@ -45,17 +44,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Family Safety: Website Protection VPN (DNS-only filter) -->
-        <service
-            android:name=".familysafety.vpn.FamilySafetyVpnService"
-            android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE"
-            android:foregroundServiceType="systemExempted">
-            <intent-filter>
-                <action android:name="android.net.VpnService" />
-            </intent-filter>
-        </service>
-            
         <!-- Prayer Widget Provider -->
         <receiver 
             android:name=".PrayerWidgetProvider" 
@@ -96,19 +84,6 @@
             android:name="es.antonborri.home_widget.HomeWidgetBackgroundService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-
-        <!-- Focus Guard Accessibility Service -->
-        <service
-            android:name=".focusguard.FocusGuardAccessibilityService"
-            android:exported="false"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/focus_guard_accessibility_config"/>
-        </service>
 
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="broadcast_channel"/>
     </application>
