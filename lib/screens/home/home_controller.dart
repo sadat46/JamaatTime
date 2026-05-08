@@ -1,0 +1,803 @@
+import 'dart:async';
+
+import 'package:adhan_dart/adhan_dart.dart';
+import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/app_locale_controller.dart';
+import '../../core/constants.dart';
+import '../../features/notice_board/data/notice_model.dart';
+import '../../features/notice_board/data/notice_read_state_service.dart';
+import '../../features/notice_board/data/notice_repository.dart';
+import '../../models/location_config.dart';
+import '../../services/auto_vibration_service.dart';
+import '../../services/jamaat_service.dart';
+import '../../services/location_config_service.dart';
+import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
+import '../../services/prayer_aux_calculator.dart';
+import '../../services/prayer_time_engine.dart';
+import '../../services/settings_service.dart';
+import 'models/prayer_row_data.dart';
+import 'services/home_notification_scheduler.dart';
+import 'services/home_widget_sync.dart';
+
+class HomeLocationFetchResult {
+  const HomeLocationFetchResult.success({
+    required this.latitude,
+    required this.longitude,
+    required this.placeName,
+  }) : error = null;
+
+  const HomeLocationFetchResult.error(this.error)
+    : latitude = null,
+      longitude = null,
+      placeName = null;
+
+  final double? latitude;
+  final double? longitude;
+  final String? placeName;
+  final Object? error;
+
+  bool get isSuccess => error == null;
+}
+
+class HomeController extends ChangeNotifier {
+  HomeController({
+    required bool isActive,
+    AppLifecycleState? lifecycleState,
+    SettingsService? settingsService,
+    LocationService? locationService,
+    NotificationService? notificationService,
+    JamaatService? jamaatService,
+    LocationConfigService? locationConfigService,
+    NoticeRepository? noticeRepository,
+    NoticeReadStateService? noticeReadState,
+    HomeNotificationScheduler? notificationScheduler,
+    HomeWidgetSync? widgetSync,
+  }) : _isHomeActive = isActive,
+       _appLifecycleActive =
+           lifecycleState == null ||
+           lifecycleState == AppLifecycleState.resumed,
+       _settingsService = settingsService ?? SettingsService(),
+       _locationService = locationService ?? LocationService(),
+       _notificationService = notificationService ?? NotificationService(),
+       _jamaatServiceOverride = jamaatService,
+       _locationConfigService =
+           locationConfigService ?? LocationConfigService(),
+       _noticeRepositoryOverride = noticeRepository,
+       _noticeReadStateOverride = noticeReadState,
+       _notificationScheduler =
+           notificationScheduler ??
+           HomeNotificationScheduler(
+             notificationService: notificationService ?? NotificationService(),
+           ),
+       _widgetSync = widgetSync ?? HomeWidgetSync();
+
+  final SettingsService _settingsService;
+  final LocationService _locationService;
+  final NotificationService _notificationService;
+  final JamaatService? _jamaatServiceOverride;
+  final LocationConfigService _locationConfigService;
+  NoticeRepository? _noticeRepositoryOverride;
+  NoticeReadStateService? _noticeReadStateOverride;
+  final HomeNotificationScheduler _notificationScheduler;
+  final HomeWidgetSync _widgetSync;
+
+  Timer? _timer;
+  DateTime _now = DateTime.now();
+  Coordinates? _coords;
+  CalculationParameters? _params;
+  PrayerTimes? _prayerTimes;
+  Map<String, DateTime?> _times = {};
+  Map<String, dynamic>? _jamaatTimes;
+  bool _isLoadingJamaat = false;
+  String? _jamaatError;
+  DateTime? _lastJamaatUpdate;
+  DateTime _selectedDate = DateTime.now();
+  String? _selectedCity;
+  LocationConfig? _locationConfig;
+  String? _currentPlaceName;
+  bool _isFetchingPlaceName = false;
+  int _bangladeshHijriOffsetDays =
+      SettingsService.defaultBangladeshHijriOffsetDays;
+  List<PrayerRowData> _prayerTableData = [];
+  String? _lastCurrentPeriod;
+  StreamSubscription<void>? _settingsSubscription;
+  bool _isHomeActive;
+  bool _appLifecycleActive;
+  bool _isDisposed = false;
+
+  JamaatService get _jamaatService => _jamaatServiceOverride ?? JamaatService();
+
+  DateTime get now => _now;
+  Coordinates? get coords => _coords;
+  CalculationParameters? get calculationParams => _params;
+  PrayerTimes? get prayerTimes => _prayerTimes;
+  Map<String, DateTime?> get times => _times;
+  Map<String, dynamic>? get jamaatTimes => _jamaatTimes;
+  bool get isLoadingJamaat => _isLoadingJamaat;
+  String? get jamaatError => _jamaatError;
+  DateTime? get lastJamaatUpdate => _lastJamaatUpdate;
+  DateTime get selectedDate => _selectedDate;
+  String? get selectedCity => _selectedCity;
+  LocationConfig? get locationConfig => _locationConfig;
+  String? get currentPlaceName => _currentPlaceName;
+  bool get isFetchingPlaceName => _isFetchingPlaceName;
+  int get bangladeshHijriOffsetDays => _bangladeshHijriOffsetDays;
+  List<PrayerRowData> get prayerTableData => _prayerTableData;
+  bool get shouldRunHomeTimer => _isHomeActive && _appLifecycleActive;
+
+  Stream<NoticeModel?> watchLatestNotice() => noticeRepository.watchLatest();
+
+  Future<bool> hasUnreadLatestNotice(NoticeModel? latest) {
+    return noticeReadState.hasUnreadLatest(latest);
+  }
+
+  Future<void> markLatestNoticeSeen(NoticeModel latest) {
+    return noticeReadState.markAllSeen([latest]);
+  }
+
+  NoticeRepository get noticeRepository {
+    return _noticeRepositoryOverride ??= NoticeRepository();
+  }
+
+  NoticeReadStateService get noticeReadState {
+    return _noticeReadStateOverride ??= NoticeReadStateService();
+  }
+
+  Future<void> initialize() async {
+    _selectedCity = AppConstants.defaultCity;
+    _locationConfig = _locationConfigService.getConfigForCity(_selectedCity!);
+    _locationConfigService.setCurrentConfig(_locationConfig!);
+    _notificationService.setLocationConfig(_locationConfig!);
+
+    _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+      _locationConfig!,
+    );
+
+    if (_locationConfig!.country == Country.bangladesh) {
+      final madhab = await _settingsService.getMadhab();
+      if (_isDisposed) return;
+      _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+    }
+    _bangladeshHijriOffsetDays = await _settingsService
+        .getBangladeshHijriOffsetDays();
+    if (_isDisposed) return;
+
+    final coords = Coordinates(
+      _locationConfig!.latitude,
+      _locationConfig!.longitude,
+    );
+    _prayerTimes = PrayerTimes(
+      coordinates: coords,
+      date: _now,
+      calculationParameters: _params!,
+      precision: true,
+    );
+    _times = PrayerTimeEngine.instance.createPrayerTimesMap(_prayerTimes!);
+    _notify();
+
+    if (_locationConfig!.jamaatSource == JamaatSource.server) {
+      await fetchJamaatTimes(_selectedCity!);
+      if (_isDisposed) return;
+    } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+      calculateLocalJamaatTimes();
+    }
+    await _loadLastLocation();
+    if (_isDisposed) return;
+
+    updatePrayerTimes();
+    await _scheduleNotificationsIfNeeded();
+    if (_isDisposed) return;
+    _syncHomeTimer();
+
+    _settingsSubscription = _settingsService.onSettingsChanged.listen((
+      _,
+    ) async {
+      await _loadMadhab();
+      if (_isDisposed) return;
+      await _loadBangladeshHijriOffset();
+      if (_isDisposed) return;
+      await _notificationScheduler.handleSettingsChange(
+        selectedDate: _selectedDate,
+        prayerTimes: _times,
+        jamaatTimes: _jamaatTimes,
+        selectedCity: _selectedCity,
+        currentPlaceName: _currentPlaceName,
+        locationConfig: _locationConfig,
+      );
+      if (_isDisposed) return;
+      _updateHomeWidget();
+      unawaited(AutoVibrationService().reschedule(_jamaatTimes));
+    });
+  }
+
+  void setHomeActive(bool isActive) {
+    if (_isDisposed) {
+      return;
+    }
+    if (_isHomeActive == isActive) {
+      return;
+    }
+    _isHomeActive = isActive;
+    _syncHomeTimer();
+    if (shouldRunHomeTimer) {
+      _handleHomeMinuteTick();
+    }
+    _notify();
+  }
+
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isDisposed) {
+      return;
+    }
+    final wasActive = _appLifecycleActive;
+    _appLifecycleActive = state == AppLifecycleState.resumed;
+    if (wasActive != _appLifecycleActive) {
+      _syncHomeTimer();
+      if (shouldRunHomeTimer) {
+        _handleHomeMinuteTick();
+      }
+      _notify();
+    }
+  }
+
+  Future<void> selectCity(String value) async {
+    if (_isDisposed) {
+      return;
+    }
+    if (value == _selectedCity) {
+      return;
+    }
+
+    _selectedCity = value;
+    _notify();
+
+    final prefs = await SharedPreferences.getInstance();
+    if (_isDisposed) return;
+    await prefs.setBool('is_gps_mode', false);
+    await prefs.setString('selected_city', value);
+
+    _locationConfig = _locationConfigService.getConfigForCity(value);
+    _locationConfigService.setCurrentConfig(_locationConfig!);
+    _notificationService.setLocationConfig(_locationConfig!);
+
+    _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+      _locationConfig!,
+    );
+
+    if (_locationConfig!.country == Country.bangladesh) {
+      final madhab = await _settingsService.getMadhab();
+      if (_isDisposed) return;
+      _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+    }
+
+    _notificationScheduler.invalidate();
+    _coords = Coordinates(
+      _locationConfig!.latitude,
+      _locationConfig!.longitude,
+    );
+    updatePrayerTimes();
+
+    if (_locationConfig!.jamaatSource == JamaatSource.server) {
+      await fetchJamaatTimes(value);
+    } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+      calculateLocalJamaatTimes();
+    }
+  }
+
+  Future<void> refreshJamaatTimes() async {
+    if (_isDisposed) {
+      return;
+    }
+    if (_selectedCity == null) {
+      return;
+    }
+    await fetchJamaatTimes(_selectedCity!, forceRefresh: true);
+    updatePrayerTimes();
+  }
+
+  Future<HomeLocationFetchResult?> fetchUserLocation() async {
+    if (_isDisposed) {
+      return null;
+    }
+    if (_isFetchingPlaceName) {
+      return null;
+    }
+
+    _coords = null;
+    _isFetchingPlaceName = true;
+    _currentPlaceName = null;
+    _notify();
+
+    try {
+      final position = await _locationService.getCurrentPosition();
+      if (_isDisposed) return null;
+      _coords = Coordinates(position.latitude, position.longitude);
+
+      final prefs = await SharedPreferences.getInstance();
+      if (_isDisposed) return null;
+      await prefs.setDouble('last_latitude', position.latitude);
+      await prefs.setDouble('last_longitude', position.longitude);
+
+      final place = await _locationService.getPlaceName(
+        position.latitude,
+        position.longitude,
+      );
+      if (_isDisposed) return null;
+      final country = _locationConfigService.detectCountryFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (country == Country.other) {
+        final placeName = place ?? 'Current Location';
+        _locationConfig = LocationConfig.world(
+          placeName,
+          position.latitude,
+          position.longitude,
+        );
+        _locationConfigService.setCurrentConfig(_locationConfig!);
+        _notificationService.setLocationConfig(_locationConfig!);
+        _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+          _locationConfig!,
+        );
+        _jamaatTimes = null;
+        _jamaatError = null;
+        _isLoadingJamaat = false;
+        _selectedCity = null;
+        await prefs.setBool('is_gps_mode', true);
+        await prefs.remove('selected_city');
+      } else if (country == Country.saudiArabia) {
+        final nearestCity = _locationConfigService.getNearestSaudiCity(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (nearestCity != null) {
+          _selectedCity = nearestCity;
+          _locationConfig = _locationConfigService.getConfigForCity(
+            nearestCity,
+          );
+          _locationConfigService.setCurrentConfig(_locationConfig!);
+          _notificationService.setLocationConfig(_locationConfig!);
+          _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+            _locationConfig!,
+          );
+          calculateLocalJamaatTimes();
+          await prefs.setBool('is_gps_mode', false);
+          await prefs.setString('selected_city', nearestCity);
+        }
+      } else if (country == Country.bangladesh) {
+        if (_locationConfig == null ||
+            _locationConfig!.country != Country.bangladesh) {
+          _selectedCity = AppConstants.defaultCity;
+          _locationConfig = _locationConfigService.getConfigForCity(
+            _selectedCity!,
+          );
+          _locationConfigService.setCurrentConfig(_locationConfig!);
+          _notificationService.setLocationConfig(_locationConfig!);
+          _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+            _locationConfig!,
+          );
+
+          final madhab = await _settingsService.getMadhab();
+          if (_isDisposed) return null;
+          _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+          await fetchJamaatTimes(_selectedCity!);
+          if (_isDisposed) return null;
+        }
+      }
+
+      _currentPlaceName = place;
+      _isFetchingPlaceName = false;
+      updatePrayerTimes();
+      _computePrayerTableData();
+      _notify();
+
+      if (place != null && place.isNotEmpty) {
+        await prefs.setString('last_location_name', place);
+      }
+
+      return HomeLocationFetchResult.success(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        placeName: place,
+      );
+    } catch (error) {
+      if (error.toString().contains('permission')) {
+        await _locationService.openLocationSettings();
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      if (_isDisposed) return HomeLocationFetchResult.error(error);
+      final lastPlace = prefs.getString('last_location_name');
+      final lastLat = prefs.getDouble('last_latitude');
+      final lastLng = prefs.getDouble('last_longitude');
+
+      _isFetchingPlaceName = false;
+      if (lastLat != null && lastLng != null) {
+        _coords = Coordinates(lastLat, lastLng);
+        updatePrayerTimes();
+      }
+      if (lastPlace != null && lastPlace.isNotEmpty) {
+        _currentPlaceName = lastPlace;
+      }
+      _computePrayerTableData();
+      _notify();
+
+      return HomeLocationFetchResult.error(error);
+    }
+  }
+
+  Future<void> fetchJamaatTimes(
+    String city, {
+    bool forceRefresh = false,
+  }) async {
+    if (_isDisposed) {
+      return;
+    }
+    _isLoadingJamaat = true;
+    _jamaatError = null;
+    _jamaatTimes = null;
+    _notify();
+
+    try {
+      final times = await _jamaatService.getJamaatTimes(
+        city: city,
+        date: _selectedDate,
+        forceRefresh: forceRefresh,
+      );
+      if (_isDisposed) return;
+
+      if (times != null) {
+        final completeJamaatTimes = Map<String, dynamic>.from(times);
+        final maghribJamaatTime = PrayerAuxCalculator.instance
+            .calculateMaghribJamaatTime(
+              maghribPrayerTime: _times['Maghrib'],
+              selectedCity: _selectedCity,
+            );
+        if (maghribJamaatTime != '-') {
+          completeJamaatTimes['maghrib'] = maghribJamaatTime;
+        }
+
+        _jamaatTimes = completeJamaatTimes;
+        _lastJamaatUpdate = DateTime.now();
+        _isLoadingJamaat = false;
+        _computePrayerTableData();
+        _notify();
+
+        _notificationScheduler.invalidate();
+        await _scheduleNotificationsIfNeeded();
+      } else {
+        _jamaatTimes = null;
+        _isLoadingJamaat = false;
+        _computePrayerTableData();
+        _notify();
+      }
+    } catch (_) {
+      if (_isDisposed) {
+        return;
+      }
+      _jamaatTimes = null;
+      _isLoadingJamaat = false;
+      _jamaatError = _trCurrent(
+        'জামাত সময় লোড করতে সমস্যা হয়েছে',
+        'Failed to load jamaat times',
+      );
+      _computePrayerTableData();
+      _notify();
+    }
+  }
+
+  void calculateLocalJamaatTimes() {
+    if (_isDisposed) {
+      return;
+    }
+    if (_locationConfig == null || _locationConfig!.jamaatOffsets == null) {
+      return;
+    }
+
+    final offsets = _locationConfig!.jamaatOffsets!;
+    final newJamaatTimes = <String, dynamic>{};
+    final prayerMapping = {
+      'fajr': 'Fajr',
+      'dhuhr': 'Dhuhr',
+      'asr': 'Asr',
+      'maghrib': 'Maghrib',
+      'isha': 'Isha',
+    };
+
+    for (final entry in offsets.entries) {
+      final prayerKey = entry.key;
+      final offset = entry.value;
+      final prayerName = prayerMapping[prayerKey];
+
+      if (prayerName != null && _times[prayerName] != null) {
+        final prayerTime = _times[prayerName]!;
+        final jamaatTime = prayerTime.add(Duration(minutes: offset));
+        newJamaatTimes[prayerKey] = DateFormat(
+          'HH:mm',
+        ).format(jamaatTime.toLocal());
+      }
+    }
+
+    _jamaatTimes = newJamaatTimes;
+    _isLoadingJamaat = false;
+    _jamaatError = null;
+    _computePrayerTableData();
+    _notify();
+
+    _notificationScheduler.invalidate();
+    unawaited(_scheduleNotificationsIfNeeded());
+  }
+
+  void updatePrayerTimes() {
+    if (_isDisposed) {
+      return;
+    }
+    if (_params == null) {
+      return;
+    }
+
+    final coords =
+        _coords ??
+        (_locationConfig != null
+            ? Coordinates(_locationConfig!.latitude, _locationConfig!.longitude)
+            : Coordinates(
+                AppConstants.defaultLatitude,
+                AppConstants.defaultLongitude,
+              ));
+
+    _prayerTimes = PrayerTimes(
+      coordinates: coords,
+      date: _selectedDate,
+      calculationParameters: _params!,
+      precision: true,
+    );
+    _times = PrayerTimeEngine.instance.createPrayerTimesMap(_prayerTimes!);
+
+    if (_jamaatTimes != null) {
+      final updatedJamaatTimes = Map<String, dynamic>.from(_jamaatTimes!);
+      final maghribJamaatTime = PrayerAuxCalculator.instance
+          .calculateMaghribJamaatTime(
+            maghribPrayerTime: _times['Maghrib'],
+            selectedCity: _selectedCity,
+          );
+      if (maghribJamaatTime != '-') {
+        updatedJamaatTimes['maghrib'] = maghribJamaatTime;
+      }
+      _jamaatTimes = updatedJamaatTimes;
+    }
+
+    _notificationScheduler.invalidate();
+    unawaited(_scheduleNotificationsIfNeeded());
+    _computePrayerTableData();
+    _notify();
+  }
+
+  void _syncHomeTimer() {
+    if (!shouldRunHomeTimer) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    if (_timer?.isActive ?? false) {
+      return;
+    }
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (shouldRunHomeTimer) {
+        _handleHomeMinuteTick();
+      }
+    });
+  }
+
+  void _handleHomeMinuteTick() {
+    final newNow = DateTime.now();
+    final oldDay = DateTime(_now.year, _now.month, _now.day);
+    final newDay = DateTime(newNow.year, newNow.month, newNow.day);
+
+    if (newDay.isAfter(oldDay)) {
+      _now = newNow;
+      _selectedDate = newNow;
+      updatePrayerTimes();
+      if (_selectedCity != null && _locationConfig != null) {
+        if (_locationConfig!.jamaatSource == JamaatSource.server) {
+          unawaited(fetchJamaatTimes(_selectedCity!));
+        } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+          calculateLocalJamaatTimes();
+        }
+      }
+    } else if (_times.isNotEmpty) {
+      final newPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+        times: _times,
+        now: newNow,
+      );
+      if (newPeriod != _lastCurrentPeriod) {
+        _now = newNow;
+        _computePrayerTableData();
+        _notify();
+      }
+    }
+    _now = newNow;
+  }
+
+  Future<void> _loadMadhab() async {
+    if (_locationConfig == null ||
+        _locationConfig!.country != Country.bangladesh ||
+        _params == null) {
+      return;
+    }
+
+    final madhab = await _settingsService.getMadhab();
+    if (_isDisposed) return;
+    _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+    if (madhab == 'hanafi') {
+      _params!.adjustments = Map.from(AppConstants.defaultAdjustments);
+    } else {
+      _params!.adjustments = {'asr': 0, 'isha': 2};
+    }
+    updatePrayerTimes();
+  }
+
+  Future<void> _loadBangladeshHijriOffset() async {
+    final offset = await _settingsService.getBangladeshHijriOffsetDays();
+    if (_isDisposed) {
+      return;
+    }
+    _bangladeshHijriOffsetDays = offset;
+    _notify();
+  }
+
+  Future<void> _loadLastLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_isDisposed) return;
+    final lastPlace = prefs.getString('last_location_name');
+    final lastLat = prefs.getDouble('last_latitude');
+    final lastLng = prefs.getDouble('last_longitude');
+
+    var needsUpdate = false;
+    if (lastLat != null && lastLng != null) {
+      _coords = Coordinates(lastLat, lastLng);
+      updatePrayerTimes();
+      needsUpdate = true;
+    }
+    if (lastPlace != null && lastPlace.isNotEmpty) {
+      _currentPlaceName = lastPlace;
+      needsUpdate = true;
+    }
+    if (needsUpdate) {
+      _computePrayerTableData();
+      _notify();
+    }
+  }
+
+  Future<void> _scheduleNotificationsIfNeeded() {
+    return _notificationScheduler.scheduleIfNeeded(
+      selectedDate: _selectedDate,
+      prayerTimes: _times,
+      jamaatTimes: _jamaatTimes,
+      selectedCity: _selectedCity,
+      currentPlaceName: _currentPlaceName,
+      locationConfig: _locationConfig,
+    );
+  }
+
+  String _getCurrentPrayerName() {
+    final now = DateTime.now();
+    final selectedDateOnly = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
+    final todayOnly = DateTime(now.year, now.month, now.day);
+
+    if (selectedDateOnly.isBefore(todayOnly)) {
+      return 'Isha';
+    } else if (selectedDateOnly.isAfter(todayOnly)) {
+      return 'Fajr';
+    } else {
+      final current = _prayerTimes?.currentPrayer(date: _now);
+      if (current == Prayer.fajr) return 'Fajr';
+      if (current == Prayer.sunrise) return 'Sunrise';
+      if (current == Prayer.dhuhr) return 'Dhuhr';
+      if (current == Prayer.asr) return 'Asr';
+      if (current == Prayer.maghrib) return 'Maghrib';
+      if (current == Prayer.isha) return 'Isha';
+      return 'Fajr';
+    }
+  }
+
+  void _computePrayerTableData() {
+    final currentPrayer = _getCurrentPrayerName();
+    final tableData = <PrayerRowData>[];
+    const prayerNames = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+    for (final name in prayerNames) {
+      final prayerTime = _times[name];
+      final timeStr = prayerTime != null
+          ? DateFormat('HH:mm').format(prayerTime.toLocal())
+          : '-';
+
+      final type = name == 'Sunrise'
+          ? PrayerRowType.info
+          : PrayerRowType.prayer;
+      final jamaatKey = switch (name) {
+        'Fajr' => 'fajr',
+        'Dhuhr' => 'dhuhr',
+        'Asr' => 'asr',
+        'Maghrib' => 'maghrib',
+        'Isha' => 'isha',
+        _ => name.toLowerCase(),
+      };
+
+      var jamaatStr = '-';
+      if (name == 'Maghrib') {
+        jamaatStr = PrayerAuxCalculator.instance.calculateMaghribJamaatTime(
+          maghribPrayerTime: _times['Maghrib'],
+          selectedCity: _selectedCity,
+        );
+      } else if (_jamaatTimes != null && _jamaatTimes!.containsKey(jamaatKey)) {
+        final value = _jamaatTimes![jamaatKey];
+        if (value != null && value.toString().isNotEmpty) {
+          jamaatStr = PrayerAuxCalculator.instance.formatJamaatTime(
+            value.toString(),
+          );
+        }
+      }
+
+      tableData.add(
+        PrayerRowData(
+          name: name,
+          timeStr: timeStr,
+          jamaatStr: jamaatStr,
+          isCurrent: name == currentPrayer,
+          type: type,
+        ),
+      );
+    }
+
+    _prayerTableData = tableData;
+    if (_times.isNotEmpty) {
+      _lastCurrentPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+        times: _times,
+        now: DateTime.now(),
+      );
+    }
+    _updateHomeWidget();
+  }
+
+  void _updateHomeWidget() {
+    _widgetSync.update(
+      times: _times,
+      selectedDate: _selectedDate,
+      locationConfig: _locationConfig,
+      calculationParameters: _params,
+      coordinates: _coords,
+      currentPlaceName: _currentPlaceName,
+      bangladeshHijriOffsetDays: _bangladeshHijriOffsetDays,
+      jamaatTimes: _jamaatTimes,
+    );
+  }
+
+  bool get _isEnglishCurrent =>
+      AppLocaleController.instance.current.languageCode == 'en';
+
+  String _trCurrent(String bn, String en) => _isEnglishCurrent ? en : bn;
+
+  void _notify() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _timer?.cancel();
+    _settingsSubscription?.cancel();
+    super.dispose();
+  }
+}
