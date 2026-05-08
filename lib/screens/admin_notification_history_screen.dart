@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 import '../core/locale_text.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_callable_service.dart';
 import '../services/notifications/fcm_service.dart';
 import '../widgets/notifications/notification_history_row.dart';
 
@@ -60,9 +60,7 @@ class _AdminNotificationHistoryScreenState
     extends State<AdminNotificationHistoryScreen> {
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
-    region: 'us-central1',
-  );
+  final FirebaseCallableService _callables = FirebaseCallableService();
   final ScrollController _scrollCtrl = ScrollController();
 
   final List<_MergedNotificationRow> _rows = [];
@@ -219,13 +217,11 @@ class _AdminNotificationHistoryScreenState
       _diagnosticsError = null;
     });
     try {
-      final resp = await _functions
-          .httpsCallable('getNotificationDiagnostics')
-          .call<Map<Object?, Object?>>({});
+      final diagnostics = await _callables.call('getNotificationDiagnostics');
       final local = await FcmService().debugSnapshot();
       if (!mounted) return;
       setState(() {
-        _diagnostics = Map<String, dynamic>.from(resp.data);
+        _diagnostics = diagnostics;
         _localDiagnostics = local;
       });
     } catch (e) {
@@ -245,7 +241,7 @@ class _AdminNotificationHistoryScreenState
       final broadcastType =
           data['broadcastType']?.toString() ??
           ((imageUrl != null && imageUrl.isNotEmpty) ? 'image' : 'text');
-      await _functions.httpsCallable('broadcastNotification').call({
+      await _callables.call('broadcastNotification', {
         'type': broadcastType,
         'title': data['title'],
         'body': data['body'],
@@ -274,9 +270,7 @@ class _AdminNotificationHistoryScreenState
   Future<void> _onCancel(String notifId) async {
     setState(() => _busy.add(notifId));
     try {
-      await _functions.httpsCallable('cancelScheduledBroadcast').call({
-        'notifId': notifId,
-      });
+      await _callables.call('cancelScheduledBroadcast', {'notifId': notifId});
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

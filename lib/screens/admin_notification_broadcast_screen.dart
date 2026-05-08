@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/locale_text.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_callable_service.dart';
 import '../widgets/notifications/broadcast_preview_card.dart';
 import '../widgets/notifications/broadcast_send_confirm_dialog.dart';
 
@@ -42,7 +42,7 @@ class _AdminNotificationBroadcastScreenState
   static const int _imageUploadMaxBytes = 1000000;
 
   final AuthService _authService = AuthService();
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  final FirebaseCallableService _callables = FirebaseCallableService();
 
   final TextEditingController _titleCtrl = TextEditingController();
   final TextEditingController _bodyCtrl = TextEditingController();
@@ -164,14 +164,10 @@ class _AdminNotificationBroadcastScreenState
     required String contentType,
     required int sizeBytes,
   }) async {
-    final callable = _functions.httpsCallable(
-      'createNotificationImageUploadUrl',
-    );
-    final resp = await callable.call<Map<Object?, Object?>>({
+    final data = await _callables.call('createNotificationImageUploadUrl', {
       'contentType': contentType,
       'sizeBytes': sizeBytes,
     });
-    final data = resp.data;
     final uploadUrl = data['uploadUrl']?.toString();
     final publicUrl = data['publicUrl']?.toString();
     if (uploadUrl == null || uploadUrl.isEmpty) {
@@ -275,9 +271,7 @@ class _AdminNotificationBroadcastScreenState
       final callableName = scheduledFor != null
           ? 'scheduleBroadcast'
           : 'broadcastNotification';
-      final callable = _functions.httpsCallable(callableName);
-      final resp = await callable.call<Map<Object?, Object?>>(payload);
-      final data = resp.data;
+      final data = await _callables.call(callableName, payload);
       final status = data['status']?.toString() ?? 'sent';
       final notifId = data['notifId']?.toString() ?? '';
       final failureReason = data['failureReason']?.toString();
@@ -309,14 +303,14 @@ class _AdminNotificationBroadcastScreenState
           _fireAt = null;
         });
       }
-    } on FirebaseFunctionsException catch (e) {
+    } on FirebaseCallableException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             context.tr(
-              bn: 'ব্রডকাস্ট ব্যর্থ: ${e.code} ${e.message ?? ''}',
-              en: 'Broadcast failed: ${e.code} ${e.message ?? ''}',
+              bn: 'ব্রডকাস্ট ব্যর্থ: ${e.displayMessage}',
+              en: 'Broadcast failed: ${e.displayMessage}',
             ),
           ),
         ),

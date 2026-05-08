@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import 'firebase_callable_service.dart';
 
 enum UserRole { user, admin, superadmin }
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  final FirebaseCallableService _callables = FirebaseCallableService();
 
   Stream<User?> get userChanges => _auth.userChanges();
   User? get currentUser => _auth.currentUser;
@@ -91,13 +92,12 @@ class AuthService {
 
   /// Attempt the single-use self-bootstrap against the server-side allowlist
   /// at `system_config/bootstrap_superadmins`. Returns normally on success;
-  /// throws [FirebaseFunctionsException] with code `permission-denied` when
+  /// throws [FirebaseCallableException] with code `permission-denied` when
   /// the caller's email is not on the allowlist. After success, the caller
   /// must refresh their id token (`user.getIdToken(true)`) and re-read the
   /// role via [getUserRole].
   Future<void> bootstrapSuperadminRole() async {
-    final callable = _functions.httpsCallable('bootstrapSuperadminRole');
-    await callable.call();
+    await _callables.call('bootstrapSuperadminRole');
   }
 
   /// Change another user's role. Wraps the `setUserRole` Cloud Function
@@ -105,8 +105,10 @@ class AuthService {
   /// every change lands in `role_audit/`. The client never writes `role`
   /// to Firestore directly.
   Future<void> updateUserRole(String userId, UserRole newRole) async {
-    final callable = _functions.httpsCallable('setUserRole');
-    await callable.call<void>({'targetUid': userId, 'role': newRole.name});
+    await _callables.call('setUserRole', {
+      'targetUid': userId,
+      'role': newRole.name,
+    });
   }
 
   /// List users for the superadmin console. This reads the `users`

@@ -1,7 +1,7 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/firebase_callable_service.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -124,10 +124,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       await _authService.bootstrapSuperadminRole();
       await _authService.currentUser?.getIdToken(true);
       succeeded = true;
-    } on FirebaseFunctionsException catch (e) {
+    } on FirebaseCallableException catch (e) {
       failureMessage = e.code == 'permission-denied'
           ? 'Not authorized. Contact an existing superadmin.'
-          : 'Bootstrap failed: ${e.message ?? e.code}';
+          : 'Bootstrap failed: ${e.displayMessage}';
     } catch (e) {
       failureMessage = 'Bootstrap failed: $e';
     }
