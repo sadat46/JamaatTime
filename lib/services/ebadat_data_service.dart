@@ -6,6 +6,17 @@ import '../models/ayat_model.dart';
 import '../models/dua_model.dart';
 import '../models/umrah_model.dart';
 
+/// Loads Ebadat content (ayats, duas, umrah sections) from bundled JSON.
+///
+/// Lazy-loaded by design: the loaders are only called from the corresponding
+/// tab's `initState` (see `screens/ebadat/tabs/`), so cold start doesn't pay
+/// for any of this work. Once loaded, results are cached in memory for the
+/// process lifetime via the singleton instance.
+///
+/// **Why no `compute()` wrap:** the three JSON assets total ~50 KB. At this
+/// size, an isolate hop would add more overhead than the parse itself.
+/// Wrapping these parses in `compute()` would *slow down* first-tab-open, not
+/// speed it up. If a future asset grows past ~200 KB, reconsider.
 class EbadatDataService {
   static final EbadatDataService _instance = EbadatDataService._internal();
   factory EbadatDataService() => _instance;

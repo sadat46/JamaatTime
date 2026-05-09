@@ -47,6 +47,12 @@ class NotificationService {
   bool _exactAlarmsAvailable = false;
   bool get exactAlarmsAvailable => _exactAlarmsAvailable;
 
+  /// Notification-channel IDs already created on the OS during this process.
+  /// Used by [_ensureChannelById] to skip redundant platform-channel calls.
+  /// Channels persist across app launches at the OS level; this set only
+  /// tracks per-process duplicates.
+  final Set<String> _createdChannelIds = <String>{};
+
   AndroidScheduleMode get _androidScheduleMode => _exactAlarmsAvailable
       ? AndroidScheduleMode.exactAllowWhileIdle
       : AndroidScheduleMode.inexactAllowWhileIdle;
@@ -201,9 +207,15 @@ class NotificationService {
         },
       );
 
-      // Create notification channel for Android
+      // Create notification channels for Android.
+      //
+      // Phase 2.3: only create the channels matching the user's current
+      // sound modes (plus the Fajr voice channel). The other 8 channels
+      // are dead weight at boot and get lazily created on demand by
+      // [_ensureChannelById] in [scheduleNotification], or when the user
+      // changes sound modes via [handleNotificationSoundModeChange].
       if (Platform.isAndroid) {
-        await _createAllNotificationChannels();
+        await _createActiveChannelsForBoot();
       }
 
       // Request notification permissions for Android 13+ and iOS
@@ -301,18 +313,16 @@ class NotificationService {
     };
   }
 
-  /// Create all notification channels for Android
-  Future<void> _createAllNotificationChannels() async {
-    try {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          flutterLocalNotificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin
-              >();
-
-      if (androidImplementation != null) {
-        // Create prayer notification channels
-        final prayerCustomChannel = AndroidNotificationChannel(
+  /// Single source of truth for notification-channel definitions.
+  ///
+  /// Returns `null` for unknown IDs (callers should treat that as "skip").
+  /// Building the channel object is cheap (it's just a Dart constructor); the
+  /// expensive part is the platform-channel call inside
+  /// [AndroidFlutterLocalNotificationsPlugin.createNotificationChannel].
+  AndroidNotificationChannel? _buildChannelById(String id) {
+    switch (id) {
+      case 'prayer_channel_custom':
+        return AndroidNotificationChannel(
           'prayer_channel_custom',
           'Prayer Notifications (Custom Sound)',
           description: 'Prayer notifications with custom adhan sound',
@@ -322,8 +332,8 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('prayer_allahu_akbar'),
         );
-
-        final prayerCustomChannel2 = AndroidNotificationChannel(
+      case 'prayer_channel_custom_2':
+        return AndroidNotificationChannel(
           'prayer_channel_custom_2',
           'Prayer Notifications (Custom Sound 2)',
           description: 'Prayer notifications with custom adhan sound 2',
@@ -333,8 +343,8 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('prayer_custom_2'),
         );
-
-        final prayerCustomChannel3 = AndroidNotificationChannel(
+      case 'prayer_channel_custom_3':
+        return AndroidNotificationChannel(
           'prayer_channel_custom_3',
           'Prayer Notifications (Custom Sound 3)',
           description: 'Prayer notifications with custom adhan sound 3',
@@ -344,8 +354,8 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('prayer_custom_3'),
         );
-
-        const prayerSystemChannel = AndroidNotificationChannel(
+      case 'prayer_channel_system':
+        return const AndroidNotificationChannel(
           'prayer_channel_system',
           'Prayer Notifications (System Sound)',
           description: 'Prayer notifications with system default sound',
@@ -355,8 +365,8 @@ class NotificationService {
           showBadge: true,
           sound: null,
         );
-
-        const prayerSilentChannel = AndroidNotificationChannel(
+      case 'prayer_channel_silent':
+        return const AndroidNotificationChannel(
           'prayer_channel_silent',
           'Prayer Notifications (Silent)',
           description: 'Prayer notifications without sound',
@@ -366,9 +376,8 @@ class NotificationService {
           showBadge: true,
           sound: null,
         );
-
-        // Create jamaat notification channels
-        final jamaatCustomChannel = AndroidNotificationChannel(
+      case 'jamaat_channel_custom':
+        return AndroidNotificationChannel(
           'jamaat_channel_custom',
           'Jamaat Notifications (Custom Sound)',
           description: 'Jamaat notifications with custom adhan sound',
@@ -378,8 +387,8 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('jamaat_allahu_akbar'),
         );
-
-        final jamaatCustomChannel2 = AndroidNotificationChannel(
+      case 'jamaat_channel_custom_2':
+        return AndroidNotificationChannel(
           'jamaat_channel_custom_2',
           'Jamaat Notifications (Custom Sound 2)',
           description: 'Jamaat notifications with custom adhan sound 2',
@@ -389,8 +398,8 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('jamaat_custom_2'),
         );
-
-        final jamaatCustomChannel3 = AndroidNotificationChannel(
+      case 'jamaat_channel_custom_3':
+        return AndroidNotificationChannel(
           'jamaat_channel_custom_3',
           'Jamaat Notifications (Custom Sound 3)',
           description: 'Jamaat notifications with custom adhan sound 3',
@@ -400,8 +409,8 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('jamaat_custom_3'),
         );
-
-        const jamaatSystemChannel = AndroidNotificationChannel(
+      case 'jamaat_channel_system':
+        return const AndroidNotificationChannel(
           'jamaat_channel_system',
           'Jamaat Notifications (System Sound)',
           description: 'Jamaat notifications with system default sound',
@@ -411,8 +420,8 @@ class NotificationService {
           showBadge: true,
           sound: null,
         );
-
-        const jamaatSilentChannel = AndroidNotificationChannel(
+      case 'jamaat_channel_silent':
+        return const AndroidNotificationChannel(
           'jamaat_channel_silent',
           'Jamaat Notifications (Silent)',
           description: 'Jamaat notifications without sound',
@@ -422,40 +431,8 @@ class NotificationService {
           showBadge: true,
           sound: null,
         );
-
-        // Create all channels
-        await androidImplementation.createNotificationChannel(
-          prayerCustomChannel,
-        );
-        await androidImplementation.createNotificationChannel(
-          prayerCustomChannel2,
-        );
-        await androidImplementation.createNotificationChannel(
-          prayerCustomChannel3,
-        );
-        await androidImplementation.createNotificationChannel(
-          prayerSystemChannel,
-        );
-        await androidImplementation.createNotificationChannel(
-          prayerSilentChannel,
-        );
-        await androidImplementation.createNotificationChannel(
-          jamaatCustomChannel,
-        );
-        await androidImplementation.createNotificationChannel(
-          jamaatCustomChannel2,
-        );
-        await androidImplementation.createNotificationChannel(
-          jamaatCustomChannel3,
-        );
-        await androidImplementation.createNotificationChannel(
-          jamaatSystemChannel,
-        );
-        await androidImplementation.createNotificationChannel(
-          jamaatSilentChannel,
-        );
-
-        final fajrVoiceChannel = AndroidNotificationChannel(
+      case 'fajr_voice_channel_v1':
+        return AndroidNotificationChannel(
           'fajr_voice_channel_v1',
           'Fajr Voice Notification',
           description: 'Plays voice reminder at Fajr prayer start time',
@@ -465,7 +442,89 @@ class NotificationService {
           showBadge: true,
           sound: RawResourceAndroidNotificationSound('fajr_prayer_voice'),
         );
-        await androidImplementation.createNotificationChannel(fajrVoiceChannel);
+      default:
+        return null;
+    }
+  }
+
+  /// Lazily create a single notification channel by ID. Idempotent within
+  /// this process via [_createdChannelIds].
+  ///
+  /// Safe to call from [scheduleNotification] right before each schedule:
+  /// the first call creates the channel, subsequent calls are O(1) set
+  /// lookups. No-op on non-Android.
+  Future<void> _ensureChannelById(String id) async {
+    if (_createdChannelIds.contains(id)) return;
+    if (!Platform.isAndroid) return;
+    final channel = _buildChannelById(id);
+    if (channel == null) {
+      developer.log(
+        'JT_NOTIFY ensureChannel unknown id=$id',
+        name: 'NotificationService',
+      );
+      return;
+    }
+    final androidImpl = _androidPlugin();
+    if (androidImpl == null) return;
+    await androidImpl.createNotificationChannel(channel);
+    _createdChannelIds.add(id);
+  }
+
+  /// All known channel IDs. Used by [_createAllNotificationChannels] when a
+  /// caller (e.g. sound-mode-change recovery) wants to refresh every channel.
+  static const List<String> _allChannelIds = <String>[
+    'prayer_channel_custom',
+    'prayer_channel_custom_2',
+    'prayer_channel_custom_3',
+    'prayer_channel_system',
+    'prayer_channel_silent',
+    'jamaat_channel_custom',
+    'jamaat_channel_custom_2',
+    'jamaat_channel_custom_3',
+    'jamaat_channel_system',
+    'jamaat_channel_silent',
+    'fajr_voice_channel_v1',
+  ];
+
+  /// Boot-time channel creation: only the channels matching the user's
+  /// CURRENT prayer + jamaat sound modes, plus the Fajr voice channel.
+  ///
+  /// The other 8 channels are dead weight at boot; only one prayer + one
+  /// jamaat channel ever fire at a time, determined by sound mode in
+  /// settings. Channels for other sound modes are created lazily on demand
+  /// when the user switches modes (via [handleNotificationSoundModeChange],
+  /// which still goes through [_createAllNotificationChannels]) or, as a
+  /// safety net, when [scheduleNotification] is called.
+  Future<void> _createActiveChannelsForBoot() async {
+    if (!Platform.isAndroid) return;
+    int prayerSoundMode;
+    int jamaatSoundMode;
+    try {
+      prayerSoundMode = await _settingsService.getPrayerNotificationSoundMode();
+    } catch (_) {
+      prayerSoundMode = 3;
+    }
+    try {
+      jamaatSoundMode = await _settingsService.getJamaatNotificationSoundMode();
+    } catch (_) {
+      jamaatSoundMode = 3;
+    }
+    await _ensureChannelById(_getPrayerChannelId(prayerSoundMode));
+    await _ensureChannelById(_getJamaatChannelId(jamaatSoundMode));
+    await _ensureChannelById('fajr_voice_channel_v1');
+  }
+
+  /// Create every known notification channel.
+  ///
+  /// Used by recovery / migration paths (e.g. [recreateNotificationChannel]).
+  /// Boot does NOT use this; boot uses [_createActiveChannelsForBoot] for a
+  /// minimal startup cost. Channel definitions live in [_buildChannelById]
+  /// (single source of truth).
+  Future<void> _createAllNotificationChannels() async {
+    try {
+      if (!Platform.isAndroid) return;
+      for (final id in _allChannelIds) {
+        await _ensureChannelById(id);
       }
     } catch (e) {
       developer.log(
@@ -529,6 +588,10 @@ class NotificationService {
         notificationType: notificationType,
         soundMode: soundMode,
       );
+
+      // Phase 2.3: lazily create the channel for this sound mode if it
+      // wasn't already created at boot. Idempotent and O(1) on cache hit.
+      await _ensureChannelById(config['channelId'] as String);
 
       // Schedule the notification
       await flutterLocalNotificationsPlugin.zonedSchedule(
