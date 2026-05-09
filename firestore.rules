@@ -45,13 +45,25 @@ service cloud.firestore {
         'updatedAt',
       ];
     }
+    function hasNoSensitiveFields() {
+      return !resource.data.keys().hasAny([
+        'createdBy', 'createdByEmail', 'target', 'targets',
+        'recipients', 'tokens', 'fcmTokens', 'deviceList',
+        'fcmResponse', 'fcmMessageId', 'fcmStats',
+        'sendMode', 'broadcastType',
+        'failureReason', 'errorLog', 'lastError',
+        'dedupKey', 'idempotencyKey', 'retryCount', 'lastRetryAt',
+        'cancelledBy', 'cancelledAt', 'editHistory',
+        'internalNote', 'internalNotes', 'debug',
+      ]);
+    }
     function isVisiblePublicNotice() {
       return resource.data.publicVisible == true
              && resource.data.status in ['sent', 'fallback_text']
              && (!('expiresAt' in resource.data)
                  || resource.data.expiresAt == null
                  || resource.data.expiresAt > request.time)
-             && resource.data.keys().hasOnly(publicNoticeKeys());
+             && hasNoSensitiveFields();
     }
 
     match /users/{uid} {
