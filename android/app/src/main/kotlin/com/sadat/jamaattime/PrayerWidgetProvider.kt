@@ -46,7 +46,6 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         private const val HOME_WIDGET_BACKGROUND_RECEIVER =
             "es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
         private const val BOUNDARY_URI = "homewidget://boundary"
-        private const val REFRESH_URI = "homewidget://refresh"
 
         private const val PREFS_NAME = "HomeWidgetPreferences"
     }
@@ -155,17 +154,6 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                     )
                     views.setOnClickPendingIntent(R.id.widget_root, pi)
                 }
-
-                val refreshIntent = Intent(HOME_WIDGET_BACKGROUND_ACTION)
-                    .setComponent(ComponentName(context, HOME_WIDGET_BACKGROUND_RECEIVER))
-                    .setData(Uri.parse(REFRESH_URI))
-                val refreshPi = PendingIntent.getBroadcast(
-                    context,
-                    1,
-                    refreshIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
-                views.setOnClickPendingIntent(R.id.refresh_button, refreshPi)
 
                 appWidgetManager.updateAppWidget(id, views)
             }
