@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../../core/firebase_bootstrap.dart';
 import 'broadcast_channel.dart';
 import 'fcm_background_handler.dart';
 import 'fcm_deep_link_router.dart';
@@ -33,6 +34,7 @@ class FcmService {
     required String locale,
   }) async {
     if (_initialized) return;
+    if (!await firebaseReady) return;
 
     _localPlugin = FlutterLocalNotificationsPlugin();
     _repo = FcmTokenRepository();
@@ -165,16 +167,20 @@ class FcmService {
   Future<Map<String, String?>> debugSnapshot() async {
     String? token;
     String authorizationStatus = 'unavailable';
-    try {
-      token = await FirebaseMessaging.instance.getToken();
-      final settings = await FirebaseMessaging.instance
-          .getNotificationSettings();
-      authorizationStatus = settings.authorizationStatus.name;
-    } catch (_) {
-      token = null;
+    User? user;
+    String? installationId;
+    if (await firebaseReady) {
+      try {
+        token = await FirebaseMessaging.instance.getToken();
+        final settings = await FirebaseMessaging.instance
+            .getNotificationSettings();
+        authorizationStatus = settings.authorizationStatus.name;
+      } catch (_) {
+        token = null;
+      }
+      user = FirebaseAuth.instance.currentUser;
+      installationId = await _safeInstallationId();
     }
-    final user = FirebaseAuth.instance.currentUser;
-    final installationId = await _safeInstallationId();
     String? androidNotificationsEnabled;
     try {
       final plugin = _initialized

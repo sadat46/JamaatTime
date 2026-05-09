@@ -1,25 +1,47 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/firebase_bootstrap.dart';
 import 'firebase_callable_service.dart';
 
 enum UserRole { user, admin, superadmin }
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseCallableService _callables = FirebaseCallableService();
 
-  Stream<User?> get userChanges => _auth.userChanges();
-  User? get currentUser => _auth.currentUser;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+
+  Stream<User?> get userChanges async* {
+    if (!await firebaseReady) {
+      return;
+    }
+    yield* _auth.userChanges();
+  }
+
+  User? get currentUser {
+    try {
+      return _auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<User?> signIn(String email, String password) async {
-    final result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+    if (!await firebaseReady) return null;
+    final result = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
     return result.user;
   }
 
   Future<User?> register(String email, String password) async {
-    final result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    if (!await firebaseReady) return null;
+    final result = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
     // Create profile doc WITHOUT the `role` field.
     // Role is assigned only by Cloud Functions (bootstrapSuperadminRole / setUserRole).
@@ -35,10 +57,12 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    if (!await firebaseReady) return;
     await _auth.signOut();
   }
 
   Future<void> savePreferredCity(String city) async {
+    if (!await firebaseReady) return;
     final user = _auth.currentUser;
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).set({
@@ -49,6 +73,7 @@ class AuthService {
   }
 
   Future<String?> loadPreferredCity() async {
+    if (!await firebaseReady) return null;
     final user = _auth.currentUser;
     if (user != null) {
       final doc = await _firestore.collection('users').doc(user.uid).get();
@@ -62,6 +87,7 @@ class AuthService {
   /// through `bootstrapSuperadminRole` (single-use self-bootstrap against
   /// a server-side allowlist) and `setUserRole` (superadmin-only).
   Future<UserRole> getUserRole() async {
+    if (!await firebaseReady) return UserRole.user;
     final user = _auth.currentUser;
     if (user == null) return UserRole.user;
 
@@ -97,6 +123,7 @@ class AuthService {
   /// must refresh their id token (`user.getIdToken(true)`) and re-read the
   /// role via [getUserRole].
   Future<void> bootstrapSuperadminRole() async {
+    if (!await firebaseReady) return;
     await _callables.call('bootstrapSuperadminRole');
   }
 
@@ -105,6 +132,7 @@ class AuthService {
   /// every change lands in `role_audit/`. The client never writes `role`
   /// to Firestore directly.
   Future<void> updateUserRole(String userId, UserRole newRole) async {
+    if (!await firebaseReady) return;
     await _callables.call('setUserRole', {
       'targetUid': userId,
       'role': newRole.name,
@@ -115,6 +143,7 @@ class AuthService {
   /// collection, which is governed by Firestore rules; non-superadmins
   /// will be rejected at the rule layer.
   Future<List<Map<String, dynamic>>> getAllUsers() async {
+    if (!await firebaseReady) return const [];
     final querySnapshot = await _firestore.collection('users').get();
 
     return querySnapshot.docs.map((doc) {
@@ -131,6 +160,14 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> getUserStats() async {
+    if (!await firebaseReady) {
+      return const {
+        'total_users': 0,
+        'users': 0,
+        'admins': 0,
+        'superadmins': 0,
+      };
+    }
     final querySnapshot = await _firestore.collection('users').get();
     final users = querySnapshot.docs;
 

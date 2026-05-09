@@ -17,6 +17,7 @@ import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/prayer_aux_calculator.dart';
+import '../../services/prayer_time_cache.dart';
 import '../../services/prayer_time_engine.dart';
 import '../../services/settings_service.dart';
 import 'models/prayer_row_data.dart';
@@ -43,6 +44,26 @@ class HomeLocationFetchResult {
   bool get isSuccess => error == null;
 }
 
+class _HomeStartupState {
+  const _HomeStartupState({
+    required this.selectedCity,
+    required this.locationConfig,
+    required this.coordinates,
+    required this.currentPlaceName,
+    required this.madhab,
+    required this.bangladeshHijriOffsetDays,
+    required this.cacheKey,
+  });
+
+  final String? selectedCity;
+  final LocationConfig locationConfig;
+  final Coordinates? coordinates;
+  final String? currentPlaceName;
+  final String madhab;
+  final int bangladeshHijriOffsetDays;
+  final PrayerTimeCacheKey cacheKey;
+}
+
 class HomeController extends ChangeNotifier {
   HomeController({
     required bool isActive,
@@ -56,6 +77,7 @@ class HomeController extends ChangeNotifier {
     NoticeReadStateService? noticeReadState,
     HomeNotificationScheduler? notificationScheduler,
     HomeWidgetSync? widgetSync,
+    PrayerTimeCache? prayerTimeCache,
   }) : _isHomeActive = isActive,
        _appLifecycleActive =
            lifecycleState == null ||
@@ -73,7 +95,8 @@ class HomeController extends ChangeNotifier {
            HomeNotificationScheduler(
              notificationService: notificationService ?? NotificationService(),
            ),
-       _widgetSync = widgetSync ?? HomeWidgetSync();
+       _widgetSync = widgetSync ?? HomeWidgetSync(),
+       _prayerTimeCache = prayerTimeCache ?? PrayerTimeCache();
 
   final SettingsService _settingsService;
   final LocationService _locationService;
@@ -84,6 +107,7 @@ class HomeController extends ChangeNotifier {
   NoticeReadStateService? _noticeReadStateOverride;
   final HomeNotificationScheduler _notificationScheduler;
   final HomeWidgetSync _widgetSync;
+  final PrayerTimeCache _prayerTimeCache;
 
   Timer? _timer;
   DateTime _now = DateTime.now();
@@ -108,6 +132,12 @@ class HomeController extends ChangeNotifier {
   bool _isHomeActive;
   bool _appLifecycleActive;
   bool _isDisposed = false;
+  bool _initialized = false;
+  bool _hydratedFromCache = false;
+  String _madhab = 'hanafi';
+  Future<bool>? _hydrateFuture;
+  Map<String, DateTime?>? _hydratedTimes;
+  Map<String, dynamic>? _hydratedJamaatTimes;
 
   JamaatService get _jamaatService => _jamaatServiceOverride ?? JamaatService();
 
@@ -148,49 +178,40 @@ class HomeController extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    _selectedCity = AppConstants.defaultCity;
-    _locationConfig = _locationConfigService.getConfigForCity(_selectedCity!);
-    _locationConfigService.setCurrentConfig(_locationConfig!);
-    _notificationService.setLocationConfig(_locationConfig!);
-
-    _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
-      _locationConfig!,
-    );
-
-    if (_locationConfig!.country == Country.bangladesh) {
-      final madhab = await _settingsService.getMadhab();
-      if (_isDisposed) return;
-      _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+    if (_initialized || _isDisposed) {
+      return;
     }
-    _bangladeshHijriOffsetDays = await _settingsService
-        .getBangladeshHijriOffsetDays();
-    if (_isDisposed) return;
+    _initialized = true;
 
-    final coords = Coordinates(
-      _locationConfig!.latitude,
-      _locationConfig!.longitude,
-    );
-    _prayerTimes = PrayerTimes(
-      coordinates: coords,
-      date: _now,
-      calculationParameters: _params!,
-      precision: true,
-    );
-    _times = PrayerTimeEngine.instance.createPrayerTimesMap(_prayerTimes!);
-    _notify();
-
-    if (_locationConfig!.jamaatSource == JamaatSource.server) {
-      await fetchJamaatTimes(_selectedCity!);
+    if (_hydrateFuture != null) {
+      await _hydrateFuture;
       if (_isDisposed) return;
+    }
+
+    final startupState = await _resolveStartupState();
+    if (_isDisposed) return;
+    _applyStartupState(startupState);
+
+    updatePrayerTimes(
+      notify: false,
+      scheduleNotifications: false,
+      writeCache: false,
+    );
+    if (!_hydratedFromCache ||
+        !_dateTimeMapsEqual(_times, _hydratedTimes) ||
+        !_dynamicMapsEqual(_jamaatTimes, _hydratedJamaatTimes)) {
+      _notify();
+    }
+    _writeCache();
+
+    if (_locationConfig!.jamaatSource == JamaatSource.server &&
+        _selectedCity != null) {
+      unawaited(fetchJamaatTimes(_selectedCity!, preserveExisting: true));
     } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
       calculateLocalJamaatTimes();
     }
-    await _loadLastLocation();
-    if (_isDisposed) return;
 
-    updatePrayerTimes();
-    await _scheduleNotificationsIfNeeded();
-    if (_isDisposed) return;
+    unawaited(_scheduleNotificationsIfNeeded());
     _syncHomeTimer();
 
     _settingsSubscription = _settingsService.onSettingsChanged.listen((
@@ -212,6 +233,209 @@ class HomeController extends ChangeNotifier {
       _updateHomeWidget();
       unawaited(AutoVibrationService().reschedule(_jamaatTimes));
     });
+  }
+
+  Future<bool> hydrateFromCache() {
+    return _hydrateFuture ??= _hydrateFromCache();
+  }
+
+  Future<bool> _hydrateFromCache() async {
+    if (_isDisposed) {
+      return false;
+    }
+    final startupState = await _resolveStartupState();
+    if (_isDisposed) return false;
+
+    _applyStartupState(startupState);
+    _computePrayerTableData();
+
+    final cached = await _prayerTimeCache.read(startupState.cacheKey);
+    if (_isDisposed) return false;
+    if (cached == null) {
+      _notify();
+      return false;
+    }
+
+    _times = Map<String, DateTime?>.from(cached.times);
+    _jamaatTimes = cached.jamaatTimes == null
+        ? null
+        : Map<String, dynamic>.from(cached.jamaatTimes!);
+    _lastJamaatUpdate = cached.lastJamaatUpdate;
+    _hydratedTimes = Map<String, DateTime?>.from(_times);
+    _hydratedJamaatTimes = _jamaatTimes == null
+        ? null
+        : Map<String, dynamic>.from(_jamaatTimes!);
+    _hydratedFromCache = true;
+
+    final coords =
+        _coords ??
+        Coordinates(_locationConfig!.latitude, _locationConfig!.longitude);
+    _prayerTimes = PrayerTimes(
+      coordinates: coords,
+      date: _selectedDate,
+      calculationParameters: _params!,
+      precision: true,
+    );
+    _computePrayerTableData();
+    _notify();
+    return true;
+  }
+
+  Future<_HomeStartupState> _resolveStartupState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isGpsMode = prefs.getBool('is_gps_mode') ?? false;
+    final savedCity = prefs.getString('selected_city');
+    final lastLat = prefs.getDouble('last_latitude');
+    final lastLng = prefs.getDouble('last_longitude');
+    final lastPlace = prefs.getString('last_location_name');
+    final madhab = await _settingsService.getMadhab();
+    final hijriOffset = await _settingsService.getBangladeshHijriOffsetDays();
+
+    LocationConfig locationConfig;
+    Coordinates? coordinates;
+    String? selectedCity;
+    String? currentPlaceName;
+
+    if (isGpsMode && lastLat != null && lastLng != null) {
+      currentPlaceName = (lastPlace != null && lastPlace.isNotEmpty)
+          ? lastPlace
+          : 'Current Location';
+      locationConfig = LocationConfig.world(currentPlaceName, lastLat, lastLng);
+      coordinates = Coordinates(lastLat, lastLng);
+    } else {
+      selectedCity = (savedCity != null && savedCity.isNotEmpty)
+          ? savedCity
+          : AppConstants.defaultCity;
+      locationConfig = _locationConfigService.getConfigForCity(selectedCity);
+      currentPlaceName = lastPlace;
+    }
+
+    return _HomeStartupState(
+      selectedCity: selectedCity,
+      locationConfig: locationConfig,
+      coordinates: coordinates,
+      currentPlaceName: currentPlaceName,
+      madhab: madhab,
+      bangladeshHijriOffsetDays: hijriOffset,
+      cacheKey: _buildCacheKey(
+        locationConfig: locationConfig,
+        selectedCity: selectedCity,
+        coordinates: coordinates,
+        currentPlaceName: currentPlaceName,
+        madhab: madhab,
+        isGpsMode: isGpsMode && lastLat != null && lastLng != null,
+      ),
+    );
+  }
+
+  void _applyStartupState(_HomeStartupState state) {
+    _selectedCity = state.selectedCity;
+    _locationConfig = state.locationConfig;
+    _coords = state.coordinates;
+    _currentPlaceName = state.currentPlaceName;
+    _madhab = state.madhab;
+    _bangladeshHijriOffsetDays = state.bangladeshHijriOffsetDays;
+
+    _locationConfigService.setCurrentConfig(_locationConfig!);
+    _notificationService.setLocationConfig(_locationConfig!);
+    _params = PrayerTimeEngine.instance.getCalculationParametersForConfig(
+      _locationConfig!,
+    );
+    if (_locationConfig!.country == Country.bangladesh) {
+      _params!.madhab = _madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+    }
+  }
+
+  PrayerTimeCacheKey _buildCurrentCacheKey() {
+    final config = _locationConfig;
+    if (config == null) {
+      return const PrayerTimeCacheKey(<String, String>{});
+    }
+    return _buildCacheKey(
+      locationConfig: config,
+      selectedCity: _selectedCity,
+      coordinates: _coords,
+      currentPlaceName: _currentPlaceName,
+      madhab: _madhab,
+      isGpsMode: _selectedCity == null,
+    );
+  }
+
+  PrayerTimeCacheKey _buildCacheKey({
+    required LocationConfig locationConfig,
+    required String? selectedCity,
+    required Coordinates? coordinates,
+    required String? currentPlaceName,
+    required String madhab,
+    required bool isGpsMode,
+  }) {
+    final coordinateSource =
+        coordinates ??
+        Coordinates(locationConfig.latitude, locationConfig.longitude);
+    return PrayerTimeCacheKey({
+      'date': _formatCacheDate(_selectedDate),
+      'mode': isGpsMode ? 'gps' : 'city',
+      'city': locationConfig.cityName,
+      'selectedCity': selectedCity ?? '',
+      'placeName': currentPlaceName ?? '',
+      'lat': coordinateSource.latitude.toStringAsFixed(6),
+      'lng': coordinateSource.longitude.toStringAsFixed(6),
+      'timezone': locationConfig.timezone,
+      'method': locationConfig.calculationMethodType.name,
+      'madhab': madhab,
+      'jamaatSource': locationConfig.jamaatSource.name,
+      'jamaatCity': selectedCity ?? '',
+    });
+  }
+
+  String _formatCacheDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  void _writeCache() {
+    if (_times.isEmpty || _locationConfig == null) {
+      return;
+    }
+    unawaited(
+      _prayerTimeCache.write(
+        HomeCachedState(
+          cacheKey: _buildCurrentCacheKey(),
+          times: Map<String, DateTime?>.from(_times),
+          jamaatTimes: _jamaatTimes == null
+              ? null
+              : Map<String, dynamic>.from(_jamaatTimes!),
+          lastJamaatUpdate: _lastJamaatUpdate,
+        ),
+      ),
+    );
+  }
+
+  bool _dateTimeMapsEqual(
+    Map<String, DateTime?>? a,
+    Map<String, DateTime?>? b,
+  ) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null || a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key]?.millisecondsSinceEpoch !=
+          entry.value?.millisecondsSinceEpoch) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _dynamicMapsEqual(Map<String, dynamic>? a, Map<String, dynamic>? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null || a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key]?.toString() != entry.value?.toString()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void setHomeActive(bool isActive) {
@@ -271,6 +495,7 @@ class HomeController extends ChangeNotifier {
     if (_locationConfig!.country == Country.bangladesh) {
       final madhab = await _settingsService.getMadhab();
       if (_isDisposed) return;
+      _madhab = madhab;
       _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
     }
 
@@ -385,6 +610,7 @@ class HomeController extends ChangeNotifier {
 
           final madhab = await _settingsService.getMadhab();
           if (_isDisposed) return null;
+          _madhab = madhab;
           _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
           await fetchJamaatTimes(_selectedCity!);
           if (_isDisposed) return null;
@@ -435,14 +661,23 @@ class HomeController extends ChangeNotifier {
   Future<void> fetchJamaatTimes(
     String city, {
     bool forceRefresh = false,
+    bool preserveExisting = false,
   }) async {
     if (_isDisposed) {
       return;
     }
-    _isLoadingJamaat = true;
+    final previousJamaatTimes = _jamaatTimes == null
+        ? null
+        : Map<String, dynamic>.from(_jamaatTimes!);
+    final showLoading = !preserveExisting || _jamaatTimes == null;
+    _isLoadingJamaat = showLoading;
     _jamaatError = null;
-    _jamaatTimes = null;
-    _notify();
+    if (!preserveExisting) {
+      _jamaatTimes = null;
+    }
+    if (showLoading) {
+      _notify();
+    }
 
     try {
       final times = await _jamaatService.getJamaatTimes(
@@ -467,28 +702,41 @@ class HomeController extends ChangeNotifier {
         _lastJamaatUpdate = DateTime.now();
         _isLoadingJamaat = false;
         _computePrayerTableData();
-        _notify();
+        if (showLoading ||
+            !_dynamicMapsEqual(_jamaatTimes, previousJamaatTimes)) {
+          _notify();
+        }
+        _writeCache();
 
         _notificationScheduler.invalidate();
-        await _scheduleNotificationsIfNeeded();
+        unawaited(_scheduleNotificationsIfNeeded());
       } else {
-        _jamaatTimes = null;
+        if (!preserveExisting) {
+          _jamaatTimes = null;
+        }
         _isLoadingJamaat = false;
         _computePrayerTableData();
-        _notify();
+        if (showLoading) {
+          _notify();
+        }
+        _writeCache();
       }
     } catch (_) {
       if (_isDisposed) {
         return;
       }
-      _jamaatTimes = null;
+      if (!preserveExisting) {
+        _jamaatTimes = null;
+      }
       _isLoadingJamaat = false;
       _jamaatError = _trCurrent(
         'জামাত সময় লোড করতে সমস্যা হয়েছে',
         'Failed to load jamaat times',
       );
       _computePrayerTableData();
-      _notify();
+      if (showLoading) {
+        _notify();
+      }
     }
   }
 
@@ -529,12 +777,17 @@ class HomeController extends ChangeNotifier {
     _jamaatError = null;
     _computePrayerTableData();
     _notify();
+    _writeCache();
 
     _notificationScheduler.invalidate();
     unawaited(_scheduleNotificationsIfNeeded());
   }
 
-  void updatePrayerTimes() {
+  void updatePrayerTimes({
+    bool notify = true,
+    bool scheduleNotifications = true,
+    bool writeCache = true,
+  }) {
     if (_isDisposed) {
       return;
     }
@@ -572,10 +825,17 @@ class HomeController extends ChangeNotifier {
       _jamaatTimes = updatedJamaatTimes;
     }
 
-    _notificationScheduler.invalidate();
-    unawaited(_scheduleNotificationsIfNeeded());
+    if (scheduleNotifications) {
+      _notificationScheduler.invalidate();
+      unawaited(_scheduleNotificationsIfNeeded());
+    }
     _computePrayerTableData();
-    _notify();
+    if (notify) {
+      _notify();
+    }
+    if (writeCache) {
+      _writeCache();
+    }
   }
 
   void _syncHomeTimer() {
@@ -633,6 +893,7 @@ class HomeController extends ChangeNotifier {
 
     final madhab = await _settingsService.getMadhab();
     if (_isDisposed) return;
+    _madhab = madhab;
     _params!.madhab = madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
     if (madhab == 'hanafi') {
       _params!.adjustments = Map.from(AppConstants.defaultAdjustments);
@@ -649,29 +910,6 @@ class HomeController extends ChangeNotifier {
     }
     _bangladeshHijriOffsetDays = offset;
     _notify();
-  }
-
-  Future<void> _loadLastLocation() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (_isDisposed) return;
-    final lastPlace = prefs.getString('last_location_name');
-    final lastLat = prefs.getDouble('last_latitude');
-    final lastLng = prefs.getDouble('last_longitude');
-
-    var needsUpdate = false;
-    if (lastLat != null && lastLng != null) {
-      _coords = Coordinates(lastLat, lastLng);
-      updatePrayerTimes();
-      needsUpdate = true;
-    }
-    if (lastPlace != null && lastPlace.isNotEmpty) {
-      _currentPlaceName = lastPlace;
-      needsUpdate = true;
-    }
-    if (needsUpdate) {
-      _computePrayerTableData();
-      _notify();
-    }
   }
 
   Future<void> _scheduleNotificationsIfNeeded() {

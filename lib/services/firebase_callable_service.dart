@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/firebase_bootstrap.dart';
+
 typedef FirebaseCallablePluginCaller =
     Future<Map<String, dynamic>> Function(
       String name,
@@ -68,6 +70,12 @@ class FirebaseCallableService {
     Map<String, dynamic> data = const <String, dynamic>{},
     String region = 'us-central1',
   ]) async {
+    if (!await firebaseReady) {
+      throw const FirebaseCallableException(
+        code: 'unavailable',
+        message: 'Firebase is not initialized.',
+      );
+    }
     if (_usesWindowsHttpFallback) {
       return _callWithWindowsHttp(name, data, region);
     }

@@ -7,6 +7,7 @@ import 'dart:io';
 import '../core/app_locale_controller.dart';
 import '../core/app_text.dart';
 import '../core/locale_prefs.dart';
+import '../core/timezone_bootstrap.dart';
 import '../services/settings_service.dart';
 import '../models/location_config.dart';
 
@@ -184,6 +185,7 @@ class NotificationService {
 
   Future<void> _initialize(BuildContext? context) async {
     try {
+      ensureTimeZonesInitialized();
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/launcher_icon');
 
@@ -545,6 +547,7 @@ class NotificationService {
     String notificationType = 'prayer', // 'prayer' or 'jamaat'
   }) async {
     try {
+      ensureTimeZonesInitialized();
       // Check if service is initialized
       if (!_isInitialized) {
         developer.log(

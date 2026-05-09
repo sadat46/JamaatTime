@@ -14,11 +14,28 @@ class AppLocaleController {
 
   Locale get current => notifier.value;
 
+  static void bootstrapWithFallback({
+    String fallbackCode = LocalePrefs.defaultCode,
+  }) {
+    instance = AppLocaleController._(
+      ValueNotifier<Locale>(LocalePrefs.toLocale(fallbackCode)),
+    );
+  }
+
   static Future<void> bootstrap() async {
     final code = await LocalePrefs.read();
     instance = AppLocaleController._(
       ValueNotifier<Locale>(LocalePrefs.toLocale(code)),
     );
+  }
+
+  Future<void> loadPersisted() async {
+    final code = await LocalePrefs.read();
+    final locale = LocalePrefs.toLocale(code);
+    if (notifier.value == locale) {
+      return;
+    }
+    notifier.value = locale;
   }
 
   Future<void> set(String code) async {

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/firebase_bootstrap.dart';
 import 'notice_errors.dart';
 import 'notice_model.dart';
 
@@ -23,7 +24,7 @@ class NoticeRepository {
   NoticeRepository({
     FirebaseFirestore? firestore,
     SharedPreferences? preferences,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+  }) : _firestore = firestore,
        _preferences = preferences;
 
   static const int defaultPageSize = 20;
@@ -31,13 +32,15 @@ class NoticeRepository {
   static const Duration _detailTtl = Duration(seconds: 30);
   static const String _cacheKey = 'notice_board.cache.v1';
 
-  final FirebaseFirestore _firestore;
+  FirebaseFirestore? _firestore;
   SharedPreferences? _preferences;
   final Map<String, _MemoryCacheEntry> _detailCache = {};
   final Map<String, Future<NoticeModel>> _singleFlight = {};
 
+  FirebaseFirestore get _db => _firestore ??= FirebaseFirestore.instance;
+
   Query<Map<String, dynamic>> _basePublicQuery() {
-    return _firestore
+    return _db
         .collection('notifications')
         .where('publicVisible', isEqualTo: true)
         .where('status', whereIn: const ['sent', 'fallback_text']);
@@ -47,6 +50,15 @@ class NoticeRepository {
     DocumentSnapshot<Map<String, dynamic>>? cursor,
     int limit = defaultPageSize,
   }) async {
+    if (!await firebaseReady) {
+      if (cursor == null) {
+        final cached = await _readColdCache();
+        if (cached.isNotEmpty) {
+          return NoticePage(items: cached, cursor: null, fromCache: true);
+        }
+      }
+      throw const NoticeNetwork('Firebase is not initialized');
+    }
     try {
       Query<Map<String, dynamic>> query = _basePublicQuery()
           .orderBy('pinned', descending: true)
@@ -99,11 +111,11 @@ class NoticeRepository {
   }
 
   Future<NoticeModel> _getByIdUncached(String notifId) async {
+    if (!await firebaseReady) {
+      throw const NoticeNetwork('Firebase is not initialized');
+    }
     try {
-      final doc = await _firestore
-          .collection('notifications')
-          .doc(notifId)
-          .get();
+      final doc = await _db.collection('notifications').doc(notifId).get();
       if (!doc.exists) throw const NoticeNotFound();
       final notice = NoticeModel.fromFirestore(doc);
       if (!notice.isReadablePublic && !notice.unsupported) {
@@ -125,6 +137,9 @@ class NoticeRepository {
   }
 
   Stream<NoticeModel?> watchLatest() async* {
+    if (!await firebaseReady) {
+      return;
+    }
     DateTime lastEmit = DateTime.fromMillisecondsSinceEpoch(0);
     await for (final snap
         in _basePublicQuery()

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../../core/app_locale_controller.dart';
+import '../../../core/timezone_bootstrap.dart';
 import '../../../models/location_config.dart';
 import '../../../services/auto_vibration_service.dart';
 import '../../../services/notification_service.dart';
@@ -50,6 +51,7 @@ class HomeNotificationScheduler {
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
   }) async {
+    ensureTimeZonesInitialized();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selectedDateOnly = DateTime(

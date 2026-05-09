@@ -1,20 +1,23 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/firebase_bootstrap.dart';
 import 'auth_service.dart';
 
 class BookmarkService {
   static final BookmarkService _instance = BookmarkService._internal();
   factory BookmarkService() => _instance;
-  BookmarkService._internal() {
-    _initAuthListener();
-  }
+  BookmarkService._internal();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AuthService _authService = AuthService();
+  bool _authListenerStarted = false;
 
   // In-memory cache for fast lookups
   final Set<String> _bookmarkedIds = {};
   bool _initialized = false;
+
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   // Check if user can bookmark (must be logged in)
   bool get canBookmark => _authService.currentUser != null;
@@ -22,7 +25,15 @@ class BookmarkService {
   String? get _userId => _authService.currentUser?.uid;
 
   // Listen to auth state changes
-  void _initAuthListener() {
+  Future<void> _initAuthListener() async {
+    if (_authListenerStarted) {
+      return;
+    }
+    _authListenerStarted = true;
+    if (!await firebaseReady) {
+      _authListenerStarted = false;
+      return;
+    }
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null) {
         // User logged in, initialize bookmarks
@@ -37,6 +48,12 @@ class BookmarkService {
 
   // Initialize/refresh bookmarks from Firestore
   Future<void> initialize() async {
+    if (!await firebaseReady) {
+      _bookmarkedIds.clear();
+      _initialized = false;
+      return;
+    }
+    unawaited(_initAuthListener());
     if (!canBookmark) {
       _bookmarkedIds.clear();
       _initialized = false;
@@ -123,12 +140,7 @@ class BookmarkService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => {
-                'id': doc.id,
-                ...doc.data(),
-              })
-          .toList();
+      return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
       // Return empty list if fetch fails
       return [];
@@ -137,7 +149,8 @@ class BookmarkService {
 
   // Get bookmarks by content type
   Future<List<Map<String, dynamic>>> getBookmarksByType(
-      String contentType) async {
+    String contentType,
+  ) async {
     if (!canBookmark) return [];
 
     try {
@@ -149,12 +162,7 @@ class BookmarkService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => {
-                'id': doc.id,
-                ...doc.data(),
-              })
-          .toList();
+      return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
       return [];
     }

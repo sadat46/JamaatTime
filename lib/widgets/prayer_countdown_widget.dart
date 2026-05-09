@@ -193,37 +193,44 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       progress = 0.0;
     } else {
       // Today - show countdown with current period name
-      final currentPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
-        times: widget.prayerTimes,
-        now: now,
-      );
-      final timeToNext = PrayerTimeEngine.instance.getTimeToNextPrayerSafe(
-        times: widget.prayerTimes,
-        now: now,
-        coordinates: widget.coordinates,
-        params: widget.calculationParams,
-      );
-      progress = _calculateProgress(now);
+      if (widget.prayerTimes.isEmpty) {
+        periodName = '';
+        countdownTimeStr = '--:--:--';
+        isSpecial = false;
+        progress = 0.0;
+      } else {
+        final currentPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(
+          times: widget.prayerTimes,
+          now: now,
+        );
+        final timeToNext = PrayerTimeEngine.instance.getTimeToNextPrayerSafe(
+          times: widget.prayerTimes,
+          now: now,
+          coordinates: widget.coordinates,
+          params: widget.calculationParams,
+        );
+        progress = _calculateProgress(now);
 
-      // Format as HH:MM:SS
-      final hours = timeToNext.inHours;
-      final minutes = timeToNext.inMinutes.remainder(60);
-      final seconds = timeToNext.inSeconds.remainder(60);
+        // Format as HH:MM:SS
+        final hours = timeToNext.inHours;
+        final minutes = timeToNext.inMinutes.remainder(60);
+        final seconds = timeToNext.inSeconds.remainder(60);
 
-      countdownTimeStr = timeToNext.isNegative
-          ? '--:--:--'
-          : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-      if (countdownTimeStr != '--:--:--') {
-        countdownTimeStr = _localizeDigits(countdownTimeStr);
+        countdownTimeStr = timeToNext.isNegative
+            ? '--:--:--'
+            : '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+        if (countdownTimeStr != '--:--:--') {
+          countdownTimeStr = _localizeDigits(countdownTimeStr);
+        }
+
+        final localizedPeriod = _localizedPrayerName(currentPeriod);
+        periodName = currentPeriod == 'Sunrise'
+            ? (_isEnglish ? 'Coming Dhuhr' : 'আসছে যোহর')
+            : (_isEnglish
+                  ? '$localizedPeriod time remaining'
+                  : '$localizedPeriod বাকি');
+        isSpecial = false;
       }
-
-      final localizedPeriod = _localizedPrayerName(currentPeriod);
-      periodName = currentPeriod == 'Sunrise'
-          ? (_isEnglish ? 'Coming Dhuhr' : 'আসছে যোহর')
-          : (_isEnglish
-                ? '$localizedPeriod time remaining'
-                : '$localizedPeriod বাকি');
-      isSpecial = false;
     }
 
     if (!mounted) return;
@@ -360,9 +367,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ))
-            .copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            );
+            .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
 
     return Column(
       mainAxisSize: MainAxisSize.min,

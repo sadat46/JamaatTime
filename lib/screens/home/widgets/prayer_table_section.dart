@@ -56,7 +56,9 @@ class _PrayerTableSectionState extends State<PrayerTableSection> {
           final lastJamaatUpdate = widget.controller.lastJamaatUpdate;
           final isLoadingJamaat = widget.controller.isLoadingJamaat;
           final jamaatError = widget.controller.jamaatError;
-          final rows = widget.controller.prayerTableData;
+          final rows = widget.controller.prayerTableData.isEmpty
+              ? _placeholderRows
+              : widget.controller.prayerTableData;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,6 +125,51 @@ class _PrayerTableSectionState extends State<PrayerTableSection> {
     );
     return _cachedRows!;
   }
+
+  static const List<PrayerRowData> _placeholderRows = [
+    PrayerRowData(
+      name: 'Fajr',
+      timeStr: '--:--',
+      jamaatStr: '-',
+      isCurrent: false,
+      type: PrayerRowType.prayer,
+    ),
+    PrayerRowData(
+      name: 'Sunrise',
+      timeStr: '--:--',
+      jamaatStr: '-',
+      isCurrent: false,
+      type: PrayerRowType.info,
+    ),
+    PrayerRowData(
+      name: 'Dhuhr',
+      timeStr: '--:--',
+      jamaatStr: '-',
+      isCurrent: false,
+      type: PrayerRowType.prayer,
+    ),
+    PrayerRowData(
+      name: 'Asr',
+      timeStr: '--:--',
+      jamaatStr: '-',
+      isCurrent: false,
+      type: PrayerRowType.prayer,
+    ),
+    PrayerRowData(
+      name: 'Maghrib',
+      timeStr: '--:--',
+      jamaatStr: '-',
+      isCurrent: false,
+      type: PrayerRowType.prayer,
+    ),
+    PrayerRowData(
+      name: 'Isha',
+      timeStr: '--:--',
+      jamaatStr: '-',
+      isCurrent: false,
+      type: PrayerRowType.prayer,
+    ),
+  ];
 
   bool _rowsEqual(List<PrayerRowData>? previous, List<PrayerRowData> next) {
     if (previous == null || previous.length != next.length) {

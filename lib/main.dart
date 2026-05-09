@@ -1,11 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:timezone/data/latest.dart' as tzdata;
-import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/ebadat/ebadat_screen.dart';
@@ -19,36 +15,25 @@ import 'services/widget_service.dart';
 import 'services/settings_service.dart';
 import 'core/app_locale_controller.dart';
 import 'core/app_theme_tokens.dart';
+import 'core/firebase_bootstrap.dart';
+import 'core/timezone_bootstrap.dart';
 import 'themes/green_theme.dart';
 
-// Global navigator key — shared with FcmService so push taps can route from
+// Global navigator key shared with FcmService so push taps can route from
 // outside the widget tree.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize timezone data once at app startup (faster than in each screen)
-  tzdata.initializeTimeZones();
-  // Removed timezone forcing to support global usage - device local time will be used
-
-  try {
-    // Initialize Firebase for all platforms
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    // Handle initialization errors gracefully
-    // Continue with the app even if Firebase fails to initialize
-  }
+  unawaited(firebaseReady);
 
   // Register the widget interaction callback. Native boundary alarms also route
   // through HomeWidget's background receiver.
   HomeWidget.registerInteractivityCallback(backgroundCallback);
 
-  // Load the persisted locale before the first frame so the UI renders in
-  // the correct language with no flicker (D15).
-  await AppLocaleController.bootstrap();
+  AppLocaleController.bootstrapWithFallback();
+  unawaited(AppLocaleController.instance.loadPersisted());
 
   runApp(const MyApp());
 
@@ -58,12 +43,14 @@ void main() async {
 }
 
 Future<void> _runPostFirstFrameBootstrap() async {
-  unawaited(_preloadActiveLocaleFonts());
+  ensureTimeZonesInitialized();
 
   try {
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      BookmarkService().initialize();
-    });
+    if (await firebaseReady) {
+      FirebaseAuth.instance.authStateChanges().listen((User? user) {
+        BookmarkService().initialize();
+      });
+    }
   } catch (_) {
     // Continue without bookmark warmup if Firebase auth is unavailable.
   }
@@ -81,35 +68,22 @@ Future<void> _runPostFirstFrameBootstrap() async {
   }
 
   try {
-    await FcmService().init(
-      navigatorKey: appNavigatorKey,
-      locale: AppLocaleController.instance.current.languageCode,
-    );
+    if (await firebaseReady) {
+      await FcmService().init(
+        navigatorKey: appNavigatorKey,
+        locale: AppLocaleController.instance.current.languageCode,
+      );
+    }
   } catch (_) {
     // Continue startup even if FCM fails; local jamaat reminders still work.
   }
 }
 
-Future<void> _preloadActiveLocaleFonts() async {
-  try {
-    final baseTextTheme = greenTheme.textTheme;
-    if (AppLocaleController.instance.current.languageCode == 'bn') {
-      GoogleFonts.notoSansBengaliTextTheme(baseTextTheme);
-    } else {
-      GoogleFonts.interTextTheme(baseTextTheme);
-    }
-    await GoogleFonts.pendingFonts();
-  } catch (_) {
-    // Keep startup resilient if font preloading fails.
-  }
-}
-
 ThemeData _themeFor(Locale locale) {
-  final baseTextTheme = greenTheme.textTheme;
-  final localizedTextTheme = locale.languageCode == 'bn'
-      ? GoogleFonts.notoSansBengaliTextTheme(baseTextTheme)
-      : GoogleFonts.interTextTheme(baseTextTheme);
-  return greenTheme.copyWith(textTheme: localizedTextTheme);
+  final fontFamily = locale.languageCode == 'bn' ? 'NotoSansBengali' : 'Inter';
+  return greenTheme.copyWith(
+    textTheme: greenTheme.textTheme.apply(fontFamily: fontFamily),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -143,11 +117,28 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
+  final Set<int> _builtTabIndexes = <int>{0};
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _builtTabIndexes.add(index);
     });
+  }
+
+  Widget _buildTab(int index) {
+    switch (index) {
+      case 0:
+        return HomeScreen(isActive: _selectedIndex == 0);
+      case 1:
+        return const EbadatScreen();
+      case 2:
+        return const CalendarScreen();
+      case 3:
+        return const ProfileScreen();
+      default:
+        throw RangeError.index(index, const [0, 1, 2, 3], 'index');
+    }
   }
 
   Widget _navIcon(int index, IconData icon) {
@@ -171,14 +162,23 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final screens = <Widget>[
-      HomeScreen(isActive: _selectedIndex == 0), // index: 0
-      const EbadatScreen(), // index: 1
-      const CalendarScreen(), // index: 2
-      const ProfileScreen(), // index: 3
-    ];
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: screens),
+      body: Stack(
+        children: [
+          for (var index = 0; index < 4; index++)
+            if (_builtTabIndexes.contains(index))
+              KeyedSubtree(
+                key: ValueKey<String>('main-tab-$index'),
+                child: TickerMode(
+                  enabled: _selectedIndex == index,
+                  child: Offstage(
+                    offstage: _selectedIndex != index,
+                    child: _buildTab(index),
+                  ),
+                ),
+              ),
+        ],
+      ),
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
           color: AppColors.cardBackground,

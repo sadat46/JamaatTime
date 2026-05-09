@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -42,7 +44,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
     WidgetsBinding.instance.addObserver(this);
     if (_ownsController) {
-      _controller.initialize();
+      unawaited(_controller.hydrateFromCache());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_controller.initialize());
+        }
+      });
     }
   }
 
