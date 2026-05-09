@@ -8,6 +8,7 @@ import '../../../widgets/shared_ui_widgets.dart';
 import '../home_controller.dart';
 import '../models/prayer_row_data.dart';
 import 'prayer_card.dart';
+import 'prayer_glow_band.dart';
 
 class PrayerTableSection extends StatefulWidget {
   const PrayerTableSection({super.key, required this.controller});
@@ -92,6 +93,7 @@ class _PrayerTableSectionState extends State<PrayerTableSection> {
                   ),
                 ),
               _buildRows(context, rows),
+              PrayerGlowBand(controller: widget.controller),
             ],
           );
         },

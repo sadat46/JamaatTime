@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:adhan_dart/adhan_dart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -111,6 +112,9 @@ class HomeController extends ChangeNotifier {
 
   Timer? _timer;
   DateTime _now = DateTime.now();
+  final ValueNotifier<DateTime> _nowNotifier = ValueNotifier<DateTime>(
+    DateTime.now(),
+  );
   Coordinates? _coords;
   CalculationParameters? _params;
   PrayerTimes? _prayerTimes;
@@ -146,6 +150,15 @@ class HomeController extends ChangeNotifier {
   CalculationParameters? get calculationParams => _params;
   PrayerTimes? get prayerTimes => _prayerTimes;
   Map<String, DateTime?> get times => _times;
+  ValueListenable<DateTime> get nowNotifier => _nowNotifier;
+  List<DateTime?> get orderedPrayerDateTimes => const [
+    'Fajr',
+    'Sunrise',
+    'Dhuhr',
+    'Asr',
+    'Maghrib',
+    'Isha',
+  ].map((n) => _times[n]).toList(growable: false);
   Map<String, dynamic>? get jamaatTimes => _jamaatTimes;
   bool get isLoadingJamaat => _isLoadingJamaat;
   String? get jamaatError => _jamaatError;
@@ -882,6 +895,7 @@ class HomeController extends ChangeNotifier {
       }
     }
     _now = newNow;
+    _nowNotifier.value = newNow;
   }
 
   Future<void> _loadMadhab() async {
@@ -1036,6 +1050,7 @@ class HomeController extends ChangeNotifier {
     _isDisposed = true;
     _timer?.cancel();
     _settingsSubscription?.cancel();
+    _nowNotifier.dispose();
     super.dispose();
   }
 }

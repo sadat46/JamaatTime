@@ -15,33 +15,10 @@ class _PrayerCardVisualSpec {
     required this.timeTextStyle,
   });
 
-  factory _PrayerCardVisualSpec.from({
-    required bool isActive,
-    required bool isInfo,
-  }) {
-    if (isActive) return active;
+  factory _PrayerCardVisualSpec.from({required bool isInfo}) {
     if (isInfo) return info;
     return normal;
   }
-
-  static const _PrayerCardVisualSpec active = _PrayerCardVisualSpec(
-    cardColor: AppColors.activeFill,
-    borderColor: AppColors.borderActive,
-    horizontalPadding: 12.0,
-    iconBorderAlpha: 0.42,
-    nameTextStyle: TextStyle(
-      fontWeight: FontWeight.bold,
-      color: AppColors.primaryDark,
-      fontSize: 15,
-      height: 1.15,
-    ),
-    timeTextStyle: TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.bold,
-      color: AppColors.primaryDark,
-      height: 1.15,
-    ),
-  );
 
   static const _PrayerCardVisualSpec info = _PrayerCardVisualSpec(
     cardColor: AppColors.primarySoft2,
@@ -108,17 +85,13 @@ class PrayerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isInfo = row.type == PrayerRowType.info;
-    final isActive = row.isCurrent;
     final localizedTimeStr = _localizedDigitsForContext(context, row.timeStr);
     final localizedJamaatStr = _localizedDigitsForContext(
       context,
       row.jamaatStr,
     );
     final hasJamaat = row.jamaatStr != '-';
-    final visualSpec = _PrayerCardVisualSpec.from(
-      isActive: isActive,
-      isInfo: isInfo,
-    );
+    final visualSpec = _PrayerCardVisualSpec.from(isInfo: isInfo);
     final prayerIcon = _prayerIconForName(row.name);
     final iconAccent = _prayerIconAccent(row.name);
     final iconTint = _prayerIconTint(row.name);
@@ -134,16 +107,6 @@ class PrayerCard extends StatelessWidget {
         child: IntrinsicHeight(
           child: Row(
             children: [
-              if (isActive)
-                Container(
-                  width: 5,
-                  decoration: BoxDecoration(
-                    color: AppColors.activeAccent,
-                    borderRadius: const BorderRadius.horizontal(
-                      left: Radius.circular(AppRadius.row),
-                    ),
-                  ),
-                ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
