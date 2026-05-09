@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/app_theme_tokens.dart';
 import '../../../core/constants.dart';
@@ -7,11 +6,44 @@ import '../../../core/locale_text.dart';
 import '../../../models/location_config.dart';
 import '../../../services/hijri_date_converter.dart';
 import '../../../utils/bangla_calendar.dart';
+import '../../../utils/date_format_cache.dart';
 import '../../../utils/locale_digits.dart';
 import '../../../widgets/live_clock_widget.dart';
 import '../../../widgets/prayer_countdown_widget.dart';
 import '../home_controller.dart';
 import 'notice_action_button.dart';
+
+class _HomeHeaderLayout {
+  const _HomeHeaderLayout({
+    required this.maxHeaderWidth,
+    required this.horizontalPadding,
+    required this.cardHorizontalPadding,
+    required this.countdownGap,
+    required this.topPadding,
+  });
+
+  factory _HomeHeaderLayout.from(
+    BuildContext context,
+    BoxConstraints pageConstraints,
+  ) {
+    final isCompact = pageConstraints.maxWidth < 400;
+    return _HomeHeaderLayout(
+      maxHeaderWidth: pageConstraints.maxWidth < 600
+          ? pageConstraints.maxWidth
+          : 600.0,
+      horizontalPadding: isCompact ? 16.0 : 20.0,
+      cardHorizontalPadding: isCompact ? 14.0 : 18.0,
+      countdownGap: isCompact ? 16.0 : 28.0,
+      topPadding: MediaQuery.of(context).viewPadding.top,
+    );
+  }
+
+  final double maxHeaderWidth;
+  final double horizontalPadding;
+  final double cardHorizontalPadding;
+  final double countdownGap;
+  final double topPadding;
+}
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
@@ -27,6 +59,7 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final layout = _HomeHeaderLayout.from(context, pageConstraints);
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -35,7 +68,7 @@ class HomeHeader extends StatelessWidget {
             : 'bn';
         final dateStr = _localizedDigitsForContext(
           context,
-          DateFormat(
+          DateFormatCache.get(
             'EEE, d MMM, yyyy',
             localeCode,
           ).format(controller.selectedDate),
@@ -47,6 +80,7 @@ class HomeHeader extends StatelessWidget {
 
         return _buildHeader(
           context,
+          layout: layout,
           dateStr: dateStr,
           hijriStr: hijriStr,
           banglaDateStr: banglaDateStr,
@@ -57,17 +91,11 @@ class HomeHeader extends StatelessWidget {
 
   Widget _buildHeader(
     BuildContext context, {
+    required _HomeHeaderLayout layout,
     required String dateStr,
     required String hijriStr,
     required String banglaDateStr,
   }) {
-    final topPadding = MediaQuery.of(context).viewPadding.top;
-    final maxHeaderWidth = pageConstraints.maxWidth < 600
-        ? pageConstraints.maxWidth
-        : 600.0;
-    final horizontalPadding = pageConstraints.maxWidth < 400 ? 16.0 : 20.0;
-    final countdownGap = pageConstraints.maxWidth < 400 ? 16.0 : 28.0;
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -87,12 +115,12 @@ class HomeHeader extends StatelessWidget {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxHeaderWidth),
+          constraints: BoxConstraints(maxWidth: layout.maxHeaderWidth),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-              horizontalPadding,
-              topPadding + 10,
-              horizontalPadding,
+              layout.horizontalPadding,
+              layout.topPadding + 10,
+              layout.horizontalPadding,
               14,
             ),
             child: Column(
@@ -145,7 +173,7 @@ class HomeHeader extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: pageConstraints.maxWidth < 400 ? 14.0 : 18.0,
+                      horizontal: layout.cardHorizontalPadding,
                       vertical: 16.0,
                     ),
                     child: Row(
@@ -168,7 +196,7 @@ class HomeHeader extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: countdownGap),
+                        SizedBox(width: layout.countdownGap),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

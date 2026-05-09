@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../core/app_theme_tokens.dart';
 import '../core/locale_text.dart';
 import '../services/screen_awake_service.dart';
+import '../utils/date_format_cache.dart';
 import '../utils/locale_digits.dart';
 import 'shared_ui_widgets.dart';
 
@@ -16,7 +16,7 @@ class _SahriIftarCountdownLogic {
     if (value == null) {
       return '-';
     }
-    return DateFormat('HH:mm').format(value.toLocal());
+    return DateFormatCache.get('HH:mm').format(value.toLocal());
   }
 
   static String calculateCountdown(DateTime? targetTime, DateTime now) {
@@ -214,12 +214,88 @@ class SahriIftarWidget extends StatefulWidget {
   State<SahriIftarWidget> createState() => _SahriIftarWidgetState();
 }
 
+/// Per-tick state for the inline Sahri/Iftar cards.
+///
+/// Bundled together so a single [ValueNotifier] drives both card rebuilds.
+/// Equality is value-based so the notifier suppresses no-op notifications
+/// when the second-by-second values are unchanged (e.g. paused timers).
+@immutable
+class _SahriIftarTick {
+  const _SahriIftarTick({
+    required this.sahriCountdown,
+    required this.iftarCountdown,
+    required this.sahriInGrace,
+    required this.iftarInGrace,
+  });
+
+  static const _SahriIftarTick initial = _SahriIftarTick(
+    sahriCountdown: _SahriIftarCountdownLogic.unavailableCountdown,
+    iftarCountdown: _SahriIftarCountdownLogic.unavailableCountdown,
+    sahriInGrace: false,
+    iftarInGrace: false,
+  );
+
+  final String sahriCountdown;
+  final String iftarCountdown;
+  final bool sahriInGrace;
+  final bool iftarInGrace;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SahriIftarTick &&
+      other.sahriCountdown == sahriCountdown &&
+      other.iftarCountdown == iftarCountdown &&
+      other.sahriInGrace == sahriInGrace &&
+      other.iftarInGrace == iftarInGrace;
+
+  @override
+  int get hashCode =>
+      Object.hash(sahriCountdown, iftarCountdown, sahriInGrace, iftarInGrace);
+}
+
+@immutable
+class _SahriIftarFullscreenTick {
+  const _SahriIftarFullscreenTick({
+    required this.countdown,
+    required this.inGrace,
+    required this.progress,
+    required this.shouldPulse,
+  });
+
+  static const _SahriIftarFullscreenTick initial = _SahriIftarFullscreenTick(
+    countdown: _SahriIftarCountdownLogic.unavailableCountdown,
+    inGrace: false,
+    progress: 0.0,
+    shouldPulse: false,
+  );
+
+  final String countdown;
+  final bool inGrace;
+  final double progress;
+  final bool shouldPulse;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SahriIftarFullscreenTick &&
+      other.countdown == countdown &&
+      other.inGrace == inGrace &&
+      other.progress == progress &&
+      other.shouldPulse == shouldPulse;
+
+  @override
+  int get hashCode => Object.hash(countdown, inGrace, progress, shouldPulse);
+}
+
 class _SahriIftarWidgetState extends State<SahriIftarWidget> {
   Timer? _timer;
-  String _sahriCountdown = _SahriIftarCountdownLogic.unavailableCountdown;
-  String _iftarCountdown = _SahriIftarCountdownLogic.unavailableCountdown;
-  bool _sehriInGrace = false;
-  bool _iftarInGrace = false;
+
+  // Per-tick state lives in a ValueNotifier so only the inner card subtrees
+  // rebuild on each second. The surrounding State.build() runs only on
+  // mount, prop change, or one-shot entry-animation flag.
+  final ValueNotifier<_SahriIftarTick> _tickNotifier = ValueNotifier(
+    _SahriIftarTick.initial,
+  );
+
   bool _animateIn = false;
 
   @override
@@ -273,6 +349,8 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
   }
 
   void _calculateCountdowns() {
+    if (!mounted) return;
+
     final now = DateTime.now();
     final sahriGrace = _SahriIftarCountdownLogic.graceElapsed(
       widget.fajrTime,
@@ -283,39 +361,33 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
       now,
     );
 
-    if (mounted) {
-      setState(() {
-        _sehriInGrace = sahriGrace != null;
-        if (sahriGrace != null) {
-          _sahriCountdown = _SahriIftarCountdownLogic.formatElapsed(sahriGrace);
-        } else {
-          _sahriCountdown = _SahriIftarCountdownLogic.calculateCountdown(
-            widget.fajrTime,
-            now,
-          );
-        }
-        _iftarInGrace = iftarGrace != null;
-        if (iftarGrace != null) {
-          _iftarCountdown = _SahriIftarCountdownLogic.formatElapsed(iftarGrace);
-        } else {
-          _iftarCountdown = _SahriIftarCountdownLogic.calculateCountdown(
-            widget.maghribTime,
-            now,
-          );
-        }
-      });
-    }
+    final sahriCountdown = sahriGrace != null
+        ? _SahriIftarCountdownLogic.formatElapsed(sahriGrace)
+        : _SahriIftarCountdownLogic.calculateCountdown(widget.fajrTime, now);
+    final iftarCountdown = iftarGrace != null
+        ? _SahriIftarCountdownLogic.formatElapsed(iftarGrace)
+        : _SahriIftarCountdownLogic.calculateCountdown(widget.maghribTime, now);
+
+    // Single notifier write — only the card subtrees that watch this rebuild.
+    _tickNotifier.value = _SahriIftarTick(
+      sahriCountdown: sahriCountdown,
+      iftarCountdown: iftarCountdown,
+      sahriInGrace: sahriGrace != null,
+      iftarInGrace: iftarGrace != null,
+    );
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _tickNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
+    // Times don't change on tick — compute once in State.build().
     final fajrTimeStr = LocaleDigits.localize(
       _SahriIftarCountdownLogic.formatTime(widget.fajrTime),
       locale,
@@ -324,13 +396,14 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
       _SahriIftarCountdownLogic.formatTime(widget.maghribTime),
       locale,
     );
-    final sahriCountdownText = LocaleDigits.localize(_sahriCountdown, locale);
-    final iftarCountdownText = LocaleDigits.localize(_iftarCountdown, locale);
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final Duration entryDuration = reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 360);
+
+    final sahriTitle = context.tr(bn: 'সাহরি শেষ', en: 'Sahri Ends');
+    final iftarTitle = context.tr(bn: 'ইফতার শুরু', en: 'Iftar Begins');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,27 +421,49 @@ class _SahriIftarWidgetState extends State<SahriIftarWidget> {
           ),
         _buildCardEntry(
           duration: entryDuration,
-          child: _SahriIftarCard(
-            key: const Key('sahri-card'),
-            type: SahriIftarType.sahri,
-            title: context.tr(bn: 'সাহরি শেষ', en: 'Sahri Ends'),
-            timeText: fajrTimeStr,
-            countdownText: sahriCountdownText,
-            onTap: () => _openFullscreen(SahriIftarType.sahri),
-            inGrace: _sehriInGrace,
+          // Only this card's countdown text + grace flag change on tick;
+          // a RepaintBoundary keeps tick repaints from invalidating siblings.
+          child: RepaintBoundary(
+            child: ValueListenableBuilder<_SahriIftarTick>(
+              valueListenable: _tickNotifier,
+              builder: (context, tick, _) {
+                return _SahriIftarCard(
+                  key: const Key('sahri-card'),
+                  type: SahriIftarType.sahri,
+                  title: sahriTitle,
+                  timeText: fajrTimeStr,
+                  countdownText: LocaleDigits.localize(
+                    tick.sahriCountdown,
+                    locale,
+                  ),
+                  onTap: () => _openFullscreen(SahriIftarType.sahri),
+                  inGrace: tick.sahriInGrace,
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(height: 12),
         _buildCardEntry(
           duration: entryDuration,
-          child: _SahriIftarCard(
-            key: const Key('iftar-card'),
-            type: SahriIftarType.iftar,
-            title: context.tr(bn: 'ইফতার শুরু', en: 'Iftar Begins'),
-            timeText: maghribTimeStr,
-            countdownText: iftarCountdownText,
-            onTap: () => _openFullscreen(SahriIftarType.iftar),
-            inGrace: _iftarInGrace,
+          child: RepaintBoundary(
+            child: ValueListenableBuilder<_SahriIftarTick>(
+              valueListenable: _tickNotifier,
+              builder: (context, tick, _) {
+                return _SahriIftarCard(
+                  key: const Key('iftar-card'),
+                  type: SahriIftarType.iftar,
+                  title: iftarTitle,
+                  timeText: maghribTimeStr,
+                  countdownText: LocaleDigits.localize(
+                    tick.iftarCountdown,
+                    locale,
+                  ),
+                  onTap: () => _openFullscreen(SahriIftarType.iftar),
+                  inGrace: tick.iftarInGrace,
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -750,10 +845,15 @@ class SahriIftarFullscreenPage extends StatefulWidget {
 class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   Timer? _timer;
-  String _countdown = _SahriIftarCountdownLogic.unavailableCountdown;
-  bool _inGrace = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
+  final ValueNotifier<_SahriIftarFullscreenTick> _tickNotifier = ValueNotifier(
+    _SahriIftarFullscreenTick.initial,
+  );
+  bool _appActive = true;
+  bool _tickerModeEnabled = true;
+  bool _reduceMotion = false;
+  bool _lastShouldPulse = false;
 
   DateTime? get _activeTime => widget.type == SahriIftarType.sahri
       ? widget.fajrTime
@@ -805,22 +905,32 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
     WidgetsBinding.instance.addObserver(this);
     unawaited(_setWakeLock(enabled: true));
     _calculateCountdown();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        _calculateCountdown();
-      }
-    });
+    _syncTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tickerModeEnabled = TickerMode.of(context);
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _syncPulse();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _appActive = true;
       unawaited(_setWakeLock(enabled: true));
+      _calculateCountdown();
+      _syncTimer();
     } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _appActive = false;
       unawaited(_setWakeLock(enabled: false));
+      _syncTimer();
+      _syncPulse();
     }
   }
 
@@ -828,22 +938,29 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
     await ScreenAwakeService.setEnabled(enabled);
   }
 
+  void _syncTimer() {
+    if (!_appActive) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    if (_timer?.isActive ?? false) {
+      return;
+    }
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _appActive) {
+        _calculateCountdown();
+      }
+    });
+  }
+
   void _calculateCountdown() {
     final now = DateTime.now();
     final elapsed = _SahriIftarCountdownLogic.graceElapsed(_activeTime, now);
     final newInGrace = elapsed != null;
-
-    setState(() {
-      _inGrace = newInGrace;
-      if (elapsed != null) {
-        _countdown = _SahriIftarCountdownLogic.formatElapsed(elapsed);
-      } else {
-        _countdown = _SahriIftarCountdownLogic.calculateCountdown(
-          _activeTime,
-          now,
-        );
-      }
-    });
+    final countdown = elapsed != null
+        ? _SahriIftarCountdownLogic.formatElapsed(elapsed)
+        : _SahriIftarCountdownLogic.calculateCountdown(_activeTime, now);
 
     final remaining = _SahriIftarCountdownLogic.remainingDuration(
       _activeTime,
@@ -854,18 +971,143 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
         remaining != null &&
         remaining <= _SahriIftarCountdownLogic.warningThreshold;
 
-    if (shouldPulse && !_pulseController.isAnimating) {
+    _lastShouldPulse = shouldPulse;
+    _tickNotifier.value = _SahriIftarFullscreenTick(
+      countdown: countdown,
+      inGrace: newInGrace,
+      progress: _countdownProgress(now),
+      shouldPulse: shouldPulse,
+    );
+    _syncPulse();
+  }
+
+  void _syncPulse() {
+    final shouldRun =
+        _lastShouldPulse && _appActive && _tickerModeEnabled && !_reduceMotion;
+    if (shouldRun && !_pulseController.isAnimating) {
       _pulseController.repeat(reverse: true);
-    } else if (!shouldPulse && _pulseController.isAnimating) {
+    } else if (!shouldRun && _pulseController.isAnimating) {
       _pulseController.stop();
       _pulseController.reset();
     }
+  }
+
+  Widget _buildCountdownRing({
+    required BuildContext context,
+    required double ringSize,
+    required Locale locale,
+    required _SahriIftarVisualSpec spec,
+    required TextStyle? countdownBaseStyle,
+    required bool reduceMotion,
+  }) {
+    return RepaintBoundary(
+      child: ValueListenableBuilder<_SahriIftarFullscreenTick>(
+        valueListenable: _tickNotifier,
+        builder: (context, tick, _) {
+          final countdownText = LocaleDigits.localize(tick.countdown, locale);
+          return AnimatedBuilder(
+            animation: _pulseAnim,
+            builder: (context, _) {
+              final pulseVal = _pulseAnim.value;
+              final isWarning =
+                  tick.shouldPulse && _pulseController.isAnimating;
+              final pulseColor = Color.lerp(
+                spec.accent,
+                Colors.redAccent,
+                pulseVal,
+              )!;
+              final countdownStyle = countdownBaseStyle?.copyWith(
+                color: isWarning ? pulseColor : spec.accent,
+                shadows: isWarning
+                    ? [
+                        Shadow(
+                          color: Colors.redAccent.withValues(
+                            alpha: 0.7 * pulseVal,
+                          ),
+                          blurRadius: 12 * pulseVal,
+                        ),
+                      ]
+                    : null,
+              );
+
+              return SizedBox(
+                width: ringSize,
+                height: ringSize,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox.expand(
+                      child: CircularProgressIndicator(
+                        value: tick.progress,
+                        strokeWidth: isWarning ? 10.0 + pulseVal * 4.0 : 10,
+                        backgroundColor: spec.ringTrack,
+                        valueColor: AlwaysStoppedAnimation(
+                          isWarning ? pulseColor : spec.accent,
+                        ),
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          tick.inGrace
+                              ? (_isSahri
+                                    ? context.tr(
+                                        bn: 'সাহরির সময় শেষ',
+                                        en: 'Sehri time finished',
+                                      )
+                                    : context.tr(
+                                        bn: 'ইফতারের সময় শুরু',
+                                        en: 'Iftar time started',
+                                      ))
+                              : context.tr(
+                                  bn: 'বাকি সময়',
+                                  en: 'Remaining Time',
+                                ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: tick.inGrace
+                                    ? Colors.amber.shade700
+                                    : spec.secondaryText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        AnimatedSwitcher(
+                          duration: reduceMotion
+                              ? Duration.zero
+                              : const Duration(milliseconds: 180),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                          child: Text(
+                            countdownText,
+                            key: ValueKey(countdownText),
+                            style: countdownStyle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _tickNotifier.dispose();
     _pulseController.dispose();
     unawaited(_setWakeLock(enabled: false));
     super.dispose();
@@ -876,13 +1118,10 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final locale = Localizations.localeOf(context);
-    final now = DateTime.now();
-    final progress = _countdownProgress(now);
     final timeText = LocaleDigits.localize(
       _SahriIftarCountdownLogic.formatTime(_activeTime),
       locale,
     );
-    final countdownText = LocaleDigits.localize(_countdown, locale);
     final spec = _SahriIftarVisualSpec.from(
       type: widget.type,
       brightness: Theme.of(context).brightness,
@@ -919,242 +1158,132 @@ class _SahriIftarFullscreenPageState extends State<SahriIftarFullscreenPage>
               padding: const EdgeInsets.all(18),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
-                child: Container(
-                  key: Key('${_isSahri ? 'sahri' : 'iftar'}-fullscreen'),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: spec.panelGradient,
-                    border: Border.all(color: spec.border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: spec.glow,
-                        blurRadius: 28,
-                        spreadRadius: 0.6,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          left: -40,
-                          top: -40,
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: spec.accent.withValues(alpha: 0.15),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: -24,
-                          bottom: -34,
-                          child: Container(
-                            width: 110,
-                            height: 110,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.16),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 26,
-                            vertical: 30,
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double ringSize =
-                                  (constraints.maxHeight * 0.44)
-                                      .clamp(170.0, 250.0)
-                                      .toDouble();
-
-                              return SingleChildScrollView(
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: constraints.maxHeight,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      AccentIconBadge(
-                                        icon: _icon,
-                                        accent: spec.accent,
-                                        tint: spec.glassTint,
-                                        size: 74,
-                                        iconSize: 38,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Text(
-                                        _title(context),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineSmall
-                                            ?.copyWith(
-                                              color: spec.primaryText,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 18),
-                                      AnimatedBuilder(
-                                        animation: _pulseAnim,
-                                        builder: (context, _) {
-                                          final pulseVal = _pulseAnim.value;
-                                          final ringStroke =
-                                              10.0 + pulseVal * 4.0;
-                                          final pulseColor = Color.lerp(
-                                            spec.accent,
-                                            Colors.redAccent,
-                                            pulseVal,
-                                          )!;
-                                          final isWarning =
-                                              _pulseController.isAnimating;
-                                          final countdownStyle =
-                                              countdownBaseStyle?.copyWith(
-                                                color: isWarning
-                                                    ? pulseColor
-                                                    : spec.accent,
-                                                shadows: isWarning
-                                                    ? [
-                                                        Shadow(
-                                                          color: Colors
-                                                              .redAccent
-                                                              .withValues(
-                                                                alpha:
-                                                                    0.7 *
-                                                                    pulseVal,
-                                                              ),
-                                                          blurRadius:
-                                                              12 * pulseVal,
-                                                        ),
-                                                      ]
-                                                    : null,
-                                              );
-                                          return SizedBox(
-                                            width: ringSize,
-                                            height: ringSize,
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                SizedBox.expand(
-                                                  child: CircularProgressIndicator(
-                                                    value: progress,
-                                                    strokeWidth: isWarning
-                                                        ? ringStroke
-                                                        : 10,
-                                                    backgroundColor:
-                                                        spec.ringTrack,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation(
-                                                          isWarning
-                                                              ? pulseColor
-                                                              : spec.accent,
-                                                        ),
-                                                  ),
-                                                ),
-                                                Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      _inGrace
-                                                          ? (_isSahri
-                                                                ? context.tr(
-                                                                    bn: 'সাহরির সময় শেষ',
-                                                                    en: 'Sehri time finished',
-                                                                  )
-                                                                : context.tr(
-                                                                    bn: 'ইফতারের সময় শুরু',
-                                                                    en: 'Iftar time started',
-                                                                  ))
-                                                          : context.tr(
-                                                              bn: 'বাকি সময়',
-                                                              en: 'Remaining Time',
-                                                            ),
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.copyWith(
-                                                            color: _inGrace
-                                                                ? Colors
-                                                                      .amber
-                                                                      .shade700
-                                                                : spec.secondaryText,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                          ),
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    AnimatedSwitcher(
-                                                      duration: reduceMotion
-                                                          ? Duration.zero
-                                                          : const Duration(
-                                                              milliseconds: 180,
-                                                            ),
-                                                      switchInCurve:
-                                                          Curves.easeOutCubic,
-                                                      switchOutCurve:
-                                                          Curves.easeInCubic,
-                                                      transitionBuilder:
-                                                          (child, animation) {
-                                                            return FadeTransition(
-                                                              opacity:
-                                                                  animation,
-                                                              child: child,
-                                                            );
-                                                          },
-                                                      child: Text(
-                                                        countdownText,
-                                                        key: ValueKey(
-                                                          countdownText,
-                                                        ),
-                                                        style: countdownStyle,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 18),
-                                      InfoChip(
-                                        icon: Icons.schedule_rounded,
-                                        label:
-                                            '${_isSahri ? context.tr(bn: 'শেষ', en: 'Ends at') : context.tr(bn: 'শুরু', en: 'Begins at')} $timeText',
-                                        accent: spec.accent,
-                                        textColor: spec.primaryText,
-                                        fill: spec.glassTint,
-                                      ),
-                                      const SizedBox(height: 14),
-                                      Text(
-                                        context.tr(
-                                          bn: 'ফোকাস মোড খোলা থাকলে স্ক্রিন জেগে থাকবে।',
-                                          en: 'Screen remains awake while focus mode is open.',
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: spec.secondaryText,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                child: RepaintBoundary(
+                  child: Container(
+                    key: Key('${_isSahri ? 'sahri' : 'iftar'}-fullscreen'),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      gradient: spec.panelGradient,
+                      border: Border.all(color: spec.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: spec.glow,
+                          blurRadius: 28,
+                          spreadRadius: 0.6,
+                          offset: const Offset(0, 12),
                         ),
                       ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: -40,
+                            top: -40,
+                            child: Container(
+                              width: 140,
+                              height: 140,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: spec.accent.withValues(alpha: 0.15),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: -24,
+                            bottom: -34,
+                            child: Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: 0.16),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 26,
+                              vertical: 30,
+                            ),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final double ringSize =
+                                    (constraints.maxHeight * 0.44)
+                                        .clamp(170.0, 250.0)
+                                        .toDouble();
+
+                                return SingleChildScrollView(
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      minHeight: constraints.maxHeight,
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        AccentIconBadge(
+                                          icon: _icon,
+                                          accent: spec.accent,
+                                          tint: spec.glassTint,
+                                          size: 74,
+                                          iconSize: 38,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        Text(
+                                          _title(context),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                color: spec.primaryText,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 18),
+                                        _buildCountdownRing(
+                                          context: context,
+                                          ringSize: ringSize,
+                                          locale: locale,
+                                          spec: spec,
+                                          countdownBaseStyle:
+                                              countdownBaseStyle,
+                                          reduceMotion: reduceMotion,
+                                        ),
+                                        const SizedBox(height: 18),
+                                        InfoChip(
+                                          icon: Icons.schedule_rounded,
+                                          label:
+                                              '${_isSahri ? context.tr(bn: 'শেষ', en: 'Ends at') : context.tr(bn: 'শুরু', en: 'Begins at')} $timeText',
+                                          accent: spec.accent,
+                                          textColor: spec.primaryText,
+                                          fill: spec.glassTint,
+                                        ),
+                                        const SizedBox(height: 14),
+                                        Text(
+                                          context.tr(
+                                            bn: 'ফোকাস মোড খোলা থাকলে স্ক্রিন জেগে থাকবে।',
+                                            en: 'Screen remains awake while focus mode is open.',
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: spec.secondaryText,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

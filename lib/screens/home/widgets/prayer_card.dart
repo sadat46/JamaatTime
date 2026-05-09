@@ -5,6 +5,101 @@ import '../../../l10n/app_localizations.dart';
 import '../../../utils/locale_digits.dart';
 import '../models/prayer_row_data.dart';
 
+class _PrayerCardVisualSpec {
+  const _PrayerCardVisualSpec({
+    required this.cardColor,
+    required this.borderColor,
+    required this.horizontalPadding,
+    required this.iconBorderAlpha,
+    required this.nameTextStyle,
+    required this.timeTextStyle,
+  });
+
+  factory _PrayerCardVisualSpec.from({
+    required bool isActive,
+    required bool isInfo,
+  }) {
+    if (isActive) return active;
+    if (isInfo) return info;
+    return normal;
+  }
+
+  static const _PrayerCardVisualSpec active = _PrayerCardVisualSpec(
+    cardColor: AppColors.activeFill,
+    borderColor: AppColors.borderActive,
+    horizontalPadding: 12.0,
+    iconBorderAlpha: 0.42,
+    nameTextStyle: TextStyle(
+      fontWeight: FontWeight.bold,
+      color: AppColors.primaryDark,
+      fontSize: 15,
+      height: 1.15,
+    ),
+    timeTextStyle: TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      color: AppColors.primaryDark,
+      height: 1.15,
+    ),
+  );
+
+  static const _PrayerCardVisualSpec info = _PrayerCardVisualSpec(
+    cardColor: AppColors.primarySoft2,
+    borderColor: AppColors.borderLight,
+    horizontalPadding: 16.0,
+    iconBorderAlpha: 0.24,
+    nameTextStyle: TextStyle(
+      fontWeight: FontWeight.w500,
+      fontStyle: FontStyle.italic,
+      color: AppColors.textSecondary,
+      fontSize: 15,
+      height: 1.15,
+    ),
+    timeTextStyle: TextStyle(
+      fontSize: 14,
+      fontStyle: FontStyle.italic,
+      color: AppColors.textPrimary,
+      height: 1.15,
+    ),
+  );
+
+  static const _PrayerCardVisualSpec normal = _PrayerCardVisualSpec(
+    cardColor: AppColors.cardBackground,
+    borderColor: AppColors.borderLight,
+    horizontalPadding: 16.0,
+    iconBorderAlpha: 0.24,
+    nameTextStyle: TextStyle(
+      fontWeight: FontWeight.w500,
+      color: AppColors.textPrimary,
+      fontSize: 15,
+      height: 1.15,
+    ),
+    timeTextStyle: TextStyle(
+      fontSize: 14,
+      color: AppColors.textPrimary,
+      height: 1.15,
+    ),
+  );
+
+  static const TextStyle jamaatTextStyle = TextStyle(
+    fontWeight: FontWeight.w700,
+    color: AppColors.primaryGreen,
+    fontSize: 14,
+  );
+
+  static const TextStyle missingJamaatTextStyle = TextStyle(
+    color: AppColors.textMuted,
+    fontSize: 14,
+  );
+
+  final Color cardColor;
+  final Color borderColor;
+  final double horizontalPadding;
+  final double iconBorderAlpha;
+  final TextStyle nameTextStyle;
+  final TextStyle timeTextStyle;
+}
+
 class PrayerCard extends StatelessWidget {
   const PrayerCard({super.key, required this.row});
 
@@ -20,6 +115,10 @@ class PrayerCard extends StatelessWidget {
       row.jamaatStr,
     );
     final hasJamaat = row.jamaatStr != '-';
+    final visualSpec = _PrayerCardVisualSpec.from(
+      isActive: isActive,
+      isInfo: isInfo,
+    );
     final prayerIcon = _prayerIconForName(row.name);
     final iconAccent = _prayerIconAccent(row.name);
     final iconTint = _prayerIconTint(row.name);
@@ -28,14 +127,8 @@ class PrayerCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.row),
-          color: isActive
-              ? AppColors.activeFill
-              : isInfo
-              ? AppColors.primarySoft2
-              : AppColors.cardBackground,
-          border: Border.all(
-            color: isActive ? AppColors.borderActive : AppColors.borderLight,
-          ),
+          color: visualSpec.cardColor,
+          border: Border.all(color: visualSpec.borderColor),
           boxShadow: AppShadows.subtle,
         ),
         child: IntrinsicHeight(
@@ -54,7 +147,7 @@ class PrayerCard extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: isActive ? 12.0 : 16.0,
+                    horizontal: visualSpec.horizontalPadding,
                     vertical: 12.0,
                   ),
                   child: Row(
@@ -67,7 +160,7 @@ class PrayerCard extends StatelessWidget {
                           color: iconTint,
                           border: Border.all(
                             color: iconAccent.withValues(
-                              alpha: isActive ? 0.42 : 0.24,
+                              alpha: visualSpec.iconBorderAlpha,
                             ),
                           ),
                         ),
@@ -78,21 +171,7 @@ class PrayerCard extends StatelessWidget {
                         flex: 3,
                         child: Text(
                           _localizedPrayerName(context, row.name),
-                          style: TextStyle(
-                            fontWeight: isActive
-                                ? FontWeight.bold
-                                : FontWeight.w500,
-                            fontStyle: isInfo
-                                ? FontStyle.italic
-                                : FontStyle.normal,
-                            color: isActive
-                                ? AppColors.primaryDark
-                                : isInfo
-                                ? AppColors.textSecondary
-                                : AppColors.textPrimary,
-                            fontSize: 15,
-                            height: 1.15,
-                          ),
+                          style: visualSpec.nameTextStyle,
                         ),
                       ),
                       Expanded(
@@ -100,19 +179,7 @@ class PrayerCard extends StatelessWidget {
                         child: Text(
                           localizedTimeStr,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isActive
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            fontStyle: isInfo
-                                ? FontStyle.italic
-                                : FontStyle.normal,
-                            color: isActive
-                                ? AppColors.primaryDark
-                                : AppColors.textPrimary,
-                            height: 1.15,
-                          ),
+                          style: visualSpec.timeTextStyle,
                         ),
                       ),
                       if (!isInfo)
@@ -123,16 +190,10 @@ class PrayerCard extends StatelessWidget {
                             children: [
                               Text(
                                 localizedJamaatStr,
-                                style: !hasJamaat
-                                    ? const TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 14,
-                                      )
-                                    : TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primaryGreen,
-                                        fontSize: 14,
-                                      ),
+                                style: hasJamaat
+                                    ? _PrayerCardVisualSpec.jamaatTextStyle
+                                    : _PrayerCardVisualSpec
+                                          .missingJamaatTextStyle,
                               ),
                               if (hasJamaat) ...[
                                 const SizedBox(width: 4),

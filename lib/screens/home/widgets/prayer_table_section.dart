@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/app_theme_tokens.dart';
 import '../../../core/locale_text.dart';
+import '../../../utils/date_format_cache.dart';
 import '../../../utils/locale_digits.dart';
 import '../../../widgets/shared_ui_widgets.dart';
 import '../home_controller.dart';
@@ -70,7 +70,7 @@ class _PrayerTableSectionState extends State<PrayerTableSection> {
                   ),
                   if (lastJamaatUpdate != null && !isLoadingJamaat)
                     Text(
-                      '${context.tr(bn: 'সর্বশেষ আপডেট', en: 'Last updated')}: ${_localizedDigitsForContext(context, DateFormat('HH:mm').format(lastJamaatUpdate))}',
+                      '${context.tr(bn: 'সর্বশেষ আপডেট', en: 'Last updated')}: ${_localizedDigitsForContext(context, DateFormatCache.get('HH:mm').format(lastJamaatUpdate))}',
                       style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textMuted,
@@ -113,7 +113,10 @@ class _PrayerTableSectionState extends State<PrayerTableSection> {
           .map(
             (row) => Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
-              child: PrayerCard(row: row),
+              // RepaintBoundary keeps each row's layer independent so a
+              // controller-driven rebuild that touches one row's `isCurrent`
+              // highlight doesn't repaint the others.
+              child: RepaintBoundary(child: PrayerCard(row: row)),
             ),
           )
           .toList(growable: false),

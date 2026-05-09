@@ -141,14 +141,23 @@ class ForbiddenTimesWidget extends StatefulWidget {
 }
 
 class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   Timer? _refreshTimer;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
+  /// Tracks whether the app is in the foreground (resumed). When `false`,
+  /// both the pulse animation and the per-minute refresh timer pause to avoid
+  /// burning frame/battery budget while invisible.
+  bool _appActive = true;
+  bool _tickerModeEnabled = true;
+  bool _reduceMotion = false;
+  bool _hasActiveWindow = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Pulse animation for active window border
     _pulseController = AnimationController(
       vsync: this,
@@ -162,14 +171,38 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tickerModeEnabled = TickerMode.of(context);
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _syncPulseActive();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final nowActive = state == AppLifecycleState.resumed;
+    if (nowActive == _appActive) return;
+    _appActive = nowActive;
+    if (!nowActive) {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+      _syncPulseActive();
+    } else {
+      _syncRefreshTimer();
+      _syncPulseActive();
+      // build() will re-evaluate hasActiveWindow on the next frame and
+      // re-trigger the pulse via the existing post-frame callback.
+      if (mounted) setState(() {});
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant ForbiddenTimesWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isActive != widget.isActive ||
         oldWidget.prayerTimes != widget.prayerTimes) {
       _syncRefreshTimer();
-      if (!widget.isActive) {
-        _setPulseActive(false);
-      }
+      _syncPulseActive();
       if (mounted) {
         setState(() {});
       }
@@ -177,7 +210,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
   }
 
   void _syncRefreshTimer() {
-    if (!widget.isActive) {
+    if (!widget.isActive || !_appActive) {
       _refreshTimer?.cancel();
       _refreshTimer = null;
       return;
@@ -187,7 +220,7 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     }
     // Refresh every minute so active windows stay current.
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted && widget.isActive) setState(() {});
+      if (mounted && widget.isActive && _appActive) setState(() {});
     });
   }
 
@@ -204,8 +237,19 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
     _pulseController.reset();
   }
 
+  void _syncPulseActive() {
+    _setPulseActive(
+      widget.isActive &&
+          _appActive &&
+          _tickerModeEnabled &&
+          !_reduceMotion &&
+          _hasActiveWindow,
+    );
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
@@ -243,14 +287,18 @@ class _ForbiddenTimesWidgetState extends State<ForbiddenTimesWidget>
 
     final spec = _ForbiddenVisualSpec.from(Theme.of(context).brightness);
     final now = DateTime.now();
+    final tickerModeEnabled = TickerMode.of(context);
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final hasActiveWindow = forbiddenWindows.any((window) {
       return window.isActive(now);
     });
+    _tickerModeEnabled = tickerModeEnabled;
+    _reduceMotion = reduceMotion;
+    _hasActiveWindow = hasActiveWindow;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _setPulseActive(widget.isActive && hasActiveWindow && !reduceMotion);
+        _syncPulseActive();
       }
     });
 

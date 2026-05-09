@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import '../core/constants.dart';
 import '../services/prayer_time_engine.dart';
+import '../utils/date_format_cache.dart';
 import '../utils/locale_digits.dart';
 
 /// A self-contained countdown widget that updates every second.
@@ -33,12 +33,42 @@ class PrayerCountdownWidget extends StatefulWidget {
   State<PrayerCountdownWidget> createState() => _PrayerCountdownWidgetState();
 }
 
+/// Per-tick state for the countdown ring + numeric label.
+///
+/// Bundled together because both update at the same cadence (1 s). Equality is
+/// value-based so [ValueNotifier] suppresses no-op notifications when neither
+/// the progress nor the formatted time string has changed (e.g. while paused).
+@immutable
+class _CountdownTick {
+  const _CountdownTick({required this.progress, required this.timeStr});
+
+  static const _CountdownTick zero = _CountdownTick(progress: 0.0, timeStr: '');
+
+  final double progress;
+  final String timeStr;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _CountdownTick &&
+      other.progress == progress &&
+      other.timeStr == timeStr;
+
+  @override
+  int get hashCode => Object.hash(progress, timeStr);
+}
+
 class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   Timer? _timer;
   String _periodName = '';
-  String _countdownTimeStr = '';
   bool _isSpecialPrayer = false;
-  double _progressValue = 0.0;
+
+  // Per-tick mutable state lives in a ValueNotifier so only the inner ring +
+  // time Text rebuild on each second. The surrounding State.build() is invoked
+  // only when [_periodName] or [_isSpecialPrayer] transitions.
+  final ValueNotifier<_CountdownTick> _tickNotifier = ValueNotifier(
+    _CountdownTick.zero,
+  );
+
   DateTime? _cachedTomorrowFajrDay;
   double? _cachedTomorrowFajrLatitude;
   double? _cachedTomorrowFajrLongitude;
@@ -148,16 +178,16 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
     if (selectedDateOnly.isBefore(todayOnly)) {
       // Past date
       periodName = _isEnglish
-          ? 'Viewing past date: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}'
-          : 'পূর্বের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}';
+          ? 'Viewing past date: ${DateFormatCache.get('dd MMM yyyy', localeCode).format(widget.selectedDate)}'
+          : 'পূর্বের তারিখ দেখা হচ্ছে: ${DateFormatCache.get('dd MMM yyyy', localeCode).format(widget.selectedDate)}';
       periodName = _localizeDigits(periodName);
       isSpecial = true;
       progress = 0.0;
     } else if (selectedDateOnly.isAfter(todayOnly)) {
       // Future date
       periodName = _isEnglish
-          ? 'Viewing future date: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}'
-          : 'ভবিষ্যতের তারিখ দেখা হচ্ছে: ${DateFormat('dd MMM yyyy', localeCode).format(widget.selectedDate)}';
+          ? 'Viewing future date: ${DateFormatCache.get('dd MMM yyyy', localeCode).format(widget.selectedDate)}'
+          : 'ভবিষ্যতের তারিখ দেখা হচ্ছে: ${DateFormatCache.get('dd MMM yyyy', localeCode).format(widget.selectedDate)}';
       periodName = _localizeDigits(periodName);
       isSpecial = true;
       progress = 0.0;
@@ -196,12 +226,20 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       isSpecial = false;
     }
 
-    if (mounted) {
+    if (!mounted) return;
+
+    // Per-tick values: write to the notifier — only the inner ring rebuilds.
+    _tickNotifier.value = _CountdownTick(
+      progress: progress,
+      timeStr: countdownTimeStr,
+    );
+
+    // Period name / special-mode transitions are rare; only those need a full
+    // rebuild of this State's subtree.
+    if (_periodName != periodName || _isSpecialPrayer != isSpecial) {
       setState(() {
         _periodName = periodName;
-        _countdownTimeStr = countdownTimeStr;
         _isSpecialPrayer = isSpecial;
-        _progressValue = progress;
       });
     }
   }
@@ -287,6 +325,7 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
   @override
   void dispose() {
     _timer?.cancel();
+    _tickNotifier.dispose();
     super.dispose();
   }
 
@@ -307,58 +346,68 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
       );
     }
 
-    // Normal state: circular progress ring with countdown
+    // Normal state: circular progress ring with countdown.
+    //
+    // The ring + time Text rebuild every second via [ValueListenableBuilder].
+    // The surrounding Column / period-name Text are static between period
+    // transitions. A [RepaintBoundary] isolates rasterization to the ring so
+    // tick-driven repaints don't invalidate the parent's layer.
     const double ringSize = 120.0;
+    final timeTextStyle =
+        (widget.textStyle ??
+                const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ))
+            .copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Circular ring
-        SizedBox(
-          width: ringSize,
-          height: ringSize,
-          child: CustomPaint(
-            painter: _CircularProgressPainter(
-              progress: _progressValue,
-              startColor: const Color(0xFF69F0AE),
-              endColor: Colors.white,
-              trackColor: Colors.white.withValues(alpha: 0.15),
-            ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: MediaQuery.withClampedTextScaling(
-                    maxScaleFactor: 1.0,
-                    child: Text(
-                      _countdownTimeStr,
-                      maxLines: 1,
-                      softWrap: false,
-                      style:
-                          (widget.textStyle ??
-                                  const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ))
-                              .copyWith(
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
+        RepaintBoundary(
+          child: SizedBox(
+            width: ringSize,
+            height: ringSize,
+            child: ValueListenableBuilder<_CountdownTick>(
+              valueListenable: _tickNotifier,
+              builder: (context, tick, _) {
+                return CustomPaint(
+                  painter: _CircularProgressPainter(
+                    progress: tick.progress,
+                    startColor: const Color(0xFF69F0AE),
+                    endColor: Colors.white,
+                    trackColor: Colors.white.withValues(alpha: 0.15),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: MediaQuery.withClampedTextScaling(
+                          maxScaleFactor: 1.0,
+                          child: Text(
+                            tick.timeStr,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: timeTextStyle,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
         const SizedBox(height: 4),
-        // Prayer name label below the ring
+        // Prayer name label below the ring (rebuilds only on period change).
         Text(
           _periodName,
           style: const TextStyle(
@@ -374,19 +423,42 @@ class _PrayerCountdownWidgetState extends State<PrayerCountdownWidget> {
 }
 
 /// Custom painter for a circular progress ring with gradient stroke.
+///
+/// Optimizations:
+///  * `sweepBucketDeg` quantizes `progress` to whole degrees so `shouldRepaint`
+///    only fires on degree-boundary changes. With a typical prayer interval
+///    (90+ minutes) the sweep angle advances ~0.067°/sec, so we repaint roughly
+///    once every 15 seconds instead of every second.
+///  * The `SweepGradient` shader is cached in a single-slot static cache keyed
+///    by (rect, sweepBucketDeg, startColor, endColor). The cache hits whenever
+///    the previous paint matches — usual case for static colors and a fixed
+///    ring size.
 class _CircularProgressPainter extends CustomPainter {
-  final double progress;
-  final Color startColor;
-  final Color endColor;
-  final Color trackColor;
-  static const double _strokeWidth = 10.0;
-
-  const _CircularProgressPainter({
+  _CircularProgressPainter({
     required this.progress,
     required this.startColor,
     required this.endColor,
     required this.trackColor,
-  });
+  }) : sweepBucketDeg = (360.0 * progress).round();
+
+  final double progress;
+  final Color startColor;
+  final Color endColor;
+  final Color trackColor;
+
+  /// Progress quantized to whole degrees (0..360). Drives `shouldRepaint`.
+  final int sweepBucketDeg;
+
+  static const double _strokeWidth = 10.0;
+
+  // Single-slot static shader cache. Safe in this app because only one
+  // countdown ring is ever on screen. If that changes, swap for an LRU keyed
+  // by widget identity.
+  static Rect? _cachedRect;
+  static int? _cachedSweepBucketDeg;
+  static int? _cachedStartArgb;
+  static int? _cachedEndArgb;
+  static Shader? _cachedShader;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -405,14 +477,9 @@ class _CircularProgressPainter extends CustomPainter {
     // Draw progress arc with gradient
     if (progress > 0.005) {
       final sweepAngle = 2 * math.pi * progress;
-      final gradient = SweepGradient(
-        startAngle: -math.pi / 2,
-        endAngle: -math.pi / 2 + sweepAngle,
-        colors: [startColor, endColor],
-        tileMode: TileMode.clamp,
-      );
+      final shader = _resolveShader(rect, sweepAngle);
       final progressPaint = Paint()
-        ..shader = gradient.createShader(rect)
+        ..shader = shader
         ..strokeWidth = _strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
@@ -421,10 +488,37 @@ class _CircularProgressPainter extends CustomPainter {
     }
   }
 
+  Shader _resolveShader(Rect rect, double sweepAngle) {
+    final startArgb = startColor.toARGB32();
+    final endArgb = endColor.toARGB32();
+    final cached = _cachedShader;
+    if (cached != null &&
+        _cachedRect == rect &&
+        _cachedSweepBucketDeg == sweepBucketDeg &&
+        _cachedStartArgb == startArgb &&
+        _cachedEndArgb == endArgb) {
+      return cached;
+    }
+    final gradient = SweepGradient(
+      startAngle: -math.pi / 2,
+      endAngle: -math.pi / 2 + sweepAngle,
+      colors: [startColor, endColor],
+      tileMode: TileMode.clamp,
+    );
+    final shader = gradient.createShader(rect);
+    _cachedRect = rect;
+    _cachedSweepBucketDeg = sweepBucketDeg;
+    _cachedStartArgb = startArgb;
+    _cachedEndArgb = endArgb;
+    _cachedShader = shader;
+    return shader;
+  }
+
   @override
   bool shouldRepaint(_CircularProgressPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
+    return oldDelegate.sweepBucketDeg != sweepBucketDeg ||
         oldDelegate.startColor != startColor ||
-        oldDelegate.endColor != endColor;
+        oldDelegate.endColor != endColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }
