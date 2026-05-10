@@ -408,33 +408,77 @@ class PrayerWidgetProvider : AppWidgetProvider() {
     }
 
     /**
-     * Renders the ambient glow band into [R.id.glow_band]. The band has six
-     * evenly-spaced positions corresponding to PERIOD_ORDER (Fajr, Sunrise,
-     * Dhuhr, Asr, Maghrib, Isha); the glow snaps to the position of the
-     * currently-active period (the most recent one whose start time has
-     * passed). Before today's Fajr, the loop never advances and the index
-     * stays at 5 (Isha) — matching the "before Fajr → rightmost" requirement.
+     * Renders the ambient glow band into [R.id.glow_band]. The band aligns
+     * horizontally with the four bottom-row slots (Fajr, Dhuhr, Asr, Maghrib,
+     * Isha minus the currentMain), and the glow snaps to a position that
+     * reflects where the currently-active period sits *between* them in time:
+     *
+     * - Current period before all visible slots → glow at far-left edge
+     *   (covers Fajr-current and Sunrise-current cases).
+     * - Current period after all visible slots → glow at far-right edge
+     *   (covers Isha-current and overnight/pre-Fajr).
+     * - Otherwise → midpoint between the two visible slots whose epochs
+     *   bracket the current period's epoch (e.g. Dhuhr-current → between
+     *   Fajr and Asr slots).
      */
     private fun renderGlowBand(views: RemoteViews, now: Long, raw: RawSchedule) {
+        val mainOrder = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
         val periodOrder = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha")
-        var idx = 5
-        for ((i, name) in periodOrder.withIndex()) {
+
+        var currentPeriod = "Isha"
+        for (name in periodOrder) {
             val e = raw.today[name] ?: 0L
-            if (e in 1L..now) idx = i
+            if (e in 1L..now) currentPeriod = name
         }
+        var currentMain = "Isha"
+        for (name in mainOrder) {
+            val e = raw.today[name] ?: 0L
+            if (e in 1L..now) currentMain = name
+        }
+
+        val currentEpoch = raw.today[currentPeriod] ?: 0L
+        val visibleKeys = mainOrder.filter { it != currentMain }.take(4)
 
         val w = 600
         val h = 40
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        val cx = (idx + 0.5f) * (w / 6f)
+        // Slot centers in the bitmap, matching the 4-equal-weight LinearLayout
+        // slots in Row 2 of prayer_widget.xml. The 2dp inter-slot margins are
+        // negligible at this resolution.
+        val slotCenters = floatArrayOf(0.125f * w, 0.375f * w, 0.625f * w, 0.875f * w)
+        val edgeMargin = 0.04f * w
+
+        var beforeIdx = -1
+        var afterIdx = -1
+        if (currentEpoch > 0L) {
+            for ((i, key) in visibleKeys.withIndex()) {
+                val e = raw.today[key] ?: 0L
+                if (e in 1L until currentEpoch) beforeIdx = i
+            }
+            for ((i, key) in visibleKeys.withIndex()) {
+                val e = raw.today[key] ?: 0L
+                if (e > currentEpoch) {
+                    afterIdx = i
+                    break
+                }
+            }
+        }
+
+        val cx: Float = when {
+            beforeIdx == -1 && afterIdx >= 0 -> edgeMargin
+            afterIdx == -1 && beforeIdx >= 0 -> w - edgeMargin
+            beforeIdx >= 0 && afterIdx >= 0 ->
+                (slotCenters[beforeIdx] + slotCenters[afterIdx]) / 2f
+            else -> w / 2f
+        }
         val cy = h / 2f
         val accent = 0xFF26A69A.toInt()
 
         // Glow oval — radial gradient with soft blur, alphas 0.45 / 0.18 / 0.0.
-        val glowHalfW = 117f / 2f
-        val glowHalfH = 50f / 2f
+        val glowHalfW = 170f / 2f
+        val glowHalfH = 28f / 2f
         val glowRect = RectF(cx - glowHalfW, cy - glowHalfH, cx + glowHalfW, cy + glowHalfH)
         val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         glowPaint.shader = RadialGradient(
@@ -453,7 +497,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         canvas.drawOval(glowRect, glowPaint)
 
         // Streak — thin horizontal line with linear gradient fading at both ends.
-        val streakHalfW = 117f / 2f
+        val streakHalfW = 170f / 2f
         val streakHalfH = 1f
         val streakRect = RectF(cx - streakHalfW, cy - streakHalfH, cx + streakHalfW, cy + streakHalfH)
         val streakPaint = Paint(Paint.ANTI_ALIAS_FLAG)
