@@ -8,6 +8,14 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.RectF
+import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -140,8 +148,8 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.islamic_date, islamicDate)
                 views.setTextViewText(R.id.location, location)
 
-                // Highlight the next upcoming prayer slot.
-                applyNextPrayerHighlight(views, now, raw)
+                // Ambient glow band: snaps to the slot of the currently-active period.
+                renderGlowBand(views, now, raw)
 
                 val launchIntent = context.packageManager
                     .getLaunchIntentForPackage(context.packageName)
@@ -400,59 +408,76 @@ class PrayerWidgetProvider : AppWidgetProvider() {
     }
 
     /**
-     * Highlights the slot in the bottom row that corresponds to the next
-     * upcoming main prayer. The Dart side builds rowLabels/rowTimes by taking
-     * MAIN_PRAYER_ORDER (Fajr, Dhuhr, Asr, Maghrib, Isha) and excluding the
-     * current main prayer — so the same logic, applied here, identifies the
-     * matching slot index. After Isha (when no future main prayer remains
-     * today) no slot is highlighted.
+     * Renders the ambient glow band into [R.id.glow_band]. The band has six
+     * evenly-spaced positions corresponding to PERIOD_ORDER (Fajr, Sunrise,
+     * Dhuhr, Asr, Maghrib, Isha); the glow snaps to the position of the
+     * currently-active period (the most recent one whose start time has
+     * passed). Before today's Fajr, the loop never advances and the index
+     * stays at 5 (Isha) — matching the "before Fajr → rightmost" requirement.
      */
-    private fun applyNextPrayerHighlight(
-        views: RemoteViews,
-        now: Long,
-        raw: RawSchedule,
-    ) {
-        val mainOrder = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
-        var currentMain = "Isha"
-        for (name in mainOrder) {
+    private fun renderGlowBand(views: RemoteViews, now: Long, raw: RawSchedule) {
+        val periodOrder = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha")
+        var idx = 5
+        for ((i, name) in periodOrder.withIndex()) {
             val e = raw.today[name] ?: 0L
-            if (e in 1L..now) currentMain = name
-        }
-        val rowOrder = mainOrder.filter { it != currentMain }
-        var nextIdx = -1
-        for ((i, name) in rowOrder.withIndex()) {
-            val e = raw.today[name] ?: 0L
-            if (e > now) {
-                nextIdx = i
-                break
-            }
+            if (e in 1L..now) idx = i
         }
 
-        val slotIds = intArrayOf(
-            R.id.row_slot_1, R.id.row_slot_2, R.id.row_slot_3, R.id.row_slot_4,
-        )
-        val labelIds = intArrayOf(
-            R.id.row_label_1, R.id.row_label_2, R.id.row_label_3, R.id.row_label_4,
-        )
-        val timeIds = intArrayOf(
-            R.id.row_time_1, R.id.row_time_2, R.id.row_time_3, R.id.row_time_4,
-        )
-        val highlightLabel = 0xFF26A69A.toInt() // teal
-        val highlightTime = 0xFFFFFFFF.toInt()  // pure white
-        val mutedLabel = 0xB3FFFFFF.toInt()     // 70% white
-        val mutedTime = 0xFFFFFFFF.toInt()      // 100% white (existing tone)
+        val w = 600
+        val h = 40
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
 
-        for (i in slotIds.indices) {
-            val isNext = i == nextIdx
-            views.setInt(
-                slotIds[i],
-                "setBackgroundResource",
-                if (isNext) R.drawable.widget_next_pill_bg
-                else R.drawable.widget_slot_bg_transparent,
-            )
-            views.setTextColor(labelIds[i], if (isNext) highlightLabel else mutedLabel)
-            views.setTextColor(timeIds[i], if (isNext) highlightTime else mutedTime)
-        }
+        val cx = (idx + 0.5f) * (w / 6f)
+        val cy = h / 2f
+        val accent = 0xFF26A69A.toInt()
+
+        // Glow oval — radial gradient with soft blur, alphas 0.45 / 0.18 / 0.0.
+        val glowHalfW = 117f / 2f
+        val glowHalfH = 50f / 2f
+        val glowRect = RectF(cx - glowHalfW, cy - glowHalfH, cx + glowHalfW, cy + glowHalfH)
+        val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        glowPaint.shader = RadialGradient(
+            cx,
+            cy,
+            maxOf(glowHalfW, glowHalfH),
+            intArrayOf(
+                accentWithAlpha(accent, 0.45f),
+                accentWithAlpha(accent, 0.18f),
+                accentWithAlpha(accent, 0.0f),
+            ),
+            floatArrayOf(0.0f, 0.30f, 0.65f),
+            Shader.TileMode.CLAMP,
+        )
+        glowPaint.maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL)
+        canvas.drawOval(glowRect, glowPaint)
+
+        // Streak — thin horizontal line with linear gradient fading at both ends.
+        val streakHalfW = 117f / 2f
+        val streakHalfH = 1f
+        val streakRect = RectF(cx - streakHalfW, cy - streakHalfH, cx + streakHalfW, cy + streakHalfH)
+        val streakPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        streakPaint.shader = LinearGradient(
+            cx - streakHalfW,
+            cy,
+            cx + streakHalfW,
+            cy,
+            intArrayOf(
+                accentWithAlpha(accent, 0.0f),
+                accentWithAlpha(accent, 0.9f),
+                accentWithAlpha(accent, 0.0f),
+            ),
+            floatArrayOf(0.0f, 0.5f, 1.0f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(streakRect, streakPaint)
+
+        views.setImageViewBitmap(R.id.glow_band, bitmap)
+    }
+
+    private fun accentWithAlpha(argb: Int, alpha: Float): Int {
+        val a = (alpha.coerceIn(0f, 1f) * 255f).toInt() and 0xFF
+        return (a shl 24) or (argb and 0x00FFFFFF)
     }
 
     private fun jamaatStateLabel(state: RenderState): String = when {

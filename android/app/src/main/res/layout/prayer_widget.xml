@@ -324,6 +324,17 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Ambient glow band: snaps to one of 6 positions matching the current period
+         (Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha). Bitmap is rendered in
+         PrayerWidgetProvider.renderGlowBand(). -->
+    <ImageView
+        android:id="@+id/glow_band"
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        android:layout_marginTop="2dp"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"/>
+
     <!-- Row 3: Hijri + Bangla date (line 1) + location (line 2) -->
     <LinearLayout
         android:layout_width="match_parent"
