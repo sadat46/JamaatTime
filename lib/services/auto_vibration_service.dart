@@ -100,12 +100,17 @@ class AutoVibrationService {
       if (hour == null || minute == null) continue;
       if (hour < 0 || hour > 23 || minute < 0 || minute > 59) continue;
 
-      final jamaat = DateTime(now.year, now.month, now.day, hour, minute);
-      final start = jamaat.subtract(Duration(minutes: minutesBefore));
-      final end = jamaat.add(Duration(minutes: minutesAfter));
+      var jamaat = DateTime(now.year, now.month, now.day, hour, minute);
+      var start = jamaat.subtract(Duration(minutes: minutesBefore));
+      var end = jamaat.add(Duration(minutes: minutesAfter));
 
-      // Drop windows whose end has already passed.
-      if (!end.isAfter(now)) continue;
+      // If today's window has already ended, roll forward to tomorrow so
+      // post-Isha reschedules still cover the next day's Fajr.
+      if (!end.isAfter(now)) {
+        jamaat = jamaat.add(const Duration(days: 1));
+        start = jamaat.subtract(Duration(minutes: minutesBefore));
+        end = jamaat.add(Duration(minutes: minutesAfter));
+      }
 
       windows.add({
         'prayer': canonical,
