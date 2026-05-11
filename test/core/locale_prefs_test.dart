@@ -10,8 +10,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('read() defaults to bn when nothing is persisted', () async {
-    expect(await LocalePrefs.read(), 'bn');
+  test('read() defaults to en when nothing is persisted', () async {
+    expect(await LocalePrefs.read(), 'en');
   });
 
   test('write() persists and read() returns the new value', () async {
@@ -20,21 +20,23 @@ void main() {
   });
 
   test('readFromPrefs respects pre-seeded value', () async {
-    SharedPreferences.setMockInitialValues({'app_locale': 'en'});
+    SharedPreferences.setMockInitialValues({'app_locale': 'bn'});
     final prefs = await SharedPreferences.getInstance();
-    expect(LocalePrefs.readFromPrefs(prefs), 'en');
+    expect(LocalePrefs.readFromPrefs(prefs), 'bn');
   });
 
-  test('toLocale maps codes and falls back to bn for unknown', () {
+  test('toLocale maps codes and falls back to en for unknown', () {
     expect(LocalePrefs.toLocale('en'), const Locale('en'));
     expect(LocalePrefs.toLocale('bn'), const Locale('bn'));
-    expect(LocalePrefs.toLocale('xx'), const Locale('bn'));
+    expect(LocalePrefs.toLocale('xx'), const Locale('en'));
   });
 
-  test('key constant matches the SharedPreferences key written by write()',
-      () async {
-    await LocalePrefs.write('en');
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString(LocalePrefs.key), 'en');
-  });
+  test(
+    'key constant matches the SharedPreferences key written by write()',
+    () async {
+      await LocalePrefs.write('en');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(LocalePrefs.key), 'en');
+    },
+  );
 }

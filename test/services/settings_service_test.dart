@@ -23,17 +23,17 @@ void main() {
     expect(await settingsService.getBangladeshHijriOffsetDays(), 2);
   });
 
-  test('locale defaults to bn and persists when set to en', () async {
+  test('locale defaults to en and persists when set to bn', () async {
     final settingsService = SettingsService();
 
-    expect(await settingsService.getLocale(), 'bn');
+    expect(await settingsService.getLocale(), 'en');
 
     var fired = 0;
     final sub = settingsService.onSettingsChanged.listen((_) => fired++);
     addTearDown(() => sub.cancel());
 
-    await settingsService.setLocale('en');
-    expect(await settingsService.getLocale(), 'en');
+    await settingsService.setLocale('bn');
+    expect(await settingsService.getLocale(), 'bn');
     expect(fired, 1);
   });
 

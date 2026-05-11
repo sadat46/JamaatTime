@@ -77,7 +77,7 @@ class NotificationService {
       final code = await LocalePrefs.read();
       return LocalePrefs.toLocale(code);
     } catch (_) {
-      return const Locale('bn');
+      return LocalePrefs.toLocale(LocalePrefs.defaultCode);
     }
   }
 
@@ -301,5 +301,4 @@ class NotificationService {
       );
     }
   }
-
 }

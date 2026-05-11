@@ -16,22 +16,30 @@ void main() {
     expect(AppLocaleController.instance.current, const Locale('en'));
   });
 
-  test('bootstrap() falls back to bn when nothing is persisted', () async {
+  test('bootstrap() falls back to en when nothing is persisted', () async {
+    await AppLocaleController.bootstrap();
+    expect(AppLocaleController.instance.current, const Locale('en'));
+  });
+
+  test('bootstrap() can load a persisted Bangla locale', () async {
+    SharedPreferences.setMockInitialValues({'app_locale': 'bn'});
     await AppLocaleController.bootstrap();
     expect(AppLocaleController.instance.current, const Locale('bn'));
   });
 
-  test('set() updates the notifier and persists to SharedPreferences',
-      () async {
-    await AppLocaleController.bootstrap();
-    var notified = 0;
-    AppLocaleController.instance.notifier.addListener(() => notified++);
+  test(
+    'set() updates the notifier and persists to SharedPreferences',
+    () async {
+      await AppLocaleController.bootstrap();
+      var notified = 0;
+      AppLocaleController.instance.notifier.addListener(() => notified++);
 
-    await AppLocaleController.instance.set('en');
+      await AppLocaleController.instance.set('bn');
 
-    expect(AppLocaleController.instance.current, const Locale('en'));
-    expect(notified, 1);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('app_locale'), 'en');
-  });
+      expect(AppLocaleController.instance.current, const Locale('bn'));
+      expect(notified, 1);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('app_locale'), 'bn');
+    },
+  );
 }

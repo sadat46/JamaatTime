@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// cross-isolate singleton.
 class LocalePrefs {
   static const String key = 'app_locale';
-  static const String defaultCode = 'bn';
+  static const String defaultCode = 'en';
 
   static String readFromPrefs(SharedPreferences prefs) =>
       prefs.getString(key) ?? defaultCode;
@@ -20,5 +20,5 @@ class LocalePrefs {
   }
 
   static Locale toLocale(String code) =>
-      code == 'en' ? const Locale('en') : const Locale('bn');
+      code == 'bn' ? const Locale('bn') : const Locale('en');
 }
