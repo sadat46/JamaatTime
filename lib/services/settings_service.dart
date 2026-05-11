@@ -4,6 +4,10 @@ import 'dart:async';
 import '../core/locale_prefs.dart';
 
 class SettingsService {
+  SettingsService._();
+  static final SettingsService _instance = SettingsService._();
+  factory SettingsService() => _instance;
+
   static const int defaultBangladeshHijriOffsetDays = -1;
 
   static const String _themeKey = 'theme_mode';
