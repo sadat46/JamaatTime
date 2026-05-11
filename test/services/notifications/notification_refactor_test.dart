@@ -176,7 +176,7 @@ void main() {
     });
 
     test(
-      'builds future jamaat reminders with 210x ids and skips invalid data',
+      'builds next jamaat reminders with 210x ids and skips invalid data',
       () {
         final location = tz.getLocation('Asia/Dhaka');
         final now = tz.TZDateTime(location, 2026, 5, 10, 15, 0);
@@ -197,11 +197,17 @@ void main() {
               now: now,
             );
 
-        expect(candidates.map((candidate) => candidate.id), [2102, 2103, 2104]);
+        expect(candidates.map((candidate) => candidate.id), [
+          2102,
+          2103,
+          2104,
+          2101,
+        ]);
         expect(candidates.map((candidate) => candidate.prayerKey), [
           'Dhuhr',
           'Asr',
           'Maghrib',
+          'Fajr',
         ]);
         expect(
           candidates[0].scheduledTime,
@@ -215,6 +221,47 @@ void main() {
           candidates[2].scheduledTime,
           tz.TZDateTime(location, 2026, 5, 10, 20, 25),
         );
+        expect(
+          candidates[3].scheduledTime,
+          tz.TZDateTime(location, 2026, 5, 11, 4, 55),
+        );
+      },
+    );
+
+    test(
+      'rolls all jamaat reminders to tomorrow after every reminder has passed',
+      () {
+        final location = tz.getLocation('Asia/Dhaka');
+        final now = tz.TZDateTime(location, 2026, 5, 10, 21, 0);
+        final jamaatTimes = {
+          'fajr': '05:05',
+          'dhuhr': '13:15',
+          'asr': '16:40',
+          'maghrib': '18:45',
+          'isha': '20:35',
+        };
+
+        final candidates =
+            JamaatReminderScheduler.buildFutureReminderCandidates(
+              jamaatTimes,
+              location: location,
+              now: now,
+            );
+
+        expect(candidates.map((candidate) => candidate.id), [
+          2101,
+          2102,
+          2103,
+          2104,
+          2105,
+        ]);
+        expect(candidates.map((candidate) => candidate.scheduledTime), [
+          tz.TZDateTime(location, 2026, 5, 11, 4, 55),
+          tz.TZDateTime(location, 2026, 5, 11, 13, 5),
+          tz.TZDateTime(location, 2026, 5, 11, 16, 30),
+          tz.TZDateTime(location, 2026, 5, 11, 18, 35),
+          tz.TZDateTime(location, 2026, 5, 11, 20, 25),
+        ]);
       },
     );
   });

@@ -35,16 +35,28 @@ class JamaatReminderScheduler {
         location: location,
         now: now,
       );
+      developer.log(
+        'JT_NOTIFY jamaat_reminder candidates=${candidates.length}',
+        name: 'NotificationService',
+      );
 
       for (final candidate in candidates) {
-        final displayName = localizedPrayerName(locale, candidate.prayerKey);
-        await _scheduleGateway.scheduleStandard(
-          id: candidate.id,
-          title: strings.notification_jamaatTitle(displayName),
-          body: strings.notification_jamaatBody(displayName),
-          scheduledTime: candidate.scheduledTime,
-          notificationType: 'jamaat',
-        );
+        try {
+          final displayName = localizedPrayerName(locale, candidate.prayerKey);
+          await _scheduleGateway.scheduleStandard(
+            id: candidate.id,
+            title: strings.notification_jamaatTitle(displayName),
+            body: strings.notification_jamaatBody(displayName),
+            scheduledTime: candidate.scheduledTime,
+            notificationType: 'jamaat',
+          );
+        } catch (e) {
+          developer.log(
+            'JT_NOTIFY jamaat_reminder error id=${candidate.id} prayer=${candidate.prayerKey} $e',
+            name: 'NotificationService',
+            error: e,
+          );
+        }
       }
     } catch (e) {
       developer.log(
@@ -97,14 +109,15 @@ class JamaatReminderScheduler {
     required tz.TZDateTime now,
   }) {
     final candidates = <NotificationReminderCandidate>[];
-    if (jamaatTimes == null) return candidates;
+    if (jamaatTimes == null || jamaatTimes.isEmpty) {
+      developer.log(
+        'JT_NOTIFY jamaat_reminder skipped reason=no_jamaat_times',
+        name: 'NotificationService',
+      );
+      return candidates;
+    }
 
     for (final entry in jamaatTimes.entries) {
-      final parsed = _parse(entry.key, entry.value, location, now);
-      if (parsed == null || !parsed.notifyTime.isAfter(now)) {
-        continue;
-      }
-
       final canonicalPrayerName = canonicalPrayerNameFromJamaatKey(entry.key);
       final id = NotificationIds.jamaatReminders[canonicalPrayerName];
       if (id == null) {
@@ -112,6 +125,11 @@ class JamaatReminderScheduler {
           'JT_NOTIFY skipped jamaat=${entry.key} reason=unknown_prayer_key',
           name: 'NotificationService',
         );
+        continue;
+      }
+
+      final parsed = _parse(entry.key, entry.value, location, now);
+      if (parsed == null || !parsed.notifyTime.isAfter(now)) {
         continue;
       }
 
@@ -124,6 +142,7 @@ class JamaatReminderScheduler {
       );
     }
 
+    candidates.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
     return candidates;
   }
 
@@ -193,7 +212,10 @@ class JamaatReminderScheduler {
         hour,
         minute,
       );
-      final notifyTime = jamaatTime.subtract(reminderOffset);
+      var notifyTime = jamaatTime.subtract(reminderOffset);
+      if (!notifyTime.isAfter(now)) {
+        notifyTime = notifyTime.add(const Duration(days: 1));
+      }
 
       return _ParsedJamaatReminder(notifyTime: notifyTime);
     } catch (e) {

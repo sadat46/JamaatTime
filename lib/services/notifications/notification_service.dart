@@ -243,9 +243,18 @@ class NotificationService {
       );
       await recreateNotificationChannel();
       await cancelAllNotifications();
-      await schedulePrayerNotifications(prayerTimes);
-      await scheduleJamaatNotifications(jamaatTimes);
-      await scheduleFajrVoiceNotification(prayerTimes);
+      await _runScheduleStep(
+        'prayer_end',
+        () => schedulePrayerNotifications(prayerTimes),
+      );
+      await _runScheduleStep(
+        'jamaat_reminder',
+        () => scheduleJamaatNotifications(jamaatTimes),
+      );
+      await _runScheduleStep(
+        'fajr_voice',
+        () => scheduleFajrVoiceNotification(prayerTimes),
+      );
       return true;
     } catch (e) {
       developer.log(
@@ -254,6 +263,21 @@ class NotificationService {
         error: e,
       );
       return false;
+    }
+  }
+
+  Future<void> _runScheduleStep(
+    String step,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (e) {
+      developer.log(
+        'JT_NOTIFY scheduleAll step=$step error $e',
+        name: 'NotificationService',
+        error: e,
+      );
     }
   }
 
