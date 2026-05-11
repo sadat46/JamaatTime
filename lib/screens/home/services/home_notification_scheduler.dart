@@ -167,11 +167,8 @@ class HomeNotificationScheduler {
     }
 
     if (isLatestRequest) {
-      unawaited(
-        (_rescheduleAutoVibration ?? AutoVibrationService().reschedule).call(
-          schedule.jamaatTimes,
-        ),
-      );
+      await (_rescheduleAutoVibration ?? AutoVibrationService().reschedule)
+          .call(schedule.jamaatTimes);
     }
   }
 

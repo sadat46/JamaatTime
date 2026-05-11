@@ -12,7 +12,6 @@ import '../../features/notice_board/data/notice_model.dart';
 import '../../features/notice_board/data/notice_read_state_service.dart';
 import '../../features/notice_board/data/notice_repository.dart';
 import '../../models/location_config.dart';
-import '../../services/auto_vibration_service.dart';
 import '../../services/jamaat_service.dart';
 import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
@@ -244,7 +243,6 @@ class HomeController extends ChangeNotifier {
       );
       if (_isDisposed) return;
       _updateHomeWidget();
-      unawaited(AutoVibrationService().reschedule(_jamaatTimes));
     });
   }
 

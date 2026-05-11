@@ -230,37 +230,18 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     setState(() => _prayerNotificationSoundMode = value);
     _refreshOpenSubpage();
-
-    try {
-      await _notificationService.handleNotificationSoundModeChange();
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _tr(
-              'নামাজ রিমাইন্ডার সাউন্ড আপডেট হয়েছে।',
-              'Prayer reminder sound updated.',
-            ),
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          _tr(
+            'নামাজ রিমাইন্ডার সাউন্ড আপডেট হয়েছে।',
+            'Prayer reminder sound updated.',
           ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _tr(
-              'নামাজ নোটিফিকেশন সেটিংস আপডেট করতে সমস্যা: $e',
-              'Error updating prayer notification settings: $e',
-            ),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _updateJamaatSoundMode(int value) async {
@@ -269,37 +250,18 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     setState(() => _jamaatNotificationSoundMode = value);
     _refreshOpenSubpage();
-
-    try {
-      await _notificationService.handleNotificationSoundModeChange();
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _tr(
-              'জামাত রিমাইন্ডার সাউন্ড আপডেট হয়েছে।',
-              'Jamaat reminder sound updated.',
-            ),
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          _tr(
+            'জামাত রিমাইন্ডার সাউন্ড আপডেট হয়েছে।',
+            'Jamaat reminder sound updated.',
           ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _tr(
-              'জামাত নোটিফিকেশন সেটিংস আপডেট করতে সমস্যা: $e',
-              'Error updating jamaat notification settings: $e',
-            ),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _updateFajrVoiceNotification(bool value) async {

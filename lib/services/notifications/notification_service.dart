@@ -241,6 +241,7 @@ class NotificationService {
         'JT_NOTIFY scheduleAll called exact=$exactAlarmsAvailable',
         name: 'NotificationService',
       );
+      await recreateNotificationChannel();
       await cancelAllNotifications();
       await schedulePrayerNotifications(prayerTimes);
       await scheduleJamaatNotifications(jamaatTimes);
@@ -301,17 +302,4 @@ class NotificationService {
     }
   }
 
-  Future<void> handleNotificationSoundModeChange() async {
-    try {
-      await recreateNotificationChannel();
-      await cancelAllNotifications();
-    } catch (e) {
-      developer.log(
-        'Error handling notification sound mode change: $e',
-        name: 'NotificationService',
-        error: e,
-      );
-      rethrow;
-    }
-  }
 }
