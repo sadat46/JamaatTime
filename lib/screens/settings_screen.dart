@@ -802,7 +802,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               activeTrackColor: _brandGreen,
               contentPadding: EdgeInsets.zero,
               title: Text(
-                _tr('ফজর ভয়েস নোটিফিকেশন', 'Fajr voice notification'),
+                _tr(
+                  'তাহাজ্জুদ শেষ ও ফজর শুরু ভয়েস নোটিফিকেশন',
+                  'Tahajjud end and Fajr start voice notification',
+                ),
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
@@ -810,8 +813,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               subtitle: Text(
                 _tr(
-                  'ফজরের ওয়াক্ত শুরু হলে ভয়েস রিমাইন্ডার বাজবে।',
-                  'Play voice reminder when Fajr time starts.',
+                  'তাহাজ্জুদ শেষ ও ফজর শুরু হলে রিমাইন্ডার বাজবে।',
+                  'Play reminder when Tahajjud ends and Fajr starts.',
                 ),
                 style: const TextStyle(fontSize: 12),
               ),
@@ -979,8 +982,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   color: const Color(0xFF1565C0),
                   title: _tr('নোটিফিকেশন', 'Notifications'),
                   subtitle: _tr(
-                    'নামাজ সাউন্ড, জামাত সাউন্ড, ফজর ভয়েস',
-                    'Prayer sound, Jamaat sound, Fajr voice',
+                    'নামাজ সাউন্ড, জামাত সাউন্ড, তাহাজ্জুদ/ফজর শুরু',
+                    'Prayer sound, Jamaat sound, Tahajjud/Fajr start',
                   ),
                   onTap: () => _openSettingsSubpage(_buildNotificationsPage),
                 ),
