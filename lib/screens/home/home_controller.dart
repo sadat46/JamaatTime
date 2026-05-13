@@ -16,6 +16,7 @@ import '../../services/jamaat_service.dart';
 import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/notifications/jamaat_schedule_cache.dart';
 import '../../services/prayer_aux_calculator.dart';
 import '../../services/prayer_time_cache.dart';
 import '../../services/prayer_time_engine.dart';
@@ -218,7 +219,8 @@ class HomeController extends ChangeNotifier {
 
     if (_locationConfig!.jamaatSource == JamaatSource.server &&
         _selectedCity != null) {
-      unawaited(fetchJamaatTimes(_selectedCity!, preserveExisting: true));
+      await fetchJamaatTimes(_selectedCity!, preserveExisting: true);
+      if (_isDisposed) return;
     } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
       calculateLocalJamaatTimes();
     }
@@ -236,6 +238,7 @@ class HomeController extends ChangeNotifier {
       await _notificationScheduler.handleSettingsChange(
         selectedDate: _selectedDate,
         prayerTimes: _times,
+        tomorrowPrayerTimes: _computeTomorrowPrayerTimes(),
         jamaatTimes: _jamaatTimes,
         selectedCity: _selectedCity,
         currentPlaceName: _currentPlaceName,
@@ -719,6 +722,9 @@ class HomeController extends ChangeNotifier {
         }
         _writeCache();
 
+        await _writeJamaatCacheForDate(_selectedDate, completeJamaatTimes);
+        unawaited(_fetchAndCacheTomorrowJamaat(city));
+
         _notificationScheduler.invalidate();
         unawaited(_scheduleNotificationsIfNeeded());
       } else {
@@ -731,6 +737,9 @@ class HomeController extends ChangeNotifier {
           _notify();
         }
         _writeCache();
+
+        _notificationScheduler.invalidate();
+        unawaited(_scheduleNotificationsIfNeeded());
       }
     } catch (_) {
       if (_isDisposed) {
@@ -748,6 +757,9 @@ class HomeController extends ChangeNotifier {
       if (showLoading) {
         _notify();
       }
+
+      _notificationScheduler.invalidate();
+      unawaited(_scheduleNotificationsIfNeeded());
     }
   }
 
@@ -759,29 +771,7 @@ class HomeController extends ChangeNotifier {
       return;
     }
 
-    final offsets = _locationConfig!.jamaatOffsets!;
-    final newJamaatTimes = <String, dynamic>{};
-    final prayerMapping = {
-      'fajr': 'Fajr',
-      'dhuhr': 'Dhuhr',
-      'asr': 'Asr',
-      'maghrib': 'Maghrib',
-      'isha': 'Isha',
-    };
-
-    for (final entry in offsets.entries) {
-      final prayerKey = entry.key;
-      final offset = entry.value;
-      final prayerName = prayerMapping[prayerKey];
-
-      if (prayerName != null && _times[prayerName] != null) {
-        final prayerTime = _times[prayerName]!;
-        final jamaatTime = prayerTime.add(Duration(minutes: offset));
-        newJamaatTimes[prayerKey] = DateFormat(
-          'HH:mm',
-        ).format(jamaatTime.toLocal());
-      }
-    }
+    final newJamaatTimes = _computeLocalOffsetJamaat(_times);
 
     _jamaatTimes = newJamaatTimes;
     _isLoadingJamaat = false;
@@ -789,6 +779,20 @@ class HomeController extends ChangeNotifier {
     _computePrayerTableData();
     _notify();
     _writeCache();
+
+    unawaited(_writeJamaatCacheForDate(_selectedDate, newJamaatTimes));
+    final tomorrowPrayers = _computeTomorrowPrayerTimes();
+    if (tomorrowPrayers != null) {
+      final tomorrowJamaat = _computeLocalOffsetJamaat(tomorrowPrayers);
+      if (tomorrowJamaat.isNotEmpty) {
+        unawaited(
+          _writeJamaatCacheForDate(
+            _selectedDate.add(const Duration(days: 1)),
+            tomorrowJamaat,
+          ),
+        );
+      }
+    }
 
     _notificationScheduler.invalidate();
     unawaited(_scheduleNotificationsIfNeeded());
@@ -928,11 +932,104 @@ class HomeController extends ChangeNotifier {
     return _notificationScheduler.scheduleIfNeeded(
       selectedDate: _selectedDate,
       prayerTimes: _times,
+      tomorrowPrayerTimes: _computeTomorrowPrayerTimes(),
       jamaatTimes: _jamaatTimes,
       selectedCity: _selectedCity,
       currentPlaceName: _currentPlaceName,
       locationConfig: _locationConfig,
     );
+  }
+
+  Map<String, DateTime?>? _computeTomorrowPrayerTimes() {
+    if (_params == null || _locationConfig == null) return null;
+    final coords =
+        _coords ??
+        Coordinates(_locationConfig!.latitude, _locationConfig!.longitude);
+    try {
+      final tomorrow = _selectedDate.add(const Duration(days: 1));
+      final tomorrowPrayer = PrayerTimes(
+        coordinates: coords,
+        date: tomorrow,
+        calculationParameters: _params!,
+        precision: true,
+      );
+      return PrayerTimeEngine.instance.createPrayerTimesMap(tomorrowPrayer);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _writeJamaatCacheForDate(
+    DateTime date,
+    Map<String, dynamic> jamaatTimes,
+  ) async {
+    final stringified = <String, String>{};
+    for (final entry in jamaatTimes.entries) {
+      final value = entry.value;
+      if (value == null) continue;
+      final asString = value.toString();
+      if (asString.isEmpty || asString == '-') continue;
+      stringified[entry.key] = asString;
+    }
+    if (stringified.isEmpty) return;
+    try {
+      await JamaatScheduleCache.instance.write(
+        date: date,
+        times: stringified,
+      );
+    } catch (_) {
+      // Cache write is best-effort; scheduling still proceeds.
+    }
+  }
+
+  Future<void> _fetchAndCacheTomorrowJamaat(String city) async {
+    try {
+      final tomorrow = _selectedDate.add(const Duration(days: 1));
+      final times = await _jamaatService.getJamaatTimes(
+        city: city,
+        date: tomorrow,
+      );
+      if (_isDisposed || times == null) return;
+      final complete = Map<String, dynamic>.from(times);
+      final tomorrowMaghribPrayer = _computeTomorrowPrayerTimes()?['Maghrib'];
+      final tomorrowMaghribJamaat = PrayerAuxCalculator.instance
+          .calculateMaghribJamaatTime(
+            maghribPrayerTime: tomorrowMaghribPrayer,
+            selectedCity: _selectedCity,
+          );
+      if (tomorrowMaghribJamaat != '-') {
+        complete['maghrib'] = tomorrowMaghribJamaat;
+      }
+      await _writeJamaatCacheForDate(tomorrow, complete);
+    } catch (_) {
+      // Best-effort prefetch.
+    }
+  }
+
+  Map<String, dynamic> _computeLocalOffsetJamaat(
+    Map<String, DateTime?> prayerTimes,
+  ) {
+    final offsets = _locationConfig?.jamaatOffsets;
+    final result = <String, dynamic>{};
+    if (offsets == null) return result;
+    const prayerMapping = {
+      'fajr': 'Fajr',
+      'dhuhr': 'Dhuhr',
+      'asr': 'Asr',
+      'maghrib': 'Maghrib',
+      'isha': 'Isha',
+    };
+    for (final entry in offsets.entries) {
+      final prayerKey = entry.key;
+      final offset = entry.value;
+      final prayerName = prayerMapping[prayerKey];
+      if (prayerName == null) continue;
+      final prayerTime = prayerTimes[prayerName];
+      if (prayerTime == null) continue;
+      final jamaatTime = prayerTime.add(Duration(minutes: offset));
+      result[prayerKey] = DateFormat('HH:mm').format(jamaatTime.toLocal());
+    }
+    return result;
   }
 
   String _getCurrentPrayerName() {

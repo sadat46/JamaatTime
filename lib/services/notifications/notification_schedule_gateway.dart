@@ -144,7 +144,7 @@ class NotificationScheduleGateway {
         NotificationDetails(
           android: AndroidNotificationDetails(
             'fajr_voice_channel_v1',
-            'Fajr Voice Notification',
+            'Tahajjud end and Fajr start voice notification',
             channelDescription:
                 'Plays voice reminder at Fajr prayer start time',
             importance: Importance.max,

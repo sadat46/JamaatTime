@@ -7,10 +7,10 @@ import '../../../services/auto_vibration_service.dart';
 import '../../../services/notification_service.dart';
 
 typedef ScheduleAllNotifications =
-    Future<bool> Function(
-      Map<String, DateTime?> prayerTimes,
-      Map<String, dynamic>? jamaatTimes,
-    );
+    Future<bool> Function({
+      required Map<String, DateTime?> todayPrayerTimes,
+      Map<String, DateTime?>? tomorrowPrayerTimes,
+    });
 typedef RescheduleAutoVibration =
     Future<void> Function(Map<String, dynamic>? jamaatTimes);
 
@@ -39,21 +39,27 @@ class HomeNotificationScheduler {
 
   void invalidate() {
     _lastScheduleKey = null;
+    // Bump the version so the next scheduleKey is distinct from any in-flight
+    // request — required now that jamaat data lives in the cache (not the
+    // key). Without this, a fresh-from-fetch invalidate() would collide with
+    // an in-progress schedule and be dropped by the active-key dedup.
+    _scheduleVersion++;
   }
 
   Future<void> handleSettingsChange({
     required DateTime selectedDate,
     required Map<String, DateTime?> prayerTimes,
+    required Map<String, DateTime?>? tomorrowPrayerTimes,
     required Map<String, dynamic>? jamaatTimes,
     required String? selectedCity,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
   }) async {
     invalidate();
-    _scheduleVersion++;
     await scheduleIfNeeded(
       selectedDate: selectedDate,
       prayerTimes: prayerTimes,
+      tomorrowPrayerTimes: tomorrowPrayerTimes,
       jamaatTimes: jamaatTimes,
       selectedCity: selectedCity,
       currentPlaceName: currentPlaceName,
@@ -64,6 +70,7 @@ class HomeNotificationScheduler {
   Future<void> scheduleIfNeeded({
     required DateTime selectedDate,
     required Map<String, DateTime?> prayerTimes,
+    required Map<String, DateTime?>? tomorrowPrayerTimes,
     required Map<String, dynamic>? jamaatTimes,
     required String? selectedCity,
     required String? currentPlaceName,
@@ -85,7 +92,7 @@ class HomeNotificationScheduler {
     final scheduleKey = _buildScheduleKey(
       today: today,
       prayerTimes: prayerTimes,
-      jamaatTimes: jamaatTimes,
+      tomorrowPrayerTimes: tomorrowPrayerTimes,
       selectedCity: selectedCity,
       currentPlaceName: currentPlaceName,
       locationConfig: locationConfig,
@@ -106,6 +113,9 @@ class HomeNotificationScheduler {
       today: today,
       scheduleKey: scheduleKey,
       prayerTimes: Map<String, DateTime?>.from(prayerTimes),
+      tomorrowPrayerTimes: tomorrowPrayerTimes == null
+          ? null
+          : Map<String, DateTime?>.from(tomorrowPrayerTimes),
       jamaatTimes: jamaatTimes == null
           ? null
           : Map<String, dynamic>.from(jamaatTimes),
@@ -151,17 +161,16 @@ class HomeNotificationScheduler {
   }
 
   Future<void> _executeSchedule(_PendingNotificationSchedule schedule) async {
-    final scheduled =
-        await (_scheduleAllNotifications ??
-                _notificationService.scheduleAllNotifications)
-            .call(schedule.prayerTimes, schedule.jamaatTimes);
+    final scheduleAll =
+        _scheduleAllNotifications ?? _notificationService.scheduleAllNotifications;
+    final scheduled = await scheduleAll(
+      todayPrayerTimes: schedule.prayerTimes,
+      tomorrowPrayerTimes: schedule.tomorrowPrayerTimes,
+    );
 
     final isLatestRequest = _pendingSchedule == null;
-    final isIncompleteServerJamaat =
-        schedule.locationConfig?.jamaatSource == JamaatSource.server &&
-        schedule.jamaatTimes == null;
 
-    if (scheduled && isLatestRequest && !isIncompleteServerJamaat) {
+    if (scheduled && isLatestRequest) {
       _lastScheduleKey = schedule.scheduleKey;
       _lastScheduledDate = schedule.today;
     }
@@ -175,7 +184,7 @@ class HomeNotificationScheduler {
   String _buildScheduleKey({
     required DateTime today,
     required Map<String, DateTime?> prayerTimes,
-    required Map<String, dynamic>? jamaatTimes,
+    required Map<String, DateTime?>? tomorrowPrayerTimes,
     required String? selectedCity,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
@@ -185,11 +194,14 @@ class HomeNotificationScheduler {
           (name) => '$name:${prayerTimes[name]?.millisecondsSinceEpoch ?? 0}',
         )
         .join('|');
-    final jamaatEntries =
-        (jamaatTimes ?? <String, dynamic>{}).entries
-            .map((entry) => '${entry.key}:${entry.value}')
-            .toList()
-          ..sort();
+    final tomorrowPart = tomorrowPrayerTimes == null
+        ? 'no-tomorrow'
+        : ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']
+              .map(
+                (name) =>
+                    '$name:${tomorrowPrayerTimes[name]?.millisecondsSinceEpoch ?? 0}',
+              )
+              .join('|');
     final configPart = locationConfig == null
         ? 'no-config'
         : [
@@ -207,7 +219,7 @@ class HomeNotificationScheduler {
       _scheduleVersion,
       configPart,
       prayerPart,
-      jamaatEntries.join('|'),
+      tomorrowPart,
     ].join('::');
   }
 }
@@ -217,6 +229,7 @@ class _PendingNotificationSchedule {
     required this.today,
     required this.scheduleKey,
     required this.prayerTimes,
+    required this.tomorrowPrayerTimes,
     required this.jamaatTimes,
     required this.locationConfig,
   });
@@ -224,6 +237,7 @@ class _PendingNotificationSchedule {
   final DateTime today;
   final String scheduleKey;
   final Map<String, DateTime?> prayerTimes;
+  final Map<String, DateTime?>? tomorrowPrayerTimes;
   final Map<String, dynamic>? jamaatTimes;
   final LocationConfig? locationConfig;
 }

@@ -9,12 +9,14 @@ import '../../core/locale_prefs.dart';
 import '../../core/timezone_bootstrap.dart';
 import '../../models/location_config.dart';
 import '../settings_service.dart';
-import 'fajr_voice_notification_scheduler.dart';
 import 'jamaat_reminder_scheduler.dart';
+import 'jamaat_schedule_cache.dart';
 import 'notification_channel_service.dart';
+import 'notification_ids.dart';
 import 'notification_permission_service.dart';
 import 'notification_schedule_gateway.dart';
 import 'prayer_end_reminder_scheduler.dart';
+import 'tahajjud_end_fajr_start_notification_scheduler.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -24,6 +26,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   final SettingsService _settingsService = SettingsService();
+  final JamaatScheduleCache _jamaatCache = JamaatScheduleCache.instance;
 
   bool _isInitialized = false;
   Future<void>? _initializeFuture;
@@ -55,9 +58,11 @@ class NotificationService {
         scheduleGateway: _scheduleGateway,
         localeResolver: _resolveLocale,
         locationResolver: _getLocation,
+        cache: _jamaatCache,
       );
-  late final FajrVoiceNotificationScheduler _fajrVoiceNotificationScheduler =
-      FajrVoiceNotificationScheduler(
+  late final TahajjudEndFajrStartNotificationScheduler
+  _tahajjudEndFajrStartNotificationScheduler =
+      TahajjudEndFajrStartNotificationScheduler(
         scheduleGateway: _scheduleGateway,
         settingsService: _settingsService,
         localeResolver: _resolveLocale,
@@ -126,6 +131,7 @@ class NotificationService {
       await _channelService.createActiveChannelsForBoot();
       await _permissionService.requestNotificationsPermission();
       await _permissionService.refreshExactAlarmsAvailable();
+      await _pruneStaleJamaatCache();
 
       _isInitialized = true;
     } catch (e) {
@@ -136,6 +142,16 @@ class NotificationService {
       );
     } finally {
       _initializeFuture = null;
+    }
+  }
+
+  Future<void> _pruneStaleJamaatCache() async {
+    try {
+      final now = tz.TZDateTime.now(_getLocation());
+      final cutoff = DateTime(now.year, now.month, now.day);
+      await _jamaatCache.pruneOlderThan(cutoff);
+    } catch (_) {
+      // Best-effort cleanup.
     }
   }
 
@@ -175,6 +191,25 @@ class NotificationService {
     }
   }
 
+  /// Cancel every jamaat reminder slot (today + tomorrow). Used when the user
+  /// disables jamaat notifications entirely.
+  Future<void> cancelAllJamaatReminders() async {
+    try {
+      for (final id in NotificationIds.jamaatReminders.values) {
+        await _scheduleGateway.cancel(id);
+      }
+      for (final id in NotificationIds.jamaatRemindersTomorrow.values) {
+        await _scheduleGateway.cancel(id);
+      }
+    } catch (e) {
+      developer.log(
+        'Error cancelling jamaat reminders: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+    }
+  }
+
   Map<String, DateTime?> calculatePrayerNotificationTimes(
     Map<String, DateTime?> prayerTimes,
   ) {
@@ -195,37 +230,56 @@ class NotificationService {
     );
   }
 
-  Future<void> schedulePrayerNotifications(Map<String, DateTime?> prayerTimes) {
-    return _prayerEndReminderScheduler.schedule(prayerTimes);
+  Future<void> schedulePrayerNotifications({
+    required Map<String, DateTime?> todayPrayerTimes,
+    Map<String, DateTime?>? tomorrowPrayerTimes,
+  }) {
+    return _prayerEndReminderScheduler.schedule(
+      todayPrayerTimes: todayPrayerTimes,
+      tomorrowPrayerTimes: tomorrowPrayerTimes,
+    );
   }
 
-  Future<void> scheduleJamaatNotifications(Map<String, dynamic>? jamaatTimes) {
-    return _jamaatReminderScheduler.schedule(jamaatTimes);
+  /// Reads jamaat times for today and tomorrow from [JamaatScheduleCache] and
+  /// arms reminders for both date ranges. Idempotent — re-arming the same ID
+  /// atomically replaces the prior alarm via `zonedSchedule`, so a no-data
+  /// run leaves previously armed alarms untouched.
+  Future<void> scheduleJamaatNotifications() {
+    return _jamaatReminderScheduler.schedule();
   }
 
-  Future<void> scheduleFajrVoiceNotification(
-    Map<String, DateTime?> prayerTimes,
-  ) {
-    return _fajrVoiceNotificationScheduler.schedule(prayerTimes);
+  Future<void> scheduleTahajjudEndFajrStartNotification({
+    required Map<String, DateTime?> todayPrayerTimes,
+    Map<String, DateTime?>? tomorrowPrayerTimes,
+  }) {
+    return _tahajjudEndFajrStartNotificationScheduler.schedule(
+      todayPrayerTimes: todayPrayerTimes,
+      tomorrowPrayerTimes: tomorrowPrayerTimes,
+    );
   }
 
   @visibleForTesting
-  static tz.TZDateTime nextFajrVoiceNotificationTime({
+  static tz.TZDateTime nextTahajjudEndFajrStartNotificationTime({
     required DateTime fajrTime,
     required tz.TZDateTime now,
     required tz.Location location,
   }) {
-    return FajrVoiceNotificationScheduler.nextFajrVoiceNotificationTime(
+    return TahajjudEndFajrStartNotificationScheduler.nextTahajjudEndFajrStartNotificationTime(
       fajrTime: fajrTime,
       now: now,
       location: location,
     );
   }
 
-  Future<bool> scheduleAllNotifications(
-    Map<String, DateTime?> prayerTimes,
-    Map<String, dynamic>? jamaatTimes,
-  ) async {
+  /// Single entry point for re-arming every scheduled notification this app
+  /// owns. Replaces each alarm by ID (`zonedSchedule` is replace-by-id), so
+  /// this call is idempotent and safe to invoke repeatedly. Notably it does
+  /// NOT call `cancelAllNotifications()` — that would create a wipe window
+  /// during which previously armed jamaat alarms are gone.
+  Future<bool> scheduleAllNotifications({
+    required Map<String, DateTime?> todayPrayerTimes,
+    Map<String, DateTime?>? tomorrowPrayerTimes,
+  }) async {
     try {
       await initialize(null);
       if (!_isInitialized) {
@@ -238,22 +292,28 @@ class NotificationService {
 
       await refreshExactAlarmsAvailable();
       developer.log(
-        'JT_NOTIFY scheduleAll called exact=$exactAlarmsAvailable',
+        'JT_NOTIFY scheduleAll called exact=$exactAlarmsAvailable '
+        'tomorrow=${tomorrowPrayerTimes != null}',
         name: 'NotificationService',
       );
       await recreateNotificationChannel();
-      await cancelAllNotifications();
       await _runScheduleStep(
         'prayer_end',
-        () => schedulePrayerNotifications(prayerTimes),
+        () => schedulePrayerNotifications(
+          todayPrayerTimes: todayPrayerTimes,
+          tomorrowPrayerTimes: tomorrowPrayerTimes,
+        ),
       );
       await _runScheduleStep(
         'jamaat_reminder',
-        () => scheduleJamaatNotifications(jamaatTimes),
+        () => scheduleJamaatNotifications(),
       );
       await _runScheduleStep(
         'fajr_voice',
-        () => scheduleFajrVoiceNotification(prayerTimes),
+        () => scheduleTahajjudEndFajrStartNotification(
+          todayPrayerTimes: todayPrayerTimes,
+          tomorrowPrayerTimes: tomorrowPrayerTimes,
+        ),
       );
       return true;
     } catch (e) {

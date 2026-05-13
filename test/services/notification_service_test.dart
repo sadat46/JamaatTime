@@ -18,17 +18,18 @@ void main() {
     expect(en.notification_prayerTitle(en.prayer_fajr), 'Fajr Prayer');
   });
 
-  group('nextFajrVoiceNotificationTime', () {
+  group('nextTahajjudEndFajrStartNotificationTime', () {
     test('uses same-day Fajr when it is still upcoming', () {
       final location = tz.getLocation('Asia/Dhaka');
       final now = tz.TZDateTime(location, 2026, 5, 9, 4, 0);
       final fajr = tz.TZDateTime(location, 2026, 5, 9, 4, 55);
 
-      final scheduled = NotificationService.nextFajrVoiceNotificationTime(
-        fajrTime: fajr,
-        now: now,
-        location: location,
-      );
+      final scheduled =
+          NotificationService.nextTahajjudEndFajrStartNotificationTime(
+            fajrTime: fajr,
+            now: now,
+            location: location,
+          );
 
       expect(scheduled, fajr);
     });
@@ -38,11 +39,12 @@ void main() {
       final now = tz.TZDateTime(location, 2026, 5, 9, 5, 1);
       final fajr = tz.TZDateTime(location, 2026, 5, 9, 4, 55);
 
-      final scheduled = NotificationService.nextFajrVoiceNotificationTime(
-        fajrTime: fajr,
-        now: now,
-        location: location,
-      );
+      final scheduled =
+          NotificationService.nextTahajjudEndFajrStartNotificationTime(
+            fajrTime: fajr,
+            now: now,
+            location: location,
+          );
 
       expect(scheduled, tz.TZDateTime(location, 2026, 5, 10, 4, 55));
     });
@@ -52,11 +54,12 @@ void main() {
       final now = tz.TZDateTime(location, 2026, 5, 9, 4, 55);
       final fajr = tz.TZDateTime(location, 2026, 5, 9, 4, 55);
 
-      final scheduled = NotificationService.nextFajrVoiceNotificationTime(
-        fajrTime: fajr,
-        now: now,
-        location: location,
-      );
+      final scheduled =
+          NotificationService.nextTahajjudEndFajrStartNotificationTime(
+            fajrTime: fajr,
+            now: now,
+            location: location,
+          );
 
       expect(scheduled, tz.TZDateTime(location, 2026, 5, 10, 4, 55));
     });

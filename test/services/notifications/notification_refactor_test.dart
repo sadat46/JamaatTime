@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jamaat_time/services/notifications/fajr_voice_notification_scheduler.dart';
 import 'package:jamaat_time/services/notifications/jamaat_reminder_scheduler.dart';
 import 'package:jamaat_time/services/notifications/notification_channel_service.dart';
 import 'package:jamaat_time/services/notifications/notification_ids.dart';
 import 'package:jamaat_time/services/notifications/prayer_end_reminder_scheduler.dart';
+import 'package:jamaat_time/services/notifications/tahajjud_end_fajr_start_notification_scheduler.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -266,14 +266,14 @@ void main() {
     );
   });
 
-  group('FajrVoiceNotificationScheduler', () {
+  group('TahajjudEndFajrStartNotificationScheduler', () {
     test('rolls same-day Fajr to next day after it has passed', () {
       final location = tz.getLocation('Asia/Dhaka');
       final now = tz.TZDateTime(location, 2026, 5, 10, 5, 0);
       final fajr = tz.TZDateTime(location, 2026, 5, 10, 3, 56);
 
       final scheduled =
-          FajrVoiceNotificationScheduler.nextFajrVoiceNotificationTime(
+          TahajjudEndFajrStartNotificationScheduler.nextTahajjudEndFajrStartNotificationTime(
             fajrTime: fajr,
             now: now,
             location: location,

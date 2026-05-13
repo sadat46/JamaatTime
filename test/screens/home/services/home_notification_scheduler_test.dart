@@ -14,21 +14,25 @@ void main() {
   });
 
   test(
-    'runs the latest jamaat schedule after an older no-jamaat request',
+    'runs the latest schedule after invalidate from a fresh fetch',
     () async {
-      final calls = <Map<String, dynamic>?>[];
+      final calls = <Map<String, DateTime?>>[];
       final autoVibrationCalls = <Map<String, dynamic>?>[];
       final firstStarted = Completer<void>();
       final releaseFirst = Completer<void>();
       final scheduler = _scheduler(
-        onSchedule: (prayerTimes, jamaatTimes) async {
-          calls.add(jamaatTimes == null ? null : Map.of(jamaatTimes));
-          if (calls.length == 1) {
-            firstStarted.complete();
-            await releaseFirst.future;
-          }
-          return true;
-        },
+        onSchedule:
+            ({
+              required Map<String, DateTime?> todayPrayerTimes,
+              Map<String, DateTime?>? tomorrowPrayerTimes,
+            }) async {
+              calls.add(Map.of(todayPrayerTimes));
+              if (calls.length == 1) {
+                firstStarted.complete();
+                await releaseFirst.future;
+              }
+              return true;
+            },
         onAutoVibration: (jamaatTimes) async {
           autoVibrationCalls.add(
             jamaatTimes == null ? null : Map<String, dynamic>.of(jamaatTimes),
@@ -40,6 +44,7 @@ void main() {
       final firstSchedule = scheduler.scheduleIfNeeded(
         selectedDate: today,
         prayerTimes: _prayerTimes(today),
+        tomorrowPrayerTimes: null,
         jamaatTimes: null,
         selectedCity: 'Dhaka',
         currentPlaceName: null,
@@ -47,46 +52,56 @@ void main() {
       );
       await firstStarted.future;
 
-      final jamaatTimes = {'dhuhr': '16:40', 'asr': '18:49'};
+      // Simulate fetchJamaatTimes() success path: cache is fresh, invalidate
+      // forces the next schedule call to execute even with same scheduleKey
+      // basis (prayer times unchanged).
+      scheduler.invalidate();
+      final secondJamaat = {'dhuhr': '16:40', 'asr': '18:49'};
       final secondSchedule = scheduler.scheduleIfNeeded(
         selectedDate: today,
         prayerTimes: _prayerTimes(today),
-        jamaatTimes: jamaatTimes,
+        tomorrowPrayerTimes: null,
+        jamaatTimes: secondJamaat,
         selectedCity: 'Dhaka',
         currentPlaceName: null,
         locationConfig: _serverLocation,
       );
 
-      expect(calls, [null]);
+      expect(calls.length, 1);
       releaseFirst.complete();
       await Future.wait([firstSchedule, secondSchedule]);
 
-      expect(calls, [null, jamaatTimes]);
-      expect(autoVibrationCalls, [jamaatTimes]);
+      expect(calls.length, 2);
+      expect(autoVibrationCalls, [secondJamaat]);
     },
   );
 
   test(
-    'replaces stale pending schedules with the newest jamaat data',
+    'collapses pending schedules to the newest invalidated request',
     () async {
-      final calls = <Map<String, dynamic>?>[];
+      final calls = <Map<String, DateTime?>>[];
       final firstStarted = Completer<void>();
       final releaseFirst = Completer<void>();
       final scheduler = _scheduler(
-        onSchedule: (prayerTimes, jamaatTimes) async {
-          calls.add(jamaatTimes == null ? null : Map.of(jamaatTimes));
-          if (calls.length == 1) {
-            firstStarted.complete();
-            await releaseFirst.future;
-          }
-          return true;
-        },
+        onSchedule:
+            ({
+              required Map<String, DateTime?> todayPrayerTimes,
+              Map<String, DateTime?>? tomorrowPrayerTimes,
+            }) async {
+              calls.add(Map.of(todayPrayerTimes));
+              if (calls.length == 1) {
+                firstStarted.complete();
+                await releaseFirst.future;
+              }
+              return true;
+            },
       );
 
       final today = _today();
       final firstSchedule = scheduler.scheduleIfNeeded(
         selectedDate: today,
         prayerTimes: _prayerTimes(today),
+        tomorrowPrayerTimes: null,
         jamaatTimes: null,
         selectedCity: 'Dhaka',
         currentPlaceName: null,
@@ -94,21 +109,29 @@ void main() {
       );
       await firstStarted.future;
 
+      // First pending invalidation.
+      scheduler.invalidate();
       unawaited(
         scheduler.scheduleIfNeeded(
           selectedDate: today,
           prayerTimes: _prayerTimes(today),
+          tomorrowPrayerTimes: null,
           jamaatTimes: {'dhuhr': '16:40'},
           selectedCity: 'Dhaka',
           currentPlaceName: null,
           locationConfig: _serverLocation,
         ),
       );
-      final newestJamaatTimes = {'dhuhr': '16:45', 'asr': '18:50'};
+      // Newer invalidation overrides the previous pending request, since both
+      // share the same schedule key but the newest jamaatTimes wins for the
+      // auto-vibration callback.
+      scheduler.invalidate();
+      final newestJamaat = {'dhuhr': '16:45', 'asr': '18:50'};
       final newestSchedule = scheduler.scheduleIfNeeded(
         selectedDate: today,
         prayerTimes: _prayerTimes(today),
-        jamaatTimes: newestJamaatTimes,
+        tomorrowPrayerTimes: null,
+        jamaatTimes: newestJamaat,
         selectedCity: 'Dhaka',
         currentPlaceName: null,
         locationConfig: _serverLocation,
@@ -117,40 +140,48 @@ void main() {
       releaseFirst.complete();
       await Future.wait([firstSchedule, newestSchedule]);
 
-      expect(calls, [null, newestJamaatTimes]);
+      // Two scheduleAllNotifications calls: the original in-flight one and
+      // exactly one replay from the collapsed pending queue.
+      expect(calls.length, 2);
     },
   );
 
-  test('dedupes the latest completed complete schedule', () async {
-    final calls = <Map<String, dynamic>?>[];
+  test('dedupes identical schedule requests', () async {
+    final calls = <Map<String, DateTime?>>[];
     final scheduler = _scheduler(
-      onSchedule: (prayerTimes, jamaatTimes) async {
-        calls.add(jamaatTimes == null ? null : Map.of(jamaatTimes));
-        return true;
-      },
+      onSchedule:
+          ({
+            required Map<String, DateTime?> todayPrayerTimes,
+            Map<String, DateTime?>? tomorrowPrayerTimes,
+          }) async {
+            calls.add(Map.of(todayPrayerTimes));
+            return true;
+          },
     );
 
     final today = _today();
-    final jamaatTimes = {'dhuhr': '16:40', 'asr': '18:49'};
+    final prayerTimes = _prayerTimes(today);
 
     await scheduler.scheduleIfNeeded(
       selectedDate: today,
-      prayerTimes: _prayerTimes(today),
-      jamaatTimes: jamaatTimes,
+      prayerTimes: prayerTimes,
+      tomorrowPrayerTimes: null,
+      jamaatTimes: {'dhuhr': '16:40'},
       selectedCity: 'Dhaka',
       currentPlaceName: null,
       locationConfig: _serverLocation,
     );
     await scheduler.scheduleIfNeeded(
       selectedDate: today,
-      prayerTimes: _prayerTimes(today),
-      jamaatTimes: jamaatTimes,
+      prayerTimes: prayerTimes,
+      tomorrowPrayerTimes: null,
+      jamaatTimes: {'dhuhr': '16:40'},
       selectedCity: 'Dhaka',
       currentPlaceName: null,
       locationConfig: _serverLocation,
     );
 
-    expect(calls, [jamaatTimes]);
+    expect(calls.length, 1);
   });
 }
 

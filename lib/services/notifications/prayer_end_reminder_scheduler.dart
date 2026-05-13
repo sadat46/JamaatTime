@@ -24,16 +24,35 @@ class PrayerEndReminderScheduler {
 
   static const Duration reminderOffset = Duration(minutes: 20);
 
-  Future<void> schedule(Map<String, DateTime?> prayerTimes) async {
+  Future<void> schedule({
+    required Map<String, DateTime?> todayPrayerTimes,
+    Map<String, DateTime?>? tomorrowPrayerTimes,
+  }) async {
     try {
       final locale = await _localeResolver();
       final strings = AppText.of(locale);
       final location = _locationResolver();
       final now = tz.TZDateTime.now(location);
-      final candidates = buildFutureReminderCandidates(
-        prayerTimes,
-        location: location,
-        now: now,
+
+      final candidates = <NotificationReminderCandidate>[
+        ...buildCandidatesWithIds(
+          todayPrayerTimes,
+          idMap: NotificationIds.prayerEndReminders,
+          location: location,
+          now: now,
+        ),
+        if (tomorrowPrayerTimes != null)
+          ...buildCandidatesWithIds(
+            tomorrowPrayerTimes,
+            idMap: NotificationIds.prayerEndRemindersTomorrow,
+            location: location,
+            now: now,
+          ),
+      ];
+
+      developer.log(
+        'JT_NOTIFY prayer_end candidates=${candidates.length}',
+        name: 'NotificationService',
       );
 
       for (final candidate in candidates) {
@@ -72,6 +91,20 @@ class PrayerEndReminderScheduler {
     required tz.Location location,
     required tz.TZDateTime now,
   }) {
+    return buildCandidatesWithIds(
+      prayerTimes,
+      idMap: NotificationIds.prayerEndReminders,
+      location: location,
+      now: now,
+    );
+  }
+
+  static List<NotificationReminderCandidate> buildCandidatesWithIds(
+    Map<String, DateTime?> prayerTimes, {
+    required Map<String, int> idMap,
+    required tz.Location location,
+    required tz.TZDateTime now,
+  }) {
     final notificationTimes = calculateNotificationTimes(
       prayerTimes,
       location: location,
@@ -80,7 +113,7 @@ class PrayerEndReminderScheduler {
 
     for (final prayerKey in const ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) {
       final notifyTime = notificationTimes[prayerKey];
-      final id = NotificationIds.prayerEndReminders[prayerKey];
+      final id = idMap[prayerKey];
       if (notifyTime == null || id == null || !notifyTime.isAfter(now)) {
         continue;
       }
