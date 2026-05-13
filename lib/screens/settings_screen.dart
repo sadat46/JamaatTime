@@ -381,7 +381,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildExactAlarmTile() {
+  Widget _buildExactAlarmTile({bool showTitle = true}) {
     final granted = _exactAlarmsGranted;
     final accent = granted ? _brandGreen : const Color(0xFFD84315);
     final statusLabel = granted
@@ -414,19 +414,21 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        _tr(
-                          'সঠিক সময়ের নোটিফিকেশন',
-                          'Exact-time notifications',
-                        ),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
+                    if (showTitle) ...[
+                      Flexible(
+                        child: Text(
+                          _tr(
+                            'সঠিক সময়ের নোটিফিকেশন',
+                            'Exact-time notifications',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -769,15 +771,15 @@ class _SettingsScreenState extends State<SettingsScreen>
       children: [
         _buildSectionCard(
           icon: Icons.notifications_active,
-          color: const Color(0xFF1565C0),
-          title: _tr('নোটিফিকেশন', 'Notifications'),
+          color: _brandGreen,
+          title: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
           subtitle: _tr(
-            'নামাজ ও জামাত রিমাইন্ডারের সাউন্ড নির্বাচন করুন।',
-            'Choose sound behavior for prayer and jamaat reminders.',
+            'নামাজের রিমাইন্ডারে কোন সাউন্ড বাজবে তা নির্বাচন করুন।',
+            'Choose the sound used for prayer reminders.',
           ),
           children: [
             _buildDropdownField<int>(
-              label: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
+              label: _tr('সাউন্ড অপশন', 'Sound option'),
               initialValue: _prayerNotificationSoundMode,
               items: _soundModeItems(),
               onChanged: (val) async {
@@ -785,9 +787,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _updatePrayerSoundMode(val);
               },
             ),
-            const SizedBox(height: 14),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildSectionCard(
+          icon: Icons.groups,
+          color: const Color(0xFF1565C0),
+          title: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
+          subtitle: _tr(
+            'জামাতের রিমাইন্ডারে কোন সাউন্ড বাজবে তা নির্বাচন করুন।',
+            'Choose the sound used for jamaat reminders.',
+          ),
+          children: [
             _buildDropdownField<int>(
-              label: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
+              label: _tr('সাউন্ড অপশন', 'Sound option'),
               initialValue: _jamaatNotificationSoundMode,
               items: _soundModeItems(),
               onChanged: (val) async {
@@ -795,17 +808,28 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _updateJamaatSoundMode(val);
               },
             ),
-            const SizedBox(height: 6),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildSectionCard(
+          icon: Icons.record_voice_over,
+          color: const Color(0xFF00695C),
+          title: _tr(
+            'তাহাজ্জুদ শেষ ও ফজর শুরু ভয়েস নোটিফিকেশন',
+            'Tahajjud end and Fajr start voice notification',
+          ),
+          subtitle: _tr(
+            'তাহাজ্জুদ শেষ ও ফজর শুরু হলে রিমাইন্ডার বাজবে।',
+            'Play reminder when Tahajjud ends and Fajr starts.',
+          ),
+          children: [
             SwitchListTile(
               value: _fajrVoiceNotificationEnabled,
               onChanged: _updateFajrVoiceNotification,
               activeTrackColor: _brandGreen,
               contentPadding: EdgeInsets.zero,
               title: Text(
-                _tr(
-                  'তাহাজ্জুদ শেষ ও ফজর শুরু ভয়েস নোটিফিকেশন',
-                  'Tahajjud end and Fajr start voice notification',
-                ),
+                _tr('ভয়েস নোটিফিকেশন চালু করুন', 'Enable voice notification'),
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
@@ -813,15 +837,27 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               subtitle: Text(
                 _tr(
-                  'তাহাজ্জুদ শেষ ও ফজর শুরু হলে রিমাইন্ডার বাজবে।',
-                  'Play reminder when Tahajjud ends and Fajr starts.',
+                  'বন্ধ থাকলে এই ভয়েস রিমাইন্ডার বাজবে না।',
+                  'Turn off to stop this voice reminder.',
                 ),
                 style: const TextStyle(fontSize: 12),
               ),
             ),
-            if (Platform.isAndroid) _buildExactAlarmTile(),
           ],
         ),
+        if (Platform.isAndroid) ...[
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            icon: _exactAlarmsGranted ? Icons.alarm_on : Icons.alarm_off,
+            color: _exactAlarmsGranted ? _brandGreen : const Color(0xFFD84315),
+            title: _tr('সঠিক সময়ের নোটিফিকেশন', 'Exact-time notifications'),
+            subtitle: _tr(
+              'সময়মতো নোটিফিকেশন পাঠাতে অ্যালার্ম অনুমতি দরকার।',
+              'Controls the alarm permission used for exact notification delivery.',
+            ),
+            children: [_buildExactAlarmTile(showTitle: false)],
+          ),
+        ],
       ],
     );
   }
