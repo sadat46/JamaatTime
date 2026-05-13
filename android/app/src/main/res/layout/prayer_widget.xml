@@ -30,11 +30,7 @@
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="16sp"
-                android:autoSizeMaxTextSize="24sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:ellipsize="end"/>
             <TextView
                 android:id="@+id/prayer_time"
                 android:layout_width="wrap_content"
@@ -44,11 +40,7 @@
                 android:textColor="#BFFFFFFF"
                 android:textSize="16sp"
                 android:fontFeatureSettings="tnum"
-                android:maxLines="1"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="12sp"
-                android:autoSizeMaxTextSize="18sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:maxLines="1"/>
         </LinearLayout>
 
         <!-- Center-right: Remaining label + countdown -->
@@ -72,11 +64,7 @@
                     android:textColor="#B3FFFFFF"
                     android:textSize="13sp"
                     android:maxLines="1"
-                    android:gravity="end"
-                    android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="10sp"
-                    android:autoSizeMaxTextSize="14sp"
-                    android:autoSizeStepGranularity="1sp"/>
+                    android:gravity="end"/>
                 <Chronometer
                     android:id="@+id/remaining_time"
                     android:layout_width="wrap_content"
@@ -87,11 +75,7 @@
                     android:textSize="26sp"
                     android:textStyle="bold"
                     android:fontFeatureSettings="tnum"
-                    android:maxLines="1"
-                    android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="18sp"
-                    android:autoSizeMaxTextSize="28sp"
-                    android:autoSizeStepGranularity="1sp"/>
+                    android:maxLines="1"/>
             </LinearLayout>
 
             <LinearLayout
@@ -99,8 +83,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="end|center_vertical"
-                android:baselineAligned="false"
-                android:layout_marginTop="-2dp">
+                android:baselineAligned="false">
                 <TextView
                     android:id="@+id/jamaat_label"
                     android:layout_width="wrap_content"
@@ -110,11 +93,7 @@
                     android:textColor="#B3FFFFFF"
                     android:textSize="12sp"
                     android:maxLines="1"
-                    android:gravity="end"
-                    android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="10sp"
-                    android:autoSizeMaxTextSize="13sp"
-                    android:autoSizeStepGranularity="1sp"/>
+                    android:gravity="end"/>
                 <Chronometer
                     android:id="@+id/jamaat_time"
                     android:layout_width="wrap_content"
@@ -126,11 +105,7 @@
                     android:textStyle="bold"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1"
-                    android:visibility="gone"
-                    android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="14sp"
-                    android:autoSizeMaxTextSize="24sp"
-                    android:autoSizeStepGranularity="1sp"/>
+                    android:visibility="gone"/>
             </LinearLayout>
         </LinearLayout>
 
@@ -141,6 +116,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:minHeight="44dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginTop="6dp">
@@ -166,11 +142,7 @@
                 android:textSize="13sp"
                 android:gravity="center"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="11sp"
-                android:autoSizeMaxTextSize="15sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:ellipsize="end"/>
             <TextView
                 android:id="@+id/row_time_1"
                 android:layout_width="match_parent"
@@ -182,11 +154,7 @@
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:gravity="center"
-                android:maxLines="1"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="12sp"
-                android:autoSizeMaxTextSize="17sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:maxLines="1"/>
         </LinearLayout>
 
         <!-- Slot 2 -->
@@ -211,11 +179,7 @@
                 android:textSize="13sp"
                 android:gravity="center"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="11sp"
-                android:autoSizeMaxTextSize="15sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:ellipsize="end"/>
             <TextView
                 android:id="@+id/row_time_2"
                 android:layout_width="match_parent"
@@ -227,11 +191,7 @@
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:gravity="center"
-                android:maxLines="1"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="12sp"
-                android:autoSizeMaxTextSize="17sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:maxLines="1"/>
         </LinearLayout>
 
         <!-- Slot 3 -->
@@ -256,11 +216,7 @@
                 android:textSize="13sp"
                 android:gravity="center"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="11sp"
-                android:autoSizeMaxTextSize="15sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:ellipsize="end"/>
             <TextView
                 android:id="@+id/row_time_3"
                 android:layout_width="match_parent"
@@ -272,11 +228,7 @@
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:gravity="center"
-                android:maxLines="1"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="12sp"
-                android:autoSizeMaxTextSize="17sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:maxLines="1"/>
         </LinearLayout>
 
         <!-- Slot 4 -->
@@ -300,11 +252,7 @@
                 android:textSize="13sp"
                 android:gravity="center"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="11sp"
-                android:autoSizeMaxTextSize="15sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:ellipsize="end"/>
             <TextView
                 android:id="@+id/row_time_4"
                 android:layout_width="match_parent"
@@ -316,11 +264,7 @@
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
                 android:gravity="center"
-                android:maxLines="1"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="12sp"
-                android:autoSizeMaxTextSize="17sp"
-                android:autoSizeStepGranularity="1sp"/>
+                android:maxLines="1"/>
         </LinearLayout>
     </LinearLayout>
 
@@ -330,7 +274,7 @@
     <ImageView
         android:id="@+id/glow_band"
         android:layout_width="match_parent"
-        android:layout_height="24dp"
+        android:layout_height="16dp"
         android:layout_marginTop="2dp"
         android:scaleType="fitXY"
         android:contentDescription="@null"/>

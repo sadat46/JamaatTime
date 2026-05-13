@@ -20,6 +20,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
 import android.util.Log
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -147,6 +148,26 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.row_time_4, rowTimes[3])
                 views.setTextViewText(R.id.islamic_date, islamicDate)
                 views.setTextViewText(R.id.location, location)
+
+                // Apply capped widget-only text sizing so the system font scale
+                // can never grow widget text past the layout's headroom. See
+                // setTextSizeCapped() for the formula.
+                views.setTextSizeCapped(context, R.id.prayer_name, 24f)
+                views.setTextSizeCapped(context, R.id.prayer_time, 16f)
+                views.setTextSizeCapped(context, R.id.remaining_label, 13f)
+                views.setTextSizeCapped(context, R.id.remaining_time, 26f)
+                views.setTextSizeCapped(context, R.id.jamaat_label, 12f)
+                views.setTextSizeCapped(context, R.id.jamaat_time, 22f)
+                views.setTextSizeCapped(context, R.id.row_label_1, 13f)
+                views.setTextSizeCapped(context, R.id.row_time_1, 14f)
+                views.setTextSizeCapped(context, R.id.row_label_2, 13f)
+                views.setTextSizeCapped(context, R.id.row_time_2, 14f)
+                views.setTextSizeCapped(context, R.id.row_label_3, 13f)
+                views.setTextSizeCapped(context, R.id.row_time_3, 14f)
+                views.setTextSizeCapped(context, R.id.row_label_4, 13f)
+                views.setTextSizeCapped(context, R.id.row_time_4, 14f)
+                views.setTextSizeCapped(context, R.id.islamic_date, 13f)
+                views.setTextSizeCapped(context, R.id.location, 13f)
 
                 // Ambient glow band: snaps to the slot of the currently-active period.
                 renderGlowBand(views, now, raw)
@@ -543,4 +564,22 @@ class PrayerWidgetProvider : AppWidgetProvider() {
     private fun logd(message: String) {
         if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, message)
     }
+}
+
+// Applies a widget-only text size derived from a base sp design value, capping
+// the system font scale at maxScale so accessibility scaling can never grow
+// widget text past the layout's headroom. fontScale < 1.0 is honored (smaller
+// system fonts still shrink widget text proportionally); only the oversized
+// side is clamped. Uses COMPLEX_UNIT_PX to bypass the launcher's automatic sp
+// scaling, making Kotlin the single source of truth.
+private fun RemoteViews.setTextSizeCapped(
+    context: Context,
+    viewId: Int,
+    baseSp: Float,
+    maxScale: Float = 1.15f,
+) {
+    val effectiveScale = context.resources.configuration.fontScale.coerceAtMost(maxScale)
+    val density = context.resources.displayMetrics.density
+    val px = baseSp * density * effectiveScale
+    this.setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_PX, px)
 }
