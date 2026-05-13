@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import '../core/locale_text.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_callable_service.dart';
-import '../services/notifications/fcm_service.dart';
+import '../services/notifications/fcm/fcm_service.dart';
 import '../widgets/notifications/notification_history_row.dart';
 
 // Superadmin-only history of notifications/{id}. The list reads the public

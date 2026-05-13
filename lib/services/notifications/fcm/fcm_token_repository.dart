@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../core/firebase_bootstrap.dart';
+import '../../../core/firebase_bootstrap.dart';
 
 // Writes FCM tokens to Firestore.
 // - Logged-in users → user_tokens/{uid}

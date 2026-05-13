@@ -9,7 +9,7 @@ import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/notification_service.dart';
-import 'services/notifications/fcm_service.dart';
+import 'services/notifications/fcm/fcm_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/widget_service.dart';
 import 'services/settings_service.dart';

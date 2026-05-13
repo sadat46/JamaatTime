@@ -6,7 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../../core/firebase_bootstrap.dart';
+import '../../../core/firebase_bootstrap.dart';
 import 'broadcast_channel.dart';
 import 'fcm_background_handler.dart';
 import 'fcm_deep_link_router.dart';

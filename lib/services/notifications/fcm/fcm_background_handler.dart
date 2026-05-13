@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import '../../firebase_options.dart';
+import '../../../firebase_options.dart';
 
 // Top-level background entry point required by FirebaseMessaging on Android.
 // When the app is terminated or background, Android renders the notification

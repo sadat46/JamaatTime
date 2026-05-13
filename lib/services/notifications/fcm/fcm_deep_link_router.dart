@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/feature_flags.dart';
-import '../../features/notice_board/presentation/notice_board_screen.dart';
-import '../../features/notice_board/presentation/notice_detail_screen.dart';
+import '../../../core/feature_flags.dart';
+import '../../../features/notice_board/presentation/notice_board_screen.dart';
+import '../../../features/notice_board/presentation/notice_detail_screen.dart';
 
 class FcmDeepLinkRouter {
   FcmDeepLinkRouter(this._navigatorKey);
