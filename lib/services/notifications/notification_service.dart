@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
@@ -244,8 +246,14 @@ class NotificationService {
   /// arms reminders for both date ranges. Idempotent — re-arming the same ID
   /// atomically replaces the prior alarm via `zonedSchedule`, so a no-data
   /// run leaves previously armed alarms untouched.
-  Future<void> scheduleJamaatNotifications() {
-    return _jamaatReminderScheduler.schedule();
+  Future<void> scheduleJamaatNotifications({
+    Map<String, dynamic>? todayJamaatTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
+  }) {
+    return _jamaatReminderScheduler.schedule(
+      todayJamaatTimes: todayJamaatTimes,
+      tomorrowJamaatTimes: tomorrowJamaatTimes,
+    );
   }
 
   Future<void> scheduleTahajjudEndFajrStartNotification({
@@ -279,6 +287,8 @@ class NotificationService {
   Future<bool> scheduleAllNotifications({
     required Map<String, DateTime?> todayPrayerTimes,
     Map<String, DateTime?>? tomorrowPrayerTimes,
+    Map<String, dynamic>? todayJamaatTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
   }) async {
     try {
       await initialize(null);
@@ -304,9 +314,22 @@ class NotificationService {
           tomorrowPrayerTimes: tomorrowPrayerTimes,
         ),
       );
+      // Treat empty maps as null so the scheduler falls back to the persistent
+      // JamaatScheduleCache rather than producing zero candidates silently.
+      final effectiveTodayJamaat =
+          (todayJamaatTimes == null || todayJamaatTimes.isEmpty)
+          ? null
+          : todayJamaatTimes;
+      final effectiveTomorrowJamaat =
+          (tomorrowJamaatTimes == null || tomorrowJamaatTimes.isEmpty)
+          ? null
+          : tomorrowJamaatTimes;
       await _runScheduleStep(
         'jamaat_reminder',
-        () => scheduleJamaatNotifications(),
+        () => scheduleJamaatNotifications(
+          todayJamaatTimes: effectiveTodayJamaat,
+          tomorrowJamaatTimes: effectiveTomorrowJamaat,
+        ),
       );
       await _runScheduleStep(
         'fajr_voice',
@@ -332,7 +355,8 @@ class NotificationService {
   ) async {
     try {
       await action();
-    } catch (e) {
+    } catch (e, st) {
+      print('JT_NOTIFY scheduleAll step=$step error $e\n$st');
       developer.log(
         'JT_NOTIFY scheduleAll step=$step error $e',
         name: 'NotificationService',

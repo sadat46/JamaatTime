@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:developer' as developer;
 
 import 'package:flutter/widgets.dart';
@@ -31,65 +33,107 @@ class JamaatReminderScheduler {
   /// Read today's + tomorrow's jamaat times from the persistent cache and arm
   /// reminders for both date ranges. The home controller is responsible for
   /// keeping the cache fresh.
-  Future<void> schedule() async {
+  Future<void> schedule({
+    Map<String, dynamic>? todayJamaatTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
+  }) async {
+    Locale locale;
     try {
-      final locale = await _localeResolver();
-      final strings = AppText.of(locale);
-      final location = _locationResolver();
-      final now = tz.TZDateTime.now(location);
-      final today = DateTime(now.year, now.month, now.day);
-      final tomorrow = today.add(const Duration(days: 1));
-
-      final todayTimes = await _cache.readFor(today);
-      final tomorrowTimes = await _cache.readFor(tomorrow);
-
-      final candidates = <NotificationReminderCandidate>[
-        ...buildCandidatesForDate(
-          todayTimes,
-          location: location,
-          now: now,
-          targetDate: today,
-          idMap: NotificationIds.jamaatReminders,
-        ),
-        ...buildCandidatesForDate(
-          tomorrowTimes,
-          location: location,
-          now: now,
-          targetDate: tomorrow,
-          idMap: NotificationIds.jamaatRemindersTomorrow,
-        ),
-      ];
-
-      developer.log(
-        'JT_NOTIFY jamaat_reminder candidates=${candidates.length} '
-        'today=${todayTimes != null} tomorrow=${tomorrowTimes != null}',
-        name: 'NotificationService',
-      );
-
-      for (final candidate in candidates) {
-        try {
-          final displayName = localizedPrayerName(locale, candidate.prayerKey);
-          await _scheduleGateway.scheduleStandard(
-            id: candidate.id,
-            title: strings.notification_jamaatTitle(displayName),
-            body: strings.notification_jamaatBody(displayName),
-            scheduledTime: candidate.scheduledTime,
-            notificationType: 'jamaat',
-          );
-        } catch (e) {
-          developer.log(
-            'JT_NOTIFY jamaat_reminder error id=${candidate.id} prayer=${candidate.prayerKey} $e',
-            name: 'NotificationService',
-            error: e,
-          );
-        }
-      }
+      locale = await _localeResolver();
     } catch (e) {
-      developer.log(
-        'Error in scheduleJamaatNotifications: $e',
-        name: 'NotificationService',
-        error: e,
+      print('JT_NOTIFY jamaat_reminder locale_resolve_failed $e — fallback=en');
+      locale = const Locale('en');
+    }
+
+    tz.Location location;
+    try {
+      location = _locationResolver();
+    } catch (e) {
+      print('JT_NOTIFY jamaat_reminder location_resolve_failed $e — fallback=Asia/Dhaka');
+      location = tz.getLocation('Asia/Dhaka');
+    }
+
+    final strings = AppText.of(locale);
+    final now = tz.TZDateTime.now(location);
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+
+    Map<String, dynamic>? todayTimes = todayJamaatTimes;
+    if (todayTimes == null || todayTimes.isEmpty) {
+      try {
+        todayTimes = await _cache.readFor(today);
+      } catch (e) {
+        print('JT_NOTIFY jamaat_reminder cache_read_today_failed $e');
+        todayTimes = null;
+      }
+    }
+    Map<String, dynamic>? tomorrowTimes = tomorrowJamaatTimes;
+    if (tomorrowTimes == null || tomorrowTimes.isEmpty) {
+      try {
+        tomorrowTimes = await _cache.readFor(tomorrow);
+      } catch (e) {
+        print('JT_NOTIFY jamaat_reminder cache_read_tomorrow_failed $e');
+        tomorrowTimes = null;
+      }
+    }
+
+    final candidates = <NotificationReminderCandidate>[
+      ...buildCandidatesForDate(
+        todayTimes,
+        location: location,
+        now: now,
+        targetDate: today,
+        idMap: NotificationIds.jamaatReminders,
+      ),
+      ...buildCandidatesForDate(
+        tomorrowTimes,
+        location: location,
+        now: now,
+        targetDate: tomorrow,
+        idMap: NotificationIds.jamaatRemindersTomorrow,
+      ),
+    ];
+
+    print(
+      'JT_NOTIFY jamaat_reminder candidates=${candidates.length} '
+      'today=${todayTimes != null} tomorrow=${tomorrowTimes != null} '
+      'today_keys=${todayTimes?.keys.toList()} tomorrow_keys=${tomorrowTimes?.keys.toList()}',
+    );
+    developer.log(
+      'JT_NOTIFY jamaat_reminder candidates=${candidates.length} '
+      'today=${todayTimes != null} tomorrow=${tomorrowTimes != null}',
+      name: 'NotificationService',
+    );
+
+    if (candidates.isEmpty &&
+        (todayTimes != null || tomorrowTimes != null)) {
+      print(
+        'JT_NOTIFY jamaat_reminder zero_candidates_despite_data '
+        'today=$todayTimes tomorrow=$tomorrowTimes now=$now',
       );
+    }
+
+    for (final candidate in candidates) {
+      try {
+        final displayName = localizedPrayerName(locale, candidate.prayerKey);
+        await _scheduleGateway.scheduleStandard(
+          id: candidate.id,
+          title: strings.notification_jamaatTitle(displayName),
+          body: strings.notification_jamaatBody(displayName),
+          scheduledTime: candidate.scheduledTime,
+          notificationType: 'jamaat',
+        );
+      } catch (e) {
+        print(
+          'JT_NOTIFY jamaat_reminder per_candidate_error id=${candidate.id} '
+          'prayer=${candidate.prayerKey} at=${candidate.scheduledTime} $e',
+        );
+        developer.log(
+          'JT_NOTIFY jamaat_reminder error id=${candidate.id} prayer=${candidate.prayerKey} $e',
+          name: 'NotificationService',
+          error: e,
+        );
+      }
     }
   }
 
@@ -196,7 +240,13 @@ class JamaatReminderScheduler {
     for (final entry in jamaatTimes.entries) {
       final canonicalPrayerName = canonicalPrayerNameFromJamaatKey(entry.key);
       final id = idMap[canonicalPrayerName];
-      if (id == null) continue;
+      if (id == null) {
+        print(
+          'JT_NOTIFY jamaat_reminder skip key=${entry.key} '
+          'canonical=$canonicalPrayerName reason=unknown_key',
+        );
+        continue;
+      }
 
       final parsed = _parseForDate(
         entry.key,
@@ -204,7 +254,20 @@ class JamaatReminderScheduler {
         location,
         targetDate,
       );
-      if (parsed == null || !parsed.notifyTime.isAfter(now)) continue;
+      if (parsed == null) {
+        print(
+          'JT_NOTIFY jamaat_reminder skip key=${entry.key} value=${entry.value} '
+          'reason=parse_failed',
+        );
+        continue;
+      }
+      if (!parsed.notifyTime.isAfter(now)) {
+        print(
+          'JT_NOTIFY jamaat_reminder skip key=${entry.key} value=${entry.value} '
+          'notify=${parsed.notifyTime} now=$now reason=in_past',
+        );
+        continue;
+      }
 
       candidates.add(
         NotificationReminderCandidate(

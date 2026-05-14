@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:developer' as developer;
 import 'dart:typed_data';
 
@@ -39,6 +41,7 @@ class NotificationScheduleGateway {
     try {
       ensureTimeZonesInitialized();
       if (!_isInitialized()) {
+        print('JT_NOTIFY skipped id=$id type=$notificationType reason=not_initialized');
         developer.log(
           'JT_NOTIFY skipped id=$id reason=not_initialized',
           name: 'NotificationService',
@@ -47,6 +50,7 @@ class NotificationScheduleGateway {
       }
 
       if (scheduledTime.isBefore(DateTime.now())) {
+        print('JT_NOTIFY skipped id=$id type=$notificationType reason=in_past at=$scheduledTime now=${DateTime.now()}');
         developer.log(
           'JT_NOTIFY skipped id=$id reason=in_past',
           name: 'NotificationService',
@@ -63,7 +67,8 @@ class NotificationScheduleGateway {
         } else {
           soundMode = await _settingsService.getPrayerNotificationSoundMode();
         }
-      } catch (_) {
+      } catch (e) {
+        print('JT_NOTIFY sound_mode_read_failed id=$id type=$notificationType $e — fallback=3');
         soundMode = 3;
       }
 
@@ -77,48 +82,71 @@ class NotificationScheduleGateway {
             soundMode: soundMode,
           );
 
-      await _channelService.ensureChannelById(config.channelId);
+      try {
+        await _channelService.ensureChannelById(config.channelId);
+      } catch (e) {
+        print(
+          'JT_NOTIFY channel_ensure_failed id=$id type=$notificationType '
+          'channel=${config.channelId} $e',
+        );
+        rethrow;
+      }
 
-      await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledDate,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            config.channelId,
-            notificationType == 'prayer'
-                ? 'Prayer Notifications'
-                : 'Jamaat Notifications',
-            channelDescription:
-                'Notifications for ${notificationType == 'prayer' ? 'prayer' : 'jamaat'} times',
-            importance: Importance.max,
-            priority: Priority.high,
-            showWhen: true,
-            enableVibration: config.enableVibration,
-            playSound: config.playSound,
-            icon: '@mipmap/launcher_icon',
-            color: const Color(0xFF388E3C),
-            sound: customSoundResource != null
-                ? RawResourceAndroidNotificationSound(customSoundResource)
-                : null,
-            vibrationPattern: config.enableVibration
-                ? Int64List.fromList([0, 5000])
-                : null,
+      try {
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledDate,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              config.channelId,
+              notificationType == 'prayer'
+                  ? 'Prayer Notifications'
+                  : 'Jamaat Notifications',
+              channelDescription:
+                  'Notifications for ${notificationType == 'prayer' ? 'prayer' : 'jamaat'} times',
+              importance: Importance.max,
+              priority: Priority.high,
+              showWhen: true,
+              enableVibration: config.enableVibration,
+              playSound: config.playSound,
+              icon: '@mipmap/launcher_icon',
+              color: const Color(0xFF388E3C),
+              sound: customSoundResource != null
+                  ? RawResourceAndroidNotificationSound(customSoundResource)
+                  : null,
+              vibrationPattern: config.enableVibration
+                  ? Int64List.fromList([0, 5000])
+                  : null,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
           ),
-          iOS: const DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        androidScheduleMode: _permissionService.androidScheduleMode,
+          androidScheduleMode: _permissionService.androidScheduleMode,
+        );
+      } catch (e) {
+        print(
+          'JT_NOTIFY zoned_schedule_failed id=$id type=$notificationType '
+          'channel=${config.channelId} sound=$customSoundResource at=$scheduledDate $e',
+        );
+        rethrow;
+      }
+      print(
+        'JT_NOTIFY ${notificationType == 'jamaat' ? 'jamaat_reminder' : 'prayer_end'} '
+        'scheduled id=$id type=$notificationType '
+        'channel=${config.channelId} at=${scheduledDate.toIso8601String()} '
+        'mode=${_permissionService.exactAlarmsAvailable ? "exact" : "inexact"}',
       );
       developer.log(
         'JT_NOTIFY ${notificationType == 'jamaat' ? 'jamaat_reminder' : 'prayer_end'} scheduled id=$id type=$notificationType at=${scheduledDate.toIso8601String()} mode=${_permissionService.exactAlarmsAvailable ? "exact" : "inexact"}',
         name: 'NotificationService',
       );
     } catch (e) {
+      print('JT_NOTIFY error id=$id type=$notificationType $e');
       developer.log(
         'JT_NOTIFY error id=$id $e',
         name: 'NotificationService',

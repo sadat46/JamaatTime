@@ -10,21 +10,35 @@ typedef ScheduleAllNotifications =
     Future<bool> Function({
       required Map<String, DateTime?> todayPrayerTimes,
       Map<String, DateTime?>? tomorrowPrayerTimes,
+      Map<String, dynamic>? todayJamaatTimes,
+      Map<String, dynamic>? tomorrowJamaatTimes,
     });
 typedef RescheduleAutoVibration =
     Future<void> Function(Map<String, dynamic>? jamaatTimes);
+typedef ScheduleJamaatNotifications =
+    Future<void> Function({
+      Map<String, dynamic>? todayJamaatTimes,
+      Map<String, dynamic>? tomorrowJamaatTimes,
+    });
 
 class HomeNotificationScheduler {
   HomeNotificationScheduler({
     required NotificationService notificationService,
     ScheduleAllNotifications? scheduleAllNotifications,
+    ScheduleJamaatNotifications? scheduleJamaatNotifications,
     RescheduleAutoVibration? rescheduleAutoVibration,
   }) : _notificationService = notificationService,
        _scheduleAllNotifications = scheduleAllNotifications,
+       _scheduleJamaatNotifications = scheduleJamaatNotifications,
        _rescheduleAutoVibration = rescheduleAutoVibration;
 
   final NotificationService _notificationService;
   final ScheduleAllNotifications? _scheduleAllNotifications;
+  // Retained for constructor-injection / test wiring even though the
+  // standalone jamaat re-arm call has been removed — `scheduleAllNotifications`
+  // now drives the entire jamaat path through its `_runScheduleStep`.
+  // ignore: unused_field
+  final ScheduleJamaatNotifications? _scheduleJamaatNotifications;
   final RescheduleAutoVibration? _rescheduleAutoVibration;
 
   String? _lastScheduleKey;
@@ -51,6 +65,7 @@ class HomeNotificationScheduler {
     required Map<String, DateTime?> prayerTimes,
     required Map<String, DateTime?>? tomorrowPrayerTimes,
     required Map<String, dynamic>? jamaatTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
     required String? selectedCity,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
@@ -61,6 +76,7 @@ class HomeNotificationScheduler {
       prayerTimes: prayerTimes,
       tomorrowPrayerTimes: tomorrowPrayerTimes,
       jamaatTimes: jamaatTimes,
+      tomorrowJamaatTimes: tomorrowJamaatTimes,
       selectedCity: selectedCity,
       currentPlaceName: currentPlaceName,
       locationConfig: locationConfig,
@@ -72,6 +88,7 @@ class HomeNotificationScheduler {
     required Map<String, DateTime?> prayerTimes,
     required Map<String, DateTime?>? tomorrowPrayerTimes,
     required Map<String, dynamic>? jamaatTimes,
+    Map<String, dynamic>? tomorrowJamaatTimes,
     required String? selectedCity,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
@@ -119,6 +136,9 @@ class HomeNotificationScheduler {
       jamaatTimes: jamaatTimes == null
           ? null
           : Map<String, dynamic>.from(jamaatTimes),
+      tomorrowJamaatTimes: tomorrowJamaatTimes == null
+          ? null
+          : Map<String, dynamic>.from(tomorrowJamaatTimes),
       locationConfig: locationConfig,
     );
 
@@ -162,10 +182,13 @@ class HomeNotificationScheduler {
 
   Future<void> _executeSchedule(_PendingNotificationSchedule schedule) async {
     final scheduleAll =
-        _scheduleAllNotifications ?? _notificationService.scheduleAllNotifications;
+        _scheduleAllNotifications ??
+        _notificationService.scheduleAllNotifications;
     final scheduled = await scheduleAll(
       todayPrayerTimes: schedule.prayerTimes,
       tomorrowPrayerTimes: schedule.tomorrowPrayerTimes,
+      todayJamaatTimes: schedule.jamaatTimes,
+      tomorrowJamaatTimes: schedule.tomorrowJamaatTimes,
     );
 
     final isLatestRequest = _pendingSchedule == null;
@@ -231,6 +254,7 @@ class _PendingNotificationSchedule {
     required this.prayerTimes,
     required this.tomorrowPrayerTimes,
     required this.jamaatTimes,
+    required this.tomorrowJamaatTimes,
     required this.locationConfig,
   });
 
@@ -239,5 +263,6 @@ class _PendingNotificationSchedule {
   final Map<String, DateTime?> prayerTimes;
   final Map<String, DateTime?>? tomorrowPrayerTimes;
   final Map<String, dynamic>? jamaatTimes;
+  final Map<String, dynamic>? tomorrowJamaatTimes;
   final LocationConfig? locationConfig;
 }

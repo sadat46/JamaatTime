@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/adhan,
+        @raw/fajr_prayer_voice,
+        @raw/jamaat_allahu_akbar,
+        @raw/jamaat_custom_2,
+        @raw/jamaat_custom_3,
+        @raw/prayer_allahu_akbar,
+        @raw/prayer_custom_2,
+        @raw/prayer_custom_3"
+    tools:shrinkMode="safe" />
