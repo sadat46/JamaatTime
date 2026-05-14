@@ -281,6 +281,13 @@ class HomeController extends ChangeNotifier {
         : Map<String, dynamic>.from(_jamaatTimes!);
     _hydratedFromCache = true;
 
+    // Mirror hydrated jamaat times into JamaatScheduleCache so the scheduler
+    // has data even when no fetch / localOffset path runs this session.
+    if (_jamaatTimes != null) {
+      await _writeJamaatCacheForDate(_selectedDate, _jamaatTimes!);
+      if (_isDisposed) return false;
+    }
+
     final coords =
         _coords ??
         Coordinates(_locationConfig!.latitude, _locationConfig!.longitude);
@@ -738,6 +745,14 @@ class HomeController extends ChangeNotifier {
         }
         _writeCache();
 
+        // Transient Firestore miss: if we still have in-memory jamaat times
+        // (preserveExisting kept them), mirror them into JamaatScheduleCache
+        // before scheduling so today's reminders still arm.
+        if (_jamaatTimes != null) {
+          await _writeJamaatCacheForDate(_selectedDate, _jamaatTimes!);
+          if (_isDisposed) return;
+        }
+
         _notificationScheduler.invalidate();
         unawaited(_scheduleNotificationsIfNeeded());
       }
@@ -780,22 +795,28 @@ class HomeController extends ChangeNotifier {
     _notify();
     _writeCache();
 
-    unawaited(_writeJamaatCacheForDate(_selectedDate, newJamaatTimes));
+    unawaited(_persistLocalOffsetJamaatAndSchedule(newJamaatTimes));
+  }
+
+  Future<void> _persistLocalOffsetJamaatAndSchedule(
+    Map<String, dynamic> newJamaatTimes,
+  ) async {
+    await _writeJamaatCacheForDate(_selectedDate, newJamaatTimes);
+    if (_isDisposed) return;
     final tomorrowPrayers = _computeTomorrowPrayerTimes();
     if (tomorrowPrayers != null) {
       final tomorrowJamaat = _computeLocalOffsetJamaat(tomorrowPrayers);
       if (tomorrowJamaat.isNotEmpty) {
-        unawaited(
-          _writeJamaatCacheForDate(
-            _selectedDate.add(const Duration(days: 1)),
-            tomorrowJamaat,
-          ),
+        await _writeJamaatCacheForDate(
+          _selectedDate.add(const Duration(days: 1)),
+          tomorrowJamaat,
         );
+        if (_isDisposed) return;
       }
     }
 
     _notificationScheduler.invalidate();
-    unawaited(_scheduleNotificationsIfNeeded());
+    await _scheduleNotificationsIfNeeded();
   }
 
   void updatePrayerTimes({
@@ -841,8 +862,22 @@ class HomeController extends ChangeNotifier {
     }
 
     if (scheduleNotifications) {
-      _notificationScheduler.invalidate();
-      unawaited(_scheduleNotificationsIfNeeded());
+      // Mirror the (possibly recomputed) jamaat times into the schedule cache
+      // before kicking the scheduler, so day-rollover and Maghrib-recompute
+      // flows don't leave the cache stale.
+      final jamaatSnapshot = _jamaatTimes;
+      if (jamaatSnapshot != null) {
+        unawaited(
+          _writeJamaatCacheForDate(_selectedDate, jamaatSnapshot).then((_) {
+            if (_isDisposed) return;
+            _notificationScheduler.invalidate();
+            unawaited(_scheduleNotificationsIfNeeded());
+          }),
+        );
+      } else {
+        _notificationScheduler.invalidate();
+        unawaited(_scheduleNotificationsIfNeeded());
+      }
     }
     _computePrayerTableData();
     if (notify) {
@@ -878,10 +913,14 @@ class HomeController extends ChangeNotifier {
       _now = newNow;
       _selectedDate = newNow;
       updatePrayerTimes();
-      if (_selectedCity != null && _locationConfig != null) {
-        if (_locationConfig!.jamaatSource == JamaatSource.server) {
+      if (_locationConfig != null) {
+        if (_locationConfig!.jamaatSource == JamaatSource.server &&
+            _selectedCity != null) {
           unawaited(fetchJamaatTimes(_selectedCity!));
         } else if (_locationConfig!.jamaatSource == JamaatSource.localOffset) {
+          // No _selectedCity guard: localOffset only needs jamaatOffsets, and
+          // GPS-mode users have a null _selectedCity but still need their
+          // reminders refreshed past midnight.
           calculateLocalJamaatTimes();
         }
       }
