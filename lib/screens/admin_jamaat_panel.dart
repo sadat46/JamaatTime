@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
@@ -153,12 +156,37 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
+        withData: true,
       );
 
       if (result != null) {
         final file = result.files.first;
-        final csvString = String.fromCharCodes(file.bytes!);
-        final csvData = const CsvToListConverter().convert(csvString);
+        Uint8List? bytes = file.bytes;
+        if (bytes == null && file.path != null && !kIsWeb) {
+          bytes = await File(file.path!).readAsBytes();
+        }
+        if (bytes == null) {
+          setState(() {
+            _message = context.tr(
+              bn: 'CSV ফাইল পড়া যায়নি',
+              en: 'Could not read the selected CSV file',
+            );
+            _isSuccess = false;
+          });
+          return;
+        }
+        // Strip UTF-8 BOM if present so the header detector matches "date" etc.
+        if (bytes.length >= 3 &&
+            bytes[0] == 0xEF &&
+            bytes[1] == 0xBB &&
+            bytes[2] == 0xBF) {
+          bytes = bytes.sublist(3);
+        }
+        final csvString = String.fromCharCodes(bytes).replaceAll('\r\n', '\n');
+        final csvData = const CsvToListConverter(
+          shouldParseNumbers: false,
+          eol: '\n',
+        ).convert(csvString);
 
         if (csvData.length < 2) {
           setState(() {
@@ -215,12 +243,16 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
 
         // Process CSV data
         int importedCount = 0;
+        int failedCount = 0;
+        int skippedCount = 0;
+        String? firstFailureReason;
         for (int i = 1; i < csvData.length; i++) {
           final row = csvData[i];
           if (row.length > dateIndex) {
             // Handle null values safely
-            final date = row[dateIndex]?.toString() ?? '';
+            final date = row[dateIndex]?.toString().trim() ?? '';
             if (date.isEmpty) {
+              skippedCount++;
               continue;
             }
 
@@ -271,30 +303,81 @@ class _AdminJamaatPanelState extends State<AdminJamaatPanel>
             }
 
             // Only save if we have at least one time
-            if (times.isNotEmpty) {
-              try {
-                final parsedDate = _parseDate(date);
-                if (parsedDate != null) {
-                  await _jamaatService.saveJamaatTimes(
-                    city: _selectedCity,
-                    date: parsedDate,
-                    times: times,
-                  );
-                  importedCount++;
-                }
-              } catch (e) {
-                debugPrint('Error importing row $i: $e');
-              }
+            if (times.isEmpty) {
+              skippedCount++;
+              continue;
+            }
+
+            final parsedDate = _parseDate(date);
+            if (parsedDate == null) {
+              failedCount++;
+              firstFailureReason ??= context.tr(
+                bn: 'সারি $i: তারিখ "$date" পার্স করা যায়নি',
+                en: 'Row $i: could not parse date "$date"',
+              );
+              continue;
+            }
+
+            try {
+              await _jamaatService.saveJamaatTimes(
+                city: _selectedCity,
+                date: parsedDate,
+                times: times,
+              );
+              importedCount++;
+            } catch (e) {
+              failedCount++;
+              firstFailureReason ??= context.tr(
+                bn: 'সারি $i: $e',
+                en: 'Row $i: $e',
+              );
+              debugPrint('Error importing row $i ($date): $e');
             }
           }
         }
 
+        final allOk = failedCount == 0 && importedCount > 0;
+        final summary = StringBuffer()
+          ..write(
+            context.tr(
+              bn: 'ইমপোর্ট সম্পন্ন: $importedCount/${csvData.length - 1} সারি সংরক্ষিত',
+              en: 'Import complete: $importedCount/${csvData.length - 1} rows saved',
+            ),
+          );
+        if (failedCount > 0) {
+          summary
+            ..write(' · ')
+            ..write(
+              context.tr(
+                bn: '$failedCount ব্যর্থ',
+                en: '$failedCount failed',
+              ),
+            );
+        }
+        if (skippedCount > 0) {
+          summary
+            ..write(' · ')
+            ..write(
+              context.tr(
+                bn: '$skippedCount বাদ',
+                en: '$skippedCount skipped',
+              ),
+            );
+        }
+        if (firstFailureReason != null) {
+          summary
+            ..write('\n')
+            ..write(
+              context.tr(
+                bn: 'প্রথম ত্রুটি: ',
+                en: 'First failure: ',
+              ),
+            )
+            ..write(firstFailureReason);
+        }
         setState(() {
-          _message =
-              '${context.tr(bn: 'CSV থেকে সফলভাবে ইমপোর্ট হয়েছে', en: 'Successfully imported from CSV')} '
-              '$importedCount ${context.tr(bn: 'টি রেকর্ড। পাওয়া কলাম:', en: 'records. Columns found:')} '
-              '${header.join(', ')}';
-          _isSuccess = true;
+          _message = summary.toString();
+          _isSuccess = allOk;
         });
       }
     } catch (e) {

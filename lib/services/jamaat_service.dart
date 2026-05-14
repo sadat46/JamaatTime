@@ -54,60 +54,44 @@ class JamaatService {
     required DateTime date,
     required Map<String, String> times,
   }) async {
-    try {
-      final dateString = _formatDate(date);
-      final cityKey = city.toLowerCase().replaceAll(' ', '_');
+    final dateString = _formatDate(date);
+    final cityKey = city.toLowerCase().replaceAll(' ', '_');
 
-      if (await firebaseReady) {
-        // Try Firebase first
-        try {
-          await _firestore
-              .collection('jamaat_times')
-              .doc(cityKey)
-              .collection('daily_times')
-              .doc(dateString)
-              .set({
-                'date': dateString,
-                'city': city,
-                'times': times,
-                'created_at': FieldValue.serverTimestamp(),
-                'updated_at': FieldValue.serverTimestamp(),
-                ..._identityStamp(),
-              });
+    if (await firebaseReady) {
+      // Firebase path — let errors propagate so callers (bulk import etc.)
+      // see real permission/network failures instead of a silent mock write.
+      await _firestore
+          .collection('jamaat_times')
+          .doc(cityKey)
+          .collection('daily_times')
+          .doc(dateString)
+          .set({
+            'date': dateString,
+            'city': city,
+            'times': times,
+            'updated_at': FieldValue.serverTimestamp(),
+            ..._identityStamp(),
+          }, SetOptions(merge: true));
 
-          developer.log(
-            'Jamaat times saved to Firebase for $city on $dateString',
-            name: 'JamaatService',
-          );
-          return;
-        } catch (firebaseError) {
-          developer.log(
-            'Firebase save failed, using mock storage: $firebaseError',
-            name: 'JamaatService',
-          );
-        }
-      }
+      // Invalidate cache so getJamaatTimes re-reads fresh data.
+      _cache.remove(_getCacheKey(city, date));
 
-      {
-        // Fallback to mock storage if Firebase fails
-        if (!_mockStorage.containsKey(cityKey)) {
-          _mockStorage[cityKey] = {};
-        }
-        _mockStorage[cityKey]![dateString] = times;
-
-        developer.log(
-          'Jamaat times saved to mock storage for $city on $dateString',
-          name: 'JamaatService',
-        );
-      }
-    } catch (e) {
       developer.log(
-        'Error saving jamaat times for $city: $e',
+        'Jamaat times saved to Firebase for $city on $dateString',
         name: 'JamaatService',
-        error: e,
       );
-      rethrow;
+      return;
     }
+
+    // Mock storage only used when Firebase is unavailable (tests / offline).
+    if (!_mockStorage.containsKey(cityKey)) {
+      _mockStorage[cityKey] = {};
+    }
+    _mockStorage[cityKey]![dateString] = times;
+    developer.log(
+      'Jamaat times saved to mock storage for $city on $dateString',
+      name: 'JamaatService',
+    );
   }
 
   /// Get jamaat times for a specific city and date (with caching)
@@ -289,71 +273,54 @@ class JamaatService {
     required String city,
     required Map<String, Map<String, String>> timesByDate,
   }) async {
-    try {
-      final cityKey = city.toLowerCase().replaceAll(' ', '_');
+    final cityKey = city.toLowerCase().replaceAll(' ', '_');
 
-      if (await firebaseReady) {
-        // Try Firebase first
-        try {
-          final batch = _firestore.batch();
-
-          for (final entry in timesByDate.entries) {
-            final dateString = entry.key;
-            final times = entry.value;
-
-            final docRef = _firestore
-                .collection('jamaat_times')
-                .doc(cityKey)
-                .collection('daily_times')
-                .doc(dateString);
-
-            batch.set(docRef, {
-              'date': dateString,
-              'city': city,
-              'times': times,
-              'created_at': FieldValue.serverTimestamp(),
-              'updated_at': FieldValue.serverTimestamp(),
-              ..._identityStamp(),
-            });
-          }
-
-          await batch.commit();
-          developer.log(
-            'Bulk saved ${timesByDate.length} days of jamaat times to Firebase for $city',
-            name: 'JamaatService',
-          );
-          return;
-        } catch (firebaseError) {
-          // Fallback to mock storage if Firebase fails
-          developer.log(
-            'Firebase bulk save failed, using mock storage: $firebaseError',
-            name: 'JamaatService',
-          );
-        }
-      }
-
-      if (!_mockStorage.containsKey(cityKey)) {
-        _mockStorage[cityKey] = {};
-      }
+    if (await firebaseReady) {
+      final batch = _firestore.batch();
 
       for (final entry in timesByDate.entries) {
         final dateString = entry.key;
         final times = entry.value;
-        _mockStorage[cityKey]![dateString] = times;
+
+        final docRef = _firestore
+            .collection('jamaat_times')
+            .doc(cityKey)
+            .collection('daily_times')
+            .doc(dateString);
+
+        batch.set(docRef, {
+          'date': dateString,
+          'city': city,
+          'times': times,
+          'updated_at': FieldValue.serverTimestamp(),
+          ..._identityStamp(),
+        }, SetOptions(merge: true));
+      }
+
+      await batch.commit();
+
+      for (final entry in timesByDate.entries) {
+        final dateOnly = DateTime.parse(entry.key);
+        _cache.remove(_getCacheKey(city, dateOnly));
       }
 
       developer.log(
-        'Bulk saved ${timesByDate.length} days of jamaat times to mock storage for $city',
+        'Bulk saved ${timesByDate.length} days of jamaat times to Firebase for $city',
         name: 'JamaatService',
       );
-    } catch (e) {
-      developer.log(
-        'Error bulk saving jamaat times for $city: $e',
-        name: 'JamaatService',
-        error: e,
-      );
-      rethrow;
+      return;
     }
+
+    if (!_mockStorage.containsKey(cityKey)) {
+      _mockStorage[cityKey] = {};
+    }
+    for (final entry in timesByDate.entries) {
+      _mockStorage[cityKey]![entry.key] = entry.value;
+    }
+    developer.log(
+      'Bulk saved ${timesByDate.length} days of jamaat times to mock storage for $city',
+      name: 'JamaatService',
+    );
   }
 
   /// Get all available cities with jamaat times
