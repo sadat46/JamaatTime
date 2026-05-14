@@ -3,11 +3,11 @@ import 'dart:developer' as developer;
 import 'package:flutter/widgets.dart';
 import 'package:timezone/timezone.dart' as tz;
 
-import '../../core/app_text.dart';
-import '../settings_service.dart';
-import 'notification_ids.dart';
-import 'notification_localization.dart';
-import 'notification_schedule_gateway.dart';
+import '../../../core/app_text.dart';
+import '../../settings_service.dart';
+import '../notification_ids.dart';
+import '../notification_localization.dart';
+import '../notification_schedule_gateway.dart';
 
 class TahajjudEndFajrStartNotificationScheduler {
   TahajjudEndFajrStartNotificationScheduler({

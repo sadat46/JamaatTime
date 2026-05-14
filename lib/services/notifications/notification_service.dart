@@ -9,14 +9,14 @@ import '../../core/locale_prefs.dart';
 import '../../core/timezone_bootstrap.dart';
 import '../../models/location_config.dart';
 import '../settings_service.dart';
-import 'jamaat_reminder_scheduler.dart';
-import 'jamaat_schedule_cache.dart';
 import 'notification_channel_service.dart';
 import 'notification_ids.dart';
 import 'notification_permission_service.dart';
 import 'notification_schedule_gateway.dart';
-import 'prayer_end_reminder_scheduler.dart';
-import 'tahajjud_end_fajr_start_notification_scheduler.dart';
+import 'reminders/jamaat_reminder_scheduler.dart';
+import 'reminders/jamaat_schedule_cache.dart';
+import 'reminders/prayer_end_reminder_scheduler.dart';
+import 'reminders/tahajjud_end_fajr_start_notification_scheduler.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
