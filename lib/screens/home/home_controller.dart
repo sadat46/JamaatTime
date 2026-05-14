@@ -15,7 +15,7 @@ import '../../models/location_config.dart';
 import '../../services/jamaat_service.dart';
 import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
-import '../../services/notification_service.dart';
+import '../../services/notifications/notification_service.dart';
 import '../../services/notifications/reminders/jamaat_schedule_cache.dart';
 import '../../services/prayer_aux_calculator.dart';
 import '../../services/prayer_time_cache.dart';

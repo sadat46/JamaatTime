@@ -4,7 +4,7 @@ import '../../../core/app_locale_controller.dart';
 import '../../../core/timezone_bootstrap.dart';
 import '../../../models/location_config.dart';
 import '../../../services/auto_vibration_service.dart';
-import '../../../services/notification_service.dart';
+import '../../../services/notifications/notification_service.dart';
 
 typedef ScheduleAllNotifications =
     Future<bool> Function({

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/core/app_locale_controller.dart';
 import 'package:jamaat_time/models/location_config.dart';
 import 'package:jamaat_time/screens/home/services/home_notification_scheduler.dart';
-import 'package:jamaat_time/services/notification_service.dart';
+import 'package:jamaat_time/services/notifications/notification_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -8,7 +8,7 @@ import '../features/family_safety/presentation/family_safety_page.dart';
 import '../features/family_safety/presentation/privacy_explanation_page.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auto_vibration_service.dart';
-import '../services/notification_service.dart';
+import '../services/notifications/notification_service.dart';
 import '../services/settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {

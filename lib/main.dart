@@ -8,7 +8,7 @@ import 'screens/ebadat/ebadat_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'package:home_widget/home_widget.dart';
-import 'services/notification_service.dart';
+import 'services/notifications/notification_service.dart';
 import 'services/notifications/fcm/fcm_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/widget_service.dart';

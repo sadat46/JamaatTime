@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/core/app_text.dart';
-import 'package:jamaat_time/services/notification_service.dart';
+import 'package:jamaat_time/services/notifications/notification_service.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
