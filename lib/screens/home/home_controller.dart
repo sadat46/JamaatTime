@@ -16,7 +16,7 @@ import '../../services/jamaat_service.dart';
 import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notifications/notification_service.dart';
-import '../../services/notifications/reminders/jamaat_schedule_cache.dart';
+import '../../services/notifications/reminders/jamaat_schedule_cache_writer.dart';
 import '../../services/prayer_aux_calculator.dart';
 import '../../services/prayer_time_cache.dart';
 import '../../services/prayer_time_engine.dart';
@@ -79,6 +79,7 @@ class HomeController extends ChangeNotifier {
     HomeNotificationScheduler? notificationScheduler,
     HomeWidgetSync? widgetSync,
     PrayerTimeCache? prayerTimeCache,
+    JamaatScheduleCacheWriter? jamaatScheduleCacheWriter,
   }) : _isHomeActive = isActive,
        _appLifecycleActive =
            lifecycleState == null ||
@@ -97,7 +98,9 @@ class HomeController extends ChangeNotifier {
              notificationService: notificationService ?? NotificationService(),
            ),
        _widgetSync = widgetSync ?? HomeWidgetSync(),
-       _prayerTimeCache = prayerTimeCache ?? PrayerTimeCache();
+       _prayerTimeCache = prayerTimeCache ?? PrayerTimeCache(),
+       _jamaatScheduleCacheWriter =
+           jamaatScheduleCacheWriter ?? JamaatScheduleCacheWriter();
 
   final SettingsService _settingsService;
   final LocationService _locationService;
@@ -109,6 +112,7 @@ class HomeController extends ChangeNotifier {
   final HomeNotificationScheduler _notificationScheduler;
   final HomeWidgetSync _widgetSync;
   final PrayerTimeCache _prayerTimeCache;
+  final JamaatScheduleCacheWriter _jamaatScheduleCacheWriter;
 
   Timer? _timer;
   DateTime _now = DateTime.now();
@@ -284,7 +288,10 @@ class HomeController extends ChangeNotifier {
     // Mirror hydrated jamaat times into JamaatScheduleCache so the scheduler
     // has data even when no fetch / localOffset path runs this session.
     if (_jamaatTimes != null) {
-      await _writeJamaatCacheForDate(_selectedDate, _jamaatTimes!);
+      await _jamaatScheduleCacheWriter.writeForDate(
+        date: _selectedDate,
+        jamaatTimes: _jamaatTimes!,
+      );
       if (_isDisposed) return false;
     }
 
@@ -729,7 +736,10 @@ class HomeController extends ChangeNotifier {
         }
         _writeCache();
 
-        await _writeJamaatCacheForDate(_selectedDate, completeJamaatTimes);
+        await _jamaatScheduleCacheWriter.writeForDate(
+          date: _selectedDate,
+          jamaatTimes: completeJamaatTimes,
+        );
         unawaited(_fetchAndCacheTomorrowJamaat(city));
 
         _notificationScheduler.invalidate();
@@ -749,7 +759,10 @@ class HomeController extends ChangeNotifier {
         // (preserveExisting kept them), mirror them into JamaatScheduleCache
         // before scheduling so today's reminders still arm.
         if (_jamaatTimes != null) {
-          await _writeJamaatCacheForDate(_selectedDate, _jamaatTimes!);
+          await _jamaatScheduleCacheWriter.writeForDate(
+            date: _selectedDate,
+            jamaatTimes: _jamaatTimes!,
+          );
           if (_isDisposed) return;
         }
 
@@ -801,22 +814,26 @@ class HomeController extends ChangeNotifier {
   Future<void> _persistLocalOffsetJamaatAndSchedule(
     Map<String, dynamic> newJamaatTimes,
   ) async {
-    await _writeJamaatCacheForDate(_selectedDate, newJamaatTimes);
+    await _jamaatScheduleCacheWriter.writeForDate(
+      date: _selectedDate,
+      jamaatTimes: newJamaatTimes,
+    );
     if (_isDisposed) return;
     final tomorrowPrayers = _computeTomorrowPrayerTimes();
+    Map<String, dynamic>? tomorrowJamaat;
     if (tomorrowPrayers != null) {
-      final tomorrowJamaat = _computeLocalOffsetJamaat(tomorrowPrayers);
+      tomorrowJamaat = _computeLocalOffsetJamaat(tomorrowPrayers);
       if (tomorrowJamaat.isNotEmpty) {
-        await _writeJamaatCacheForDate(
-          _selectedDate.add(const Duration(days: 1)),
-          tomorrowJamaat,
+        await _jamaatScheduleCacheWriter.writeForDate(
+          date: _selectedDate.add(const Duration(days: 1)),
+          jamaatTimes: tomorrowJamaat,
         );
         if (_isDisposed) return;
       }
     }
 
     _notificationScheduler.invalidate();
-    await _scheduleNotificationsIfNeeded();
+    await _scheduleNotificationsIfNeeded(tomorrowJamaatTimes: tomorrowJamaat);
   }
 
   void updatePrayerTimes({
@@ -868,11 +885,13 @@ class HomeController extends ChangeNotifier {
       final jamaatSnapshot = _jamaatTimes;
       if (jamaatSnapshot != null) {
         unawaited(
-          _writeJamaatCacheForDate(_selectedDate, jamaatSnapshot).then((_) {
-            if (_isDisposed) return;
-            _notificationScheduler.invalidate();
-            unawaited(_scheduleNotificationsIfNeeded());
-          }),
+          _jamaatScheduleCacheWriter
+              .writeForDate(date: _selectedDate, jamaatTimes: jamaatSnapshot)
+              .then((_) {
+                if (_isDisposed) return;
+                _notificationScheduler.invalidate();
+                unawaited(_scheduleNotificationsIfNeeded());
+              }),
         );
       } else {
         _notificationScheduler.invalidate();
@@ -967,12 +986,15 @@ class HomeController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _scheduleNotificationsIfNeeded() {
+  Future<void> _scheduleNotificationsIfNeeded({
+    Map<String, dynamic>? tomorrowJamaatTimes,
+  }) {
     return _notificationScheduler.scheduleIfNeeded(
       selectedDate: _selectedDate,
       prayerTimes: _times,
       tomorrowPrayerTimes: _computeTomorrowPrayerTimes(),
       jamaatTimes: _jamaatTimes,
+      tomorrowJamaatTimes: tomorrowJamaatTimes,
       selectedCity: _selectedCity,
       currentPlaceName: _currentPlaceName,
       locationConfig: _locationConfig,
@@ -998,29 +1020,6 @@ class HomeController extends ChangeNotifier {
     }
   }
 
-  Future<void> _writeJamaatCacheForDate(
-    DateTime date,
-    Map<String, dynamic> jamaatTimes,
-  ) async {
-    final stringified = <String, String>{};
-    for (final entry in jamaatTimes.entries) {
-      final value = entry.value;
-      if (value == null) continue;
-      final asString = value.toString();
-      if (asString.isEmpty || asString == '-') continue;
-      stringified[entry.key] = asString;
-    }
-    if (stringified.isEmpty) return;
-    try {
-      await JamaatScheduleCache.instance.write(
-        date: date,
-        times: stringified,
-      );
-    } catch (_) {
-      // Cache write is best-effort; scheduling still proceeds.
-    }
-  }
-
   Future<void> _fetchAndCacheTomorrowJamaat(String city) async {
     try {
       final tomorrow = _selectedDate.add(const Duration(days: 1));
@@ -1039,7 +1038,13 @@ class HomeController extends ChangeNotifier {
       if (tomorrowMaghribJamaat != '-') {
         complete['maghrib'] = tomorrowMaghribJamaat;
       }
-      await _writeJamaatCacheForDate(tomorrow, complete);
+      final wroteCache = await _jamaatScheduleCacheWriter.writeForDate(
+        date: tomorrow,
+        jamaatTimes: complete,
+      );
+      if (_isDisposed || !wroteCache) return;
+      _notificationScheduler.invalidate();
+      unawaited(_scheduleNotificationsIfNeeded(tomorrowJamaatTimes: complete));
     } catch (_) {
       // Best-effort prefetch.
     }

@@ -25,6 +25,8 @@ void main() {
             ({
               required Map<String, DateTime?> todayPrayerTimes,
               Map<String, DateTime?>? tomorrowPrayerTimes,
+              Map<String, dynamic>? todayJamaatTimes,
+              Map<String, dynamic>? tomorrowJamaatTimes,
             }) async {
               calls.add(Map.of(todayPrayerTimes));
               if (calls.length == 1) {
@@ -87,6 +89,8 @@ void main() {
             ({
               required Map<String, DateTime?> todayPrayerTimes,
               Map<String, DateTime?>? tomorrowPrayerTimes,
+              Map<String, dynamic>? todayJamaatTimes,
+              Map<String, dynamic>? tomorrowJamaatTimes,
             }) async {
               calls.add(Map.of(todayPrayerTimes));
               if (calls.length == 1) {
@@ -153,6 +157,8 @@ void main() {
           ({
             required Map<String, DateTime?> todayPrayerTimes,
             Map<String, DateTime?>? tomorrowPrayerTimes,
+            Map<String, dynamic>? todayJamaatTimes,
+            Map<String, dynamic>? tomorrowJamaatTimes,
           }) async {
             calls.add(Map.of(todayPrayerTimes));
             return true;
@@ -183,15 +189,54 @@ void main() {
 
     expect(calls.length, 1);
   });
+
+  test('passes jamaat maps to notification scheduling', () async {
+    Map<String, dynamic>? capturedTodayJamaat;
+    Map<String, dynamic>? capturedTomorrowJamaat;
+    final scheduler = _scheduler(
+      onSchedule:
+          ({
+            required Map<String, DateTime?> todayPrayerTimes,
+            Map<String, DateTime?>? tomorrowPrayerTimes,
+            Map<String, dynamic>? todayJamaatTimes,
+            Map<String, dynamic>? tomorrowJamaatTimes,
+          }) async {
+            capturedTodayJamaat = todayJamaatTimes;
+            capturedTomorrowJamaat = tomorrowJamaatTimes;
+            return true;
+          },
+    );
+
+    final today = _today();
+    final todayJamaat = {'fajr': '04:55'};
+    final tomorrowJamaat = {'fajr': '04:56'};
+
+    await scheduler.scheduleIfNeeded(
+      selectedDate: today,
+      prayerTimes: _prayerTimes(today),
+      tomorrowPrayerTimes: _prayerTimes(today.add(const Duration(days: 1))),
+      jamaatTimes: todayJamaat,
+      tomorrowJamaatTimes: tomorrowJamaat,
+      selectedCity: 'Dhaka',
+      currentPlaceName: null,
+      locationConfig: _serverLocation,
+    );
+
+    expect(capturedTodayJamaat, todayJamaat);
+    expect(capturedTomorrowJamaat, tomorrowJamaat);
+  });
 }
 
 HomeNotificationScheduler _scheduler({
   required ScheduleAllNotifications onSchedule,
   RescheduleAutoVibration? onAutoVibration,
+  ScheduleJamaatNotifications? onScheduleJamaat,
 }) {
   return HomeNotificationScheduler(
     notificationService: NotificationService(),
     scheduleAllNotifications: onSchedule,
+    scheduleJamaatNotifications:
+        onScheduleJamaat ?? ({todayJamaatTimes, tomorrowJamaatTimes}) async {},
     rescheduleAutoVibration: onAutoVibration ?? (_) async {},
   );
 }
