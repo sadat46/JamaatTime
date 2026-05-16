@@ -54,6 +54,7 @@ class NotificationService {
         scheduleGateway: _scheduleGateway,
         localeResolver: _resolveLocale,
         locationResolver: _getLocation,
+        enabledPrayerKeysResolver: _settingsService.getEnabledPrayerReminderKeys,
       );
   late final JamaatReminderScheduler _jamaatReminderScheduler =
       JamaatReminderScheduler(
@@ -240,6 +241,29 @@ class NotificationService {
       todayPrayerTimes: todayPrayerTimes,
       tomorrowPrayerTimes: tomorrowPrayerTimes,
     );
+  }
+
+  /// Cancels the today + tomorrow prayer-end alarms for [prayerKey].
+  /// Required when a user disables a prayer reminder — `scheduleAllNotifications`
+  /// only replaces enabled IDs and would leave the previously-armed alarm
+  /// intact until fire time. Targeted cancel by ID; no `cancelAll`.
+  Future<void> cancelPrayerEndReminder(String prayerKey) async {
+    try {
+      final todayId = NotificationIds.prayerEndReminders[prayerKey];
+      final tomorrowId = NotificationIds.prayerEndRemindersTomorrow[prayerKey];
+      if (todayId != null) await _scheduleGateway.cancel(todayId);
+      if (tomorrowId != null) await _scheduleGateway.cancel(tomorrowId);
+      developer.log(
+        'JT_NOTIFY prayer_end cancel prayer=$prayerKey',
+        name: 'NotificationService',
+      );
+    } catch (e) {
+      developer.log(
+        'Error cancelling prayer_end for $prayerKey: $e',
+        name: 'NotificationService',
+        error: e,
+      );
+    }
   }
 
   /// Reads jamaat times for today and tomorrow from [JamaatScheduleCache] and

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/services/notifications/notification_channel_service.dart';
 import 'package:jamaat_time/services/notifications/notification_ids.dart';
 import 'package:jamaat_time/services/notifications/reminders/jamaat_reminder_scheduler.dart';
+import 'package:jamaat_time/services/notifications/reminders/notification_reminder_candidate.dart';
 import 'package:jamaat_time/services/notifications/reminders/prayer_end_reminder_scheduler.dart';
 import 'package:jamaat_time/services/notifications/reminders/tahajjud_end_fajr_start_notification_scheduler.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -156,6 +157,59 @@ void main() {
         candidates[3].scheduledTime,
         tz.TZDateTime(location, 2026, 5, 11, 3, 36),
       );
+    });
+  });
+
+  group('PrayerEndReminderScheduler.filterByEnabledPrayerKeys', () {
+    late List<NotificationReminderCandidate> sample;
+
+    setUp(() {
+      final location = tz.getLocation('Asia/Dhaka');
+      sample = [
+        for (final entry in const {
+          'Fajr': 1101,
+          'Dhuhr': 1102,
+          'Asr': 1103,
+          'Maghrib': 1104,
+          'Isha': 1105,
+        }.entries)
+          NotificationReminderCandidate(
+            prayerKey: entry.key,
+            id: entry.value,
+            scheduledTime: tz.TZDateTime(location, 2026, 5, 10, 12, 0),
+          ),
+      ];
+    });
+
+    test('null enabledKeys is a passthrough (no filter configured)', () {
+      final result = PrayerEndReminderScheduler.filterByEnabledPrayerKeys(
+        sample,
+        null,
+      );
+      expect(result.map((c) => c.prayerKey), [
+        'Fajr',
+        'Dhuhr',
+        'Asr',
+        'Maghrib',
+        'Isha',
+      ]);
+    });
+
+    test('subset retains only enabled prayers preserving order', () {
+      final result = PrayerEndReminderScheduler.filterByEnabledPrayerKeys(
+        sample,
+        {'Fajr', 'Asr'},
+      );
+      expect(result.map((c) => c.prayerKey), ['Fajr', 'Asr']);
+      expect(result.map((c) => c.id), [1101, 1103]);
+    });
+
+    test('empty enabled set drops all candidates', () {
+      final result = PrayerEndReminderScheduler.filterByEnabledPrayerKeys(
+        sample,
+        const <String>{},
+      );
+      expect(result, isEmpty);
     });
   });
 

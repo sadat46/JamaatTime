@@ -14,13 +14,16 @@ class PrayerEndReminderScheduler {
     required NotificationScheduleGateway scheduleGateway,
     required Future<Locale> Function() localeResolver,
     required tz.Location Function() locationResolver,
+    Future<Set<String>> Function()? enabledPrayerKeysResolver,
   }) : _scheduleGateway = scheduleGateway,
        _localeResolver = localeResolver,
-       _locationResolver = locationResolver;
+       _locationResolver = locationResolver,
+       _enabledPrayerKeysResolver = enabledPrayerKeysResolver;
 
   final NotificationScheduleGateway _scheduleGateway;
   final Future<Locale> Function() _localeResolver;
   final tz.Location Function() _locationResolver;
+  final Future<Set<String>> Function()? _enabledPrayerKeysResolver;
 
   static const Duration reminderOffset = Duration(minutes: 20);
 
@@ -34,7 +37,7 @@ class PrayerEndReminderScheduler {
       final location = _locationResolver();
       final now = tz.TZDateTime.now(location);
 
-      final candidates = <NotificationReminderCandidate>[
+      final rawCandidates = <NotificationReminderCandidate>[
         ...buildCandidatesWithIds(
           todayPrayerTimes,
           idMap: NotificationIds.prayerEndReminders,
@@ -50,8 +53,12 @@ class PrayerEndReminderScheduler {
           ),
       ];
 
+      final enabled = await _enabledPrayerKeysResolver?.call();
+      final candidates = filterByEnabledPrayerKeys(rawCandidates, enabled);
+
       developer.log(
-        'JT_NOTIFY prayer_end candidates=${candidates.length}',
+        'JT_NOTIFY prayer_end candidates=${candidates.length} '
+        'skipped=${rawCandidates.length - candidates.length}',
         name: 'NotificationService',
       );
 
@@ -97,6 +104,16 @@ class PrayerEndReminderScheduler {
       location: location,
       now: now,
     );
+  }
+
+  static List<NotificationReminderCandidate> filterByEnabledPrayerKeys(
+    List<NotificationReminderCandidate> candidates,
+    Set<String>? enabledKeys,
+  ) {
+    if (enabledKeys == null) return candidates;
+    return candidates
+        .where((c) => enabledKeys.contains(c.prayerKey))
+        .toList();
   }
 
   static List<NotificationReminderCandidate> buildCandidatesWithIds(

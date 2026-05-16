@@ -21,6 +21,20 @@ class SettingsService {
       'jamaat_notification_sound_mode';
   static const String _keyFajrVoiceNotificationEnabled =
       'fajr_voice_notification_enabled';
+  static const Map<String, String> _keyPrayerReminderEnabled = {
+    'Fajr': 'prayer_reminder_enabled_fajr',
+    'Dhuhr': 'prayer_reminder_enabled_dhuhr',
+    'Asr': 'prayer_reminder_enabled_asr',
+    'Maghrib': 'prayer_reminder_enabled_maghrib',
+    'Isha': 'prayer_reminder_enabled_isha',
+  };
+  static const List<String> prayerReminderKeys = [
+    'Fajr',
+    'Dhuhr',
+    'Asr',
+    'Maghrib',
+    'Isha',
+  ];
   static const String _keyNotificationSoundDefaultMigratedV2 =
       'notification_sound_default_migrated_v2';
   static const String _keyBangladeshHijriOffsetDays =
@@ -143,6 +157,29 @@ class SettingsService {
     final prefs = await _prefs;
     await prefs.setBool(_keyFajrVoiceNotificationEnabled, enabled);
     _controller.add(null);
+  }
+
+  Future<bool> getPrayerReminderEnabled(String prayerKey) async {
+    final key = _keyPrayerReminderEnabled[prayerKey];
+    if (key == null) return true;
+    final prefs = await _prefs;
+    return prefs.getBool(key) ?? true;
+  }
+
+  Future<void> setPrayerReminderEnabled(String prayerKey, bool enabled) async {
+    final key = _keyPrayerReminderEnabled[prayerKey];
+    if (key == null) return;
+    final prefs = await _prefs;
+    await prefs.setBool(key, enabled);
+    _controller.add(null);
+  }
+
+  Future<Set<String>> getEnabledPrayerReminderKeys() async {
+    final prefs = await _prefs;
+    return {
+      for (final entry in _keyPrayerReminderEnabled.entries)
+        if (prefs.getBool(entry.value) ?? true) entry.key,
+    };
   }
 
   /// One-time migration to switch default notification sound to Custom 2.

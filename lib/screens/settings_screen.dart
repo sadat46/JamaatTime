@@ -35,6 +35,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   int _jamaatNotificationSoundMode =
       0; // 0: Custom1, 1: System, 2: None, 3: Custom2, 4: Custom3
   bool _fajrVoiceNotificationEnabled = false;
+  Map<String, bool> _prayerReminderEnabled = {
+    for (final k in SettingsService.prayerReminderKeys) k: true,
+  };
   bool _exactAlarmsGranted = true;
   bool _autoVibrationEnabled = false;
   int _autoVibrationMinutesBefore =
@@ -95,6 +98,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         .getJamaatNotificationSoundMode();
     final fajrVoiceEnabled = await _settingsService
         .getFajrVoiceNotificationEnabled();
+    final enabledPrayerKeys = await _settingsService
+        .getEnabledPrayerReminderKeys();
     final exactAlarms = Platform.isAndroid
         ? await _notificationService.refreshExactAlarmsAvailable()
         : true;
@@ -113,6 +118,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       _prayerNotificationSoundMode = prayerSoundMode;
       _jamaatNotificationSoundMode = jamaatSoundMode;
       _fajrVoiceNotificationEnabled = fajrVoiceEnabled;
+      _prayerReminderEnabled = {
+        for (final k in SettingsService.prayerReminderKeys)
+          k: enabledPrayerKeys.contains(k),
+      };
       _exactAlarmsGranted = exactAlarms;
       _autoVibrationEnabled = autoVibrationEnabled;
       _autoVibrationMinutesBefore = autoVibrationBefore;
@@ -222,6 +231,36 @@ class _SettingsScreenState extends State<SettingsScreen>
       '$_autoVibrationMinutesBefore মিনিট আগে, $_autoVibrationMinutesAfter মিনিট পরে',
       '${_autoVibrationMinutesBefore}m before, ${_autoVibrationMinutesAfter}m after',
     );
+  }
+
+  String _prayerLabel(String key) {
+    switch (key) {
+      case 'Fajr':
+        return _tr('ফজর', 'Fajr');
+      case 'Dhuhr':
+        return _tr('যোহর', 'Dhuhr');
+      case 'Asr':
+        return _tr('আসর', 'Asr');
+      case 'Maghrib':
+        return _tr('মাগরিব', 'Maghrib');
+      case 'Isha':
+        return _tr('এশা', 'Isha');
+      default:
+        return key;
+    }
+  }
+
+  Future<void> _updatePrayerReminderEnabled(
+    String prayerKey,
+    bool enabled,
+  ) async {
+    await _settingsService.setPrayerReminderEnabled(prayerKey, enabled);
+    if (!enabled) {
+      await _notificationService.cancelPrayerEndReminder(prayerKey);
+    }
+    if (!mounted) return;
+    setState(() => _prayerReminderEnabled[prayerKey] = enabled);
+    _refreshOpenSubpage();
   }
 
   Future<void> _updatePrayerSoundMode(int value) async {
@@ -852,6 +891,31 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _updatePrayerSoundMode(val);
               },
             ),
+          ],
+        ),
+        _buildSectionCard(
+          icon: Icons.alarm,
+          color: _brandGreen,
+          title: _tr('নামাজের রিমাইন্ডার', 'Prayer reminders'),
+          subtitle: _tr(
+            'প্রতিটি নামাজের জন্য আলাদাভাবে রিমাইন্ডার চালু বা বন্ধ করুন।',
+            'Turn each prayer reminder on or off individually.',
+          ),
+          children: [
+            for (final key in SettingsService.prayerReminderKeys)
+              SwitchListTile(
+                value: _prayerReminderEnabled[key] ?? true,
+                onChanged: (val) => _updatePrayerReminderEnabled(key, val),
+                activeTrackColor: _brandGreen,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  _prayerLabel(key),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
           ],
         ),
       ],
