@@ -45,8 +45,8 @@ void main() {
               label: strings.nav_calendar,
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.person),
-              label: strings.nav_profile,
+              icon: const Icon(Icons.more_horiz),
+              label: strings.nav_others,
             ),
           ],
         );
@@ -62,7 +62,7 @@ void main() {
     expect(find.text('হোম'), findsOneWidget);
     expect(find.text('ইবাদত'), findsOneWidget);
     expect(find.text('ক্যালেন্ডার'), findsOneWidget);
-    expect(find.text('প্রোফাইল'), findsOneWidget);
+    expect(find.text('অন্যান্য'), findsOneWidget);
   });
 
   testWidgets('bottom nav renders English labels for en locale', (
@@ -72,6 +72,6 @@ void main() {
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Ebadat'), findsOneWidget);
     expect(find.text('Calendar'), findsOneWidget);
-    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Others'), findsOneWidget);
   });
 }

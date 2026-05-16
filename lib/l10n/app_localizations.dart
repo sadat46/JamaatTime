@@ -116,11 +116,11 @@ abstract class AppLocalizations {
   /// **'Calendar'**
   String get nav_calendar;
 
-  /// Bottom navigation label for the Profile tab
+  /// Bottom navigation label for the Others tab
   ///
   /// In en, this message translates to:
-  /// **'Profile'**
-  String get nav_profile;
+  /// **'Others'**
+  String get nav_others;
 
   /// Section header for the language picker in Settings
   ///

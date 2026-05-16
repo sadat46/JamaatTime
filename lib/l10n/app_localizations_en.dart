@@ -18,7 +18,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nav_calendar => 'Calendar';
 
   @override
-  String get nav_profile => 'Profile';
+  String get nav_others => 'Others';
 
   @override
   String get settings_languageSection => 'Language';

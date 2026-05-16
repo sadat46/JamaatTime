@@ -217,8 +217,8 @@ class _MainScaffoldState extends State<MainScaffold> {
               label: strings.nav_calendar,
             ),
             BottomNavigationBarItem(
-              icon: _navIcon(3, Icons.person),
-              label: strings.nav_profile,
+              icon: _navIcon(3, Icons.more_horiz),
+              label: strings.nav_others,
             ),
           ],
         ),

@@ -18,7 +18,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get nav_calendar => 'ক্যালেন্ডার';
 
   @override
-  String get nav_profile => 'প্রোফাইল';
+  String get nav_others => 'অন্যান্য';
 
   @override
   String get settings_languageSection => 'ভাষা';
