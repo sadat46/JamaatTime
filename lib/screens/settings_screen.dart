@@ -622,6 +622,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _openSettingsSubpage(
     Widget Function(BuildContext context) builder,
   ) async {
+    final previousRefresh = _activeSubpageRefresh;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => StatefulBuilder(
@@ -636,7 +637,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ),
     );
-    _activeSubpageRefresh = null;
+    _activeSubpageRefresh = previousRefresh;
     if (!mounted) return;
     await _loadSettings();
   }
@@ -769,6 +770,70 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSubpageScaffold(
       title: _tr('নোটিফিকেশন', 'Notifications'),
       children: [
+        _buildMenuCard(
+          icon: Icons.notifications_active,
+          color: _brandGreen,
+          title: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
+          subtitle: _tr(
+            'নামাজের রিমাইন্ডারে কোন সাউন্ড বাজবে তা নির্বাচন করুন।',
+            'Choose the sound used for prayer reminders.',
+          ),
+          chip: _soundModeLabel(_prayerNotificationSoundMode),
+          onTap: () => _openSettingsSubpage(_buildPrayerSoundPage),
+        ),
+        const SizedBox(height: 12),
+        _buildMenuCard(
+          icon: Icons.groups,
+          color: const Color(0xFF1565C0),
+          title: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
+          subtitle: _tr(
+            'জামাতের রিমাইন্ডারে কোন সাউন্ড বাজবে তা নির্বাচন করুন।',
+            'Choose the sound used for jamaat reminders.',
+          ),
+          chip: _soundModeLabel(_jamaatNotificationSoundMode),
+          onTap: () => _openSettingsSubpage(_buildJamaatSoundPage),
+        ),
+        const SizedBox(height: 12),
+        _buildMenuCard(
+          icon: Icons.record_voice_over,
+          color: const Color(0xFF00695C),
+          title: _tr(
+            'তাহাজ্জুদ শেষ ও ফজর শুরু ভয়েস নোটিফিকেশন',
+            'Tahajjud end and Fajr start voice notification',
+          ),
+          subtitle: _tr(
+            'তাহাজ্জুদ শেষ ও ফজর শুরু হলে রিমাইন্ডার বাজবে।',
+            'Play reminder when Tahajjud ends and Fajr starts.',
+          ),
+          chip: _fajrVoiceNotificationEnabled
+              ? _tr('চালু', 'On')
+              : _tr('বন্ধ', 'Off'),
+          onTap: () => _openSettingsSubpage(_buildFajrVoicePage),
+        ),
+        if (Platform.isAndroid) ...[
+          const SizedBox(height: 12),
+          _buildMenuCard(
+            icon: _exactAlarmsGranted ? Icons.alarm_on : Icons.alarm_off,
+            color: _exactAlarmsGranted ? _brandGreen : const Color(0xFFD84315),
+            title: _tr('সঠিক সময়ের নোটিফিকেশন', 'Exact-time notifications'),
+            subtitle: _tr(
+              'সময়মতো নোটিফিকেশন পাঠাতে অ্যালার্ম অনুমতি দরকার।',
+              'Controls the alarm permission used for exact notification delivery.',
+            ),
+            chip: _exactAlarmsGranted
+                ? _tr('অনুমোদিত', 'Granted')
+                : _tr('অনুমতি নেই', 'Not granted'),
+            onTap: () => _openSettingsSubpage(_buildExactAlarmsPage),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPrayerSoundPage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('নামাজ রিমাইন্ডার সাউন্ড', 'Prayer reminder sound'),
+      children: [
         _buildSectionCard(
           icon: Icons.notifications_active,
           color: _brandGreen,
@@ -789,7 +854,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildJamaatSoundPage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('জামাত রিমাইন্ডার সাউন্ড', 'Jamaat reminder sound'),
+      children: [
         _buildSectionCard(
           icon: Icons.groups,
           color: const Color(0xFF1565C0),
@@ -810,7 +882,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildFajrVoicePage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('ভয়েস নোটিফিকেশন', 'Voice notification'),
+      children: [
         _buildSectionCard(
           icon: Icons.record_voice_over,
           color: const Color(0xFF00695C),
@@ -845,8 +924,15 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
-        if (Platform.isAndroid) ...[
-          const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildExactAlarmsPage(BuildContext context) {
+    return _buildSubpageScaffold(
+      title: _tr('সঠিক সময়ের নোটিফিকেশন', 'Exact-time notifications'),
+      children: [
+        if (Platform.isAndroid)
           _buildSectionCard(
             icon: _exactAlarmsGranted ? Icons.alarm_on : Icons.alarm_off,
             color: _exactAlarmsGranted ? _brandGreen : const Color(0xFFD84315),
@@ -857,7 +943,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             children: [_buildExactAlarmTile(showTitle: false)],
           ),
-        ],
       ],
     );
   }
