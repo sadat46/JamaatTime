@@ -254,6 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     String prayerKey,
     bool enabled,
   ) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     await _settingsService.setPrayerReminderEnabled(prayerKey, enabled);
     if (!enabled) {
       await _notificationService.cancelPrayerEndReminder(prayerKey);
@@ -261,6 +262,23 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     setState(() => _prayerReminderEnabled[prayerKey] = enabled);
     _refreshOpenSubpage();
+    final prayerName = _prayerLabel(prayerKey);
+    final message = enabled
+        ? _tr(
+            '$prayerName রিমাইন্ডার চালু করা হয়েছে।',
+            '$prayerName reminder turned on.',
+          )
+        : _tr(
+            '$prayerName রিমাইন্ডার বন্ধ করা হয়েছে।',
+            '$prayerName reminder turned off.',
+          );
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _updatePrayerSoundMode(int value) async {
