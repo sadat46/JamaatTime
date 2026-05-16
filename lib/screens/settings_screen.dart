@@ -78,6 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!_autoVibrationPendingEnable || !Platform.isAndroid) return;
     final granted = await _autoVibrationService.hasDndAccess();
     if (!mounted || !granted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     await _settingsService.setAutoVibrationEnabled(true);
     if (!mounted) return;
     setState(() {
@@ -85,6 +86,29 @@ class _SettingsScreenState extends State<SettingsScreen>
       _autoVibrationPendingEnable = false;
     });
     _refreshOpenSubpage();
+    _showAutoVibrationSnackBar(scaffoldMessenger, enabled: true);
+  }
+
+  void _showAutoVibrationSnackBar(
+    ScaffoldMessengerState scaffoldMessenger, {
+    required bool enabled,
+  }) {
+    final message = enabled
+        ? _tr(
+            'অটো ভাইব্রেশন চালু করা হয়েছে।',
+            'Auto vibration turned on.',
+          )
+        : _tr(
+            'অটো ভাইব্রেশন বন্ধ করা হয়েছে।',
+            'Auto vibration turned off.',
+          );
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _loadSettings() async {
@@ -330,6 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _updateAutoVibrationEnabled(bool value) async {
     if (!Platform.isAndroid) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     if (!value) {
       await _settingsService.setAutoVibrationEnabled(false);
       if (!mounted) return;
@@ -338,6 +363,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         _autoVibrationPendingEnable = false;
       });
       _refreshOpenSubpage();
+      _showAutoVibrationSnackBar(scaffoldMessenger, enabled: false);
       return;
     }
     final granted = await _autoVibrationService.hasDndAccess();
@@ -346,6 +372,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!mounted) return;
       setState(() => _autoVibrationEnabled = true);
       _refreshOpenSubpage();
+      _showAutoVibrationSnackBar(scaffoldMessenger, enabled: true);
       return;
     }
     if (!mounted) return;
@@ -1200,7 +1227,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       'জামাতের সময়ের আশেপাশে',
                       'Around Jamaat times',
                     ),
-                    chip: _autoVibrationWindowLabel(),
+                    chip: _autoVibrationEnabled
+                        ? _autoVibrationWindowLabel()
+                        : _tr('বন্ধ', 'Off'),
                     onTap: () => _openSettingsSubpage(_buildAutoVibrationPage),
                   ),
                 ],
