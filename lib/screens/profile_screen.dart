@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
@@ -84,9 +85,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final info = await PackageInfo.fromPlatform();
       if (!mounted) return;
       setState(() {
-        _version = 'v ${info.version} (${info.buildNumber})';
+        final publicBuildNumber = AppVersion.publicBuildNumber(
+          info.buildNumber,
+        );
+        _version = AppVersion.label(
+          version: info.version,
+          buildNumber: info.buildNumber,
+        );
         _currentVersion = info.version;
-        _buildNumber = info.buildNumber;
+        _buildNumber = publicBuildNumber;
       });
     } catch (_) {
       // Keep version empty if package info is unavailable.

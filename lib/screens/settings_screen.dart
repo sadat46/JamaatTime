@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../core/app_locale_controller.dart';
+import '../core/app_version.dart';
 import '../core/feature_flags.dart';
 import '../features/family_safety/presentation/family_safety_page.dart';
 import '../features/family_safety/presentation/privacy_explanation_page.dart';
@@ -94,14 +95,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     required bool enabled,
   }) {
     final message = enabled
-        ? _tr(
-            'অটো ভাইব্রেশন চালু করা হয়েছে।',
-            'Auto vibration turned on.',
-          )
-        : _tr(
-            'অটো ভাইব্রেশন বন্ধ করা হয়েছে।',
-            'Auto vibration turned off.',
-          );
+        ? _tr('অটো ভাইব্রেশন চালু করা হয়েছে।', 'Auto vibration turned on.')
+        : _tr('অটো ভাইব্রেশন বন্ধ করা হয়েছে।', 'Auto vibration turned off.');
     scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(message),
@@ -160,7 +155,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       final info = await PackageInfo.fromPlatform();
       if (!mounted) return;
       setState(() {
-        _appVersion = 'v ${info.version} (${info.buildNumber})';
+        _appVersion = AppVersion.label(
+          version: info.version,
+          buildNumber: info.buildNumber,
+        );
       });
       _refreshOpenSubpage();
     } catch (_) {
