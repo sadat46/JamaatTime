@@ -109,24 +109,32 @@ class FcmService {
       debugPrint('JT_NOTIFY: requestPermission failed: $e');
     }
 
-    // Register the FCM token first; subscribeToTopic requires a registered
-    // token to succeed reliably.
+    // Subscribe to the broadcast topic eagerly. subscribeToTopic does not
+    // strictly require getToken to have resolved (the SDK auto-fetches the
+    // token internally), and gating on token meant first-cold-start with a
+    // not-yet-registered token silently skipped the subscribe — and
+    // onTokenRefresh doesn't fire for the FIRST token, so we never retried.
+    debugPrint('JT_NOTIFY: deferred registration entered');
+    unawaited(_ensureTopicSubscription(messaging));
+
     String? token;
     try {
       token = await messaging.getToken();
+      debugPrint(
+        'JT_NOTIFY: getToken result=${token == null ? 'null' : '${token.length} chars'}',
+      );
       await _persistToken(token: token, locale: locale);
     } catch (e) {
       debugPrint('JT_NOTIFY: getToken/persist failed: $e');
     }
 
-    if (token != null && token.isNotEmpty) {
-      await _ensureTopicSubscription(messaging);
-    }
-
     _tokenRefreshSub = messaging.onTokenRefresh.listen((newToken) async {
+      debugPrint('JT_NOTIFY: onTokenRefresh fired (${newToken.length} chars)');
       try {
         await _persistToken(token: newToken, locale: locale);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('JT_NOTIFY: onTokenRefresh persist failed: $e');
+      }
       // Token rotation invalidates the prior topic subscription; re-subscribe.
       await _clearTopicSubscribedFlag();
       await _ensureTopicSubscription(messaging);
@@ -180,15 +188,22 @@ class FcmService {
   }
 
   Future<void> _ensureTopicSubscription(FirebaseMessaging messaging) async {
+    debugPrint('JT_NOTIFY: _ensureTopicSubscription enter');
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool(_kTopicSubscribedFlag) == true) return;
+      if (prefs.getBool(_kTopicSubscribedFlag) == true) {
+        debugPrint('JT_NOTIFY: topic flag already true, skipping subscribe');
+        return;
+      }
     } catch (e) {
       debugPrint('JT_NOTIFY: prefs read failed for topic flag: $e');
     }
     try {
-      await messaging.subscribeToTopic(_kAllUsersTopic);
+      debugPrint('JT_NOTIFY: calling subscribeToTopic($_kAllUsersTopic)');
+      await messaging
+          .subscribeToTopic(_kAllUsersTopic)
+          .timeout(const Duration(seconds: 30));
       debugPrint('JT_NOTIFY: subscribed to topic $_kAllUsersTopic');
       try {
         await prefs?.setBool(_kTopicSubscribedFlag, true);

@@ -24,7 +24,7 @@ class FcmTokenRepository {
     final entry = {
       'token': token,
       'platform': 'android',
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedAt': Timestamp.now(),
       if (installationId != null) 'installationId': installationId,
     };
     await ref.set({

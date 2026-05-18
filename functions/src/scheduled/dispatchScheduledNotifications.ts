@@ -138,7 +138,7 @@ export const dispatchScheduledNotifications = onSchedule(
             imageUrl: draft.imageUrl ?? null,
             target: {
               kind: draft.target.kind as BroadcastTargetKind,
-              value: draft.target.value,
+              value: draft.target.value ?? null,
             },
             deepLink: draft.deepLink ?? null,
             triggerSource: draft.triggerSource,
