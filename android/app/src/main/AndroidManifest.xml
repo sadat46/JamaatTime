@@ -85,7 +85,7 @@
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="broadcast_channel"/>
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="notice_board"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
