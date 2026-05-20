@@ -38,6 +38,7 @@ class MainActivity : FlutterActivity() {
 
         FocusGuardChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         BatteryOptimizationChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        ExactAlarmSettingsChannel(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         AutoVibrationPlugin(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         familySafetyChannel = FamilySafetyChannel(flutterEngine.dartExecutor.binaryMessenger, this)
     }

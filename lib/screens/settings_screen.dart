@@ -174,9 +174,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     _refreshOpenSubpage();
   }
 
-  Future<void> _grantExactAlarms() async {
+  Future<void> _openExactAlarmsSettings() async {
     if (!Platform.isAndroid) return;
-    await _notificationService.requestExactAlarmsPermission();
+    if (_exactAlarmsGranted) {
+      await _notificationService.openExactAlarmSettings();
+    } else {
+      await _notificationService.requestExactAlarmsPermission();
+    }
     // The grant flow opens the system settings page; user returns to the app
     // afterward. Re-check on next frame to reflect their choice.
     await _refreshExactAlarmsStatus();
@@ -471,8 +475,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         : _tr('অনুমতি দেওয়া নেই', 'Not granted');
     final descriptionLabel = granted
         ? _tr(
-            'অ্যালার্ম ও রিমাইন্ডার অনুমতি চালু আছে — সঠিক সময়ে নোটিফিকেশন আসবে।',
-            'Alarms & reminders permission is on — notifications will fire at the exact time.',
+            'অ্যালার্ম ও রিমাইন্ডার অনুমতি চালু আছে। চাইলে Android সেটিংস থেকে এটি পরিচালনা করতে পারেন।',
+            'Alarms & reminders permission is on. You can manage it from Android settings.',
           )
         : _tr(
             'অনুমতি বন্ধ থাকলে নোটিফিকেশন ১০ মিনিট পর্যন্ত দেরিতে আসতে পারে।',
@@ -539,17 +543,19 @@ class _SettingsScreenState extends State<SettingsScreen>
               ],
             ),
           ),
-          if (!granted) ...[
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: _grantExactAlarms,
-              style: TextButton.styleFrom(
-                foregroundColor: accent,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              child: Text(_tr('অনুমতি দিন', 'Grant')),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _openExactAlarmsSettings,
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
             ),
-          ],
+            child: Text(
+              granted
+                  ? _tr('পরিচালনা করুন', 'Manage')
+                  : _tr('অনুমতি দিন', 'Grant'),
+            ),
+          ),
         ],
       ),
     );

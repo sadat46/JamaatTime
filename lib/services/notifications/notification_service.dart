@@ -54,7 +54,8 @@ class NotificationService {
         scheduleGateway: _scheduleGateway,
         localeResolver: _resolveLocale,
         locationResolver: _getLocation,
-        enabledPrayerKeysResolver: _settingsService.getEnabledPrayerReminderKeys,
+        enabledPrayerKeysResolver:
+            _settingsService.getEnabledPrayerReminderKeys,
       );
   late final JamaatReminderScheduler _jamaatReminderScheduler =
       JamaatReminderScheduler(
@@ -164,6 +165,10 @@ class NotificationService {
 
   Future<bool> requestExactAlarmsPermission() {
     return _permissionService.requestExactAlarmsPermission();
+  }
+
+  Future<void> openExactAlarmSettings() {
+    return _permissionService.openExactAlarmSettings();
   }
 
   Future<void> scheduleNotification({

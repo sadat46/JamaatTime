@@ -2,9 +2,14 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 
 class NotificationPermissionService {
   NotificationPermissionService(this._plugin);
+
+  static const MethodChannel _exactAlarmSettingsChannel = MethodChannel(
+    'jamaat_time/exact_alarm_settings',
+  );
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _exactAlarmsAvailable = false;
@@ -61,6 +66,19 @@ class NotificationPermissionService {
         name: 'NotificationService',
       );
       return false;
+    }
+  }
+
+  Future<void> openExactAlarmSettings() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _exactAlarmSettingsChannel.invokeMethod<void>('openSettings');
+    } catch (e) {
+      developer.log(
+        'openExactAlarmSettings failed: $e',
+        name: 'NotificationService',
+      );
+      await requestExactAlarmsPermission();
     }
   }
 
