@@ -45,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       SettingsService.defaultAutoVibrationMinutesBefore;
   int _autoVibrationMinutesAfter =
       SettingsService.defaultAutoVibrationMinutesAfter;
+  bool _autoVibrationDndAccessGranted = false;
   bool _autoVibrationPendingEnable = false;
   bool _loading = true;
   String _appVersion = '';
@@ -67,10 +68,11 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // After the user returns from the system "Alarms & reminders" page, sync
-    // the displayed status with the OS-level state.
+    // After the user returns from Android permission pages, sync the displayed
+    // statuses with the OS-level state.
     if (state == AppLifecycleState.resumed) {
       _refreshExactAlarmsStatus();
+      _refreshAutoVibrationDndAccess();
       _resolvePendingAutoVibrationEnable();
     }
   }
@@ -78,7 +80,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _resolvePendingAutoVibrationEnable() async {
     if (!_autoVibrationPendingEnable || !Platform.isAndroid) return;
     final granted = await _autoVibrationService.hasDndAccess();
-    if (!mounted || !granted) return;
+    if (!mounted) return;
+    setState(() => _autoVibrationDndAccessGranted = granted);
+    _refreshOpenSubpage();
+    if (!granted) return;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     await _settingsService.setAutoVibrationEnabled(true);
     if (!mounted) return;
@@ -128,6 +133,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         .getAutoVibrationMinutesBefore();
     final autoVibrationAfter = await _settingsService
         .getAutoVibrationMinutesAfter();
+    final autoVibrationDndAccess = Platform.isAndroid
+        ? await _autoVibrationService.hasDndAccess()
+        : false;
 
     if (!mounted) return;
     setState(() {
@@ -145,6 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _autoVibrationEnabled = autoVibrationEnabled;
       _autoVibrationMinutesBefore = autoVibrationBefore;
       _autoVibrationMinutesAfter = autoVibrationAfter;
+      _autoVibrationDndAccessGranted = autoVibrationDndAccess;
       _loading = false;
     });
     _refreshOpenSubpage();
@@ -174,6 +183,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     _refreshOpenSubpage();
   }
 
+  Future<void> _refreshAutoVibrationDndAccess() async {
+    if (!Platform.isAndroid) return;
+    final granted = await _autoVibrationService.hasDndAccess();
+    if (!mounted) return;
+    setState(() => _autoVibrationDndAccessGranted = granted);
+    _refreshOpenSubpage();
+  }
+
   Future<void> _openExactAlarmsSettings() async {
     if (!Platform.isAndroid) return;
     if (_exactAlarmsGranted) {
@@ -184,6 +201,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     // The grant flow opens the system settings page; user returns to the app
     // afterward. Re-check on next frame to reflect their choice.
     await _refreshExactAlarmsStatus();
+  }
+
+  Future<void> _openAutoVibrationDndSettings() async {
+    if (!Platform.isAndroid) return;
+    await _autoVibrationService.openDndSettings();
+    await _refreshAutoVibrationDndAccess();
   }
 
   Future<void> _updateLocale(String code) async {
@@ -372,13 +395,19 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (granted) {
       await _settingsService.setAutoVibrationEnabled(true);
       if (!mounted) return;
-      setState(() => _autoVibrationEnabled = true);
+      setState(() {
+        _autoVibrationEnabled = true;
+        _autoVibrationDndAccessGranted = true;
+      });
       _refreshOpenSubpage();
       _showAutoVibrationSnackBar(scaffoldMessenger, enabled: true);
       return;
     }
     if (!mounted) return;
-    setState(() => _autoVibrationPendingEnable = true);
+    setState(() {
+      _autoVibrationDndAccessGranted = false;
+      _autoVibrationPendingEnable = true;
+    });
     _refreshOpenSubpage();
     final shouldOpen = await showDialog<bool>(
       context: context,
@@ -561,6 +590,122 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Widget _buildAutoVibrationDndAccessTile() {
+    final granted = _autoVibrationDndAccessGranted;
+    final accent = granted ? _brandGreen : const Color(0xFFD84315);
+    final statusLabel = granted
+        ? _tr('অনুমোদিত', 'Allowed')
+        : _tr('প্রয়োজন', 'Required');
+    final descriptionLabel = granted
+        ? _tr(
+            'DND এক্সেস চালু আছে। অটো ভাইব্রেশন ফোনকে ভাইব্রেট মোডে নিতে পারবে।',
+            'DND access is allowed. Auto vibration can switch the phone to vibrate.',
+          )
+        : _tr(
+            'অটো ভাইব্রেশন যেন রিংগার মোড বদলাতে পারে, Android সেটিংস থেকে DND এক্সেস দিন।',
+            'Allow DND access in Android settings so auto vibration can change ringer mode.',
+          );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            granted ? Icons.do_not_disturb_off : Icons.do_not_disturb_on,
+            size: 20,
+            color: accent,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _tr('DND এক্সেস', 'DND access'),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha(26),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  descriptionLabel,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _openAutoVibrationDndSettings,
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: Text(_tr('পরিচালনা করুন', 'Manage')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAutoVibrationDndWarning() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            size: 20,
+            color: Color(0xFFD84315),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _tr(
+                'অটো ভাইব্রেশনের সময়সূচি চালু আছে, কিন্তু DND এক্সেস না দিলে ফোন ভাইব্রেট মোডে যেতে পারবে না।',
+                'Auto vibration schedules are active, but the phone cannot switch to vibrate until DND access is allowed.',
+              ),
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: Color(0xFFD84315),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStepperRow({
     required String label,
     required int value,
@@ -644,6 +789,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             style: const TextStyle(fontSize: 12),
           ),
         ),
+        _buildAutoVibrationDndAccessTile(),
+        if (_autoVibrationEnabled && !_autoVibrationDndAccessGranted)
+          _buildAutoVibrationDndWarning(),
         _buildStepperRow(
           label: _tr('জামাতের আগে (মিনিট)', 'Minutes before jamaat'),
           value: _autoVibrationMinutesBefore,
