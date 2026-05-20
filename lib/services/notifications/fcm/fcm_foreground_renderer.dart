@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 
+import '../notification_ids.dart';
 import 'broadcast_channel.dart';
 
 // Renders FCM pushes while the app is foregrounded. Android does not
@@ -18,6 +19,17 @@ class FcmForegroundRenderer {
   Future<void> show(RemoteMessage message) async {
     final notif = message.notification;
     final data = message.data;
+
+    // Tombstone: superadmin retracted this notice. Cancel the notification we
+    // rendered for it (if any) and render nothing new.
+    if (data['action'] == 'remove_notice') {
+      final notifId = (data['notifId'] ?? data['notification_id']) as String?;
+      if (notifId != null && notifId.isNotEmpty) {
+        await _plugin.cancel(NotificationIds.broadcast(notifId));
+      }
+      return;
+    }
+
     final title = notif?.title ?? (data['title'] as String?) ?? '';
     final body = notif?.body ?? (data['body'] as String?) ?? '';
     if (title.isEmpty && body.isEmpty) return;
@@ -51,8 +63,12 @@ class FcmForegroundRenderer {
       'priority': data['priority'],
       'schemaVersion': data['schemaVersion'],
     });
+    final notifId = (data['notifId'] ?? data['notification_id']) as String?;
+    final localId = (notifId != null && notifId.isNotEmpty)
+        ? NotificationIds.broadcast(notifId)
+        : message.messageId.hashCode;
     await _plugin.show(
-      message.messageId.hashCode,
+      localId,
       title,
       body,
       NotificationDetails(android: details),

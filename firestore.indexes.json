@@ -115,6 +115,14 @@
         { "fieldPath": "claimed", "order": "ASCENDING" },
         { "fieldPath": "fireAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "scheduled_notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "claimed", "order": "ASCENDING" },
+        { "fieldPath": "claimedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

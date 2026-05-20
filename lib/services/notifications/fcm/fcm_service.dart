@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/firebase_bootstrap.dart';
 import 'broadcast_channel.dart';
@@ -13,6 +14,9 @@ import 'fcm_deep_link_router.dart';
 import 'fcm_foreground_renderer.dart';
 import 'fcm_token_repository.dart';
 
+const String _kAllUsersTopic = 'all_users';
+const String _kTopicSubscribedFlag = 'fcm.topic.all_users.subscribed.v1';
+
 // Facade for the FCM receive layer. Runs on app start, BEFORE any auth gate,
 // so guest devices subscribe to `all_users` and register in
 // device_tokens/{installationId} without ever signing in.
@@ -20,6 +24,11 @@ class FcmService {
   FcmService._();
   static final FcmService instance = FcmService._();
   factory FcmService() => instance;
+
+  // Exposed for a settings-screen CTA that re-prompts the user for
+  // POST_NOTIFICATIONS when denial was the reason broadcasts don't display.
+  final ValueNotifier<bool> notificationsPermissionDenied =
+      ValueNotifier<bool>(false);
 
   bool _initialized = false;
   late final FlutterLocalNotificationsPlugin _localPlugin;
@@ -34,10 +43,8 @@ class FcmService {
     required String locale,
   }) async {
     if (_initialized) return;
-    if (!await firebaseReady) return;
 
     _localPlugin = FlutterLocalNotificationsPlugin();
-    _repo = FcmTokenRepository();
     _renderer = FcmForegroundRenderer(_localPlugin);
     _router = FcmDeepLinkRouter(navigatorKey);
 
@@ -51,12 +58,18 @@ class FcmService {
       },
     );
 
+    // Channel creation is a local OS resource; create it before the
+    // firebaseReady guard so background FCM renders never hit a missing channel
+    // even if Firebase init transiently fails.
     await _localPlugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(broadcastAndroidChannel);
     await _router?.restorePendingIntent();
+
+    if (!await firebaseReady) return;
+    _repo = FcmTokenRepository();
 
     FirebaseMessaging.onBackgroundMessage(fcmBackgroundHandler);
 
@@ -79,26 +92,52 @@ class FcmService {
     String locale,
   ) async {
     try {
-      await messaging.requestPermission(alert: true, badge: true, sound: true);
-    } catch (_) {
-      // Android notification permission can be denied; FCM receive setup remains valid.
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint(
+          'JT_NOTIFY: POST_NOTIFICATIONS denied; broadcasts will not display.',
+        );
+        notificationsPermissionDenied.value = true;
+      } else {
+        notificationsPermissionDenied.value = false;
+      }
+    } catch (e) {
+      debugPrint('JT_NOTIFY: requestPermission failed: $e');
     }
 
-    try {
-      await messaging.subscribeToTopic('all_users');
-    } catch (_) {
-      // Topic subscription can fail transiently; a later call will retry.
-    }
+    // Subscribe to the broadcast topic eagerly. subscribeToTopic does not
+    // strictly require getToken to have resolved (the SDK auto-fetches the
+    // token internally), and gating on token meant first-cold-start with a
+    // not-yet-registered token silently skipped the subscribe — and
+    // onTokenRefresh doesn't fire for the FIRST token, so we never retried.
+    debugPrint('JT_NOTIFY: deferred registration entered');
+    unawaited(_ensureTopicSubscription(messaging));
 
+    String? token;
     try {
-      final token = await messaging.getToken();
+      token = await messaging.getToken();
+      debugPrint(
+        'JT_NOTIFY: getToken result=${token == null ? 'null' : '${token.length} chars'}',
+      );
       await _persistToken(token: token, locale: locale);
-    } catch (_) {
-      // Do not let Firestore/App Check/network token writes disable FCM display.
+    } catch (e) {
+      debugPrint('JT_NOTIFY: getToken/persist failed: $e');
     }
 
-    _tokenRefreshSub = messaging.onTokenRefresh.listen((newToken) {
-      _persistToken(token: newToken, locale: locale).catchError((_) {});
+    _tokenRefreshSub = messaging.onTokenRefresh.listen((newToken) async {
+      debugPrint('JT_NOTIFY: onTokenRefresh fired (${newToken.length} chars)');
+      try {
+        await _persistToken(token: newToken, locale: locale);
+      } catch (e) {
+        debugPrint('JT_NOTIFY: onTokenRefresh persist failed: $e');
+      }
+      // Token rotation invalidates the prior topic subscription; re-subscribe.
+      await _clearTopicSubscribedFlag();
+      await _ensureTopicSubscription(messaging);
     });
 
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) async {
@@ -146,6 +185,40 @@ class FcmService {
       token: token,
       locale: locale,
     );
+  }
+
+  Future<void> _ensureTopicSubscription(FirebaseMessaging messaging) async {
+    debugPrint('JT_NOTIFY: _ensureTopicSubscription enter');
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_kTopicSubscribedFlag) == true) {
+        debugPrint('JT_NOTIFY: topic flag already true, skipping subscribe');
+        return;
+      }
+    } catch (e) {
+      debugPrint('JT_NOTIFY: prefs read failed for topic flag: $e');
+    }
+    try {
+      debugPrint('JT_NOTIFY: calling subscribeToTopic($_kAllUsersTopic)');
+      await messaging
+          .subscribeToTopic(_kAllUsersTopic)
+          .timeout(const Duration(seconds: 30));
+      debugPrint('JT_NOTIFY: subscribed to topic $_kAllUsersTopic');
+      try {
+        await prefs?.setBool(_kTopicSubscribedFlag, true);
+      } catch (_) {}
+    } catch (e) {
+      // Leave the flag unset so the next cold start (or token refresh) retries.
+      debugPrint('JT_NOTIFY: subscribeToTopic failed: $e');
+    }
+  }
+
+  Future<void> _clearTopicSubscribedFlag() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kTopicSubscribedFlag);
+    } catch (_) {}
   }
 
   Future<String?> _safeInstallationId() async {

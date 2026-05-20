@@ -35,4 +35,14 @@ class NotificationIds {
 
   static const int fajrVoice = 3101;
   static const int fajrVoiceTomorrow = 3102;
+
+  // FCM broadcast notices share a single dynamic range, offset well clear of
+  // the reminder ranges above (max 3102). The local id is derived
+  // deterministically from the server notifId so a later data-only "tombstone"
+  // push can cancel the exact notification it produced.
+  static const int _broadcastBase = 4000000;
+
+  static int broadcast(String notifId) {
+    return _broadcastBase + (notifId.hashCode & 0x7FFFFF);
+  }
 }

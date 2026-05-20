@@ -17,7 +17,7 @@ const int _kPageSize = 20;
 
 enum _TriggerFilter { all, manual, autoJamaatChange }
 
-enum _StatusFilter { all, sent, failed, queued, cancelled, fallbackText }
+enum _StatusFilter { all, sent, failed, queued, cancelled, fallbackText, removed }
 
 enum _PriorityFilter { all, normal, high, critical }
 
@@ -128,6 +128,7 @@ class _AdminNotificationHistoryScreenState
       _StatusFilter.queued => 'queued',
       _StatusFilter.cancelled => 'cancelled',
       _StatusFilter.fallbackText => 'fallback_text',
+      _StatusFilter.removed => 'removed',
       _StatusFilter.all => null,
     };
     if (status != null) q = q.where('status', isEqualTo: status);
@@ -288,6 +289,60 @@ class _AdminNotificationHistoryScreenState
     }
   }
 
+  Future<void> _onRemove(String notifId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          context.tr(
+            bn: 'নোটিশ বোর্ড থেকে সরাবেন?',
+            en: 'Remove from notice board?',
+          ),
+        ),
+        content: Text(
+          context.tr(
+            bn: 'এটি সব ব্যবহারকারীর কাছ থেকে নোটিশটি লুকিয়ে ফেলবে। '
+                'অডিটের জন্য রেকর্ড ও ছবি সংরক্ষিত থাকবে।',
+            en: 'This hides the notice from all users. The record and image '
+                'are kept for audit.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(context.tr(bn: 'বাতিল', en: 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(context.tr(bn: 'সরান', en: 'Remove')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy.add(notifId));
+    try {
+      await _callables.call('removeBroadcast', {'notifId': notifId});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr(bn: 'নোটিশ সরানো হয়েছে', en: 'Notice removed'),
+          ),
+        ),
+      );
+      await _loadMore(reset: true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Remove failed: $e')));
+    } finally {
+      if (mounted) setState(() => _busy.remove(notifId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
@@ -407,6 +462,10 @@ class _AdminNotificationHistoryScreenState
                   DropdownMenuItem(
                     value: _StatusFilter.cancelled,
                     child: Text('cancelled'),
+                  ),
+                  DropdownMenuItem(
+                    value: _StatusFilter.removed,
+                    child: Text('removed'),
                   ),
                 ],
                 onChanged: (v) => setState(() => _statusFilter = v),
@@ -665,6 +724,7 @@ class _AdminNotificationHistoryScreenState
           legacy: row.legacy,
           onRetry: _onRetry,
           onCancel: _onCancel,
+          onRemove: _onRemove,
           onViewRaw: () => _showRawDrawer(row),
           busy: _busy.contains(row.id),
         );

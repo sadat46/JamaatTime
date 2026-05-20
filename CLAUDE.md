@@ -60,6 +60,7 @@ notifications/
 | 1101–1105 / 1201–1205 | prayer-end today / tomorrow |
 | 2101–2105 / 2201–2205 | jamaat today / tomorrow |
 | 3101 / 3102 | fajr-voice today / tomorrow |
+| 4_000_000 + hash(notifId) | FCM broadcast notices (dynamic; `NotificationIds.broadcast`) |
 
 All IDs live in `notification_ids.dart`. Adding a new reminder type → new century prefix, declared in that file.
 
