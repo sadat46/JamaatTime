@@ -86,6 +86,7 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="notice_board"/>
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notification"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

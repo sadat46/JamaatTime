@@ -111,7 +111,7 @@ class NotificationService {
     try {
       ensureTimeZonesInitialized();
       const initializationSettingsAndroid = AndroidInitializationSettings(
-        '@mipmap/launcher_icon',
+        '@drawable/ic_stat_notification',
       );
 
       const initializationSettingsIOS = DarwinInitializationSettings(

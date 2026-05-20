@@ -111,7 +111,7 @@ class NotificationScheduleGateway {
               showWhen: true,
               enableVibration: config.enableVibration,
               playSound: config.playSound,
-              icon: '@mipmap/launcher_icon',
+              icon: '@drawable/ic_stat_notification',
               color: const Color(0xFF388E3C),
               sound: customSoundResource != null
                   ? RawResourceAndroidNotificationSound(customSoundResource)
@@ -180,7 +180,7 @@ class NotificationScheduleGateway {
             showWhen: true,
             enableVibration: true,
             playSound: true,
-            icon: '@mipmap/launcher_icon',
+            icon: '@drawable/ic_stat_notification',
             color: const Color(0xFF388E3C),
             sound: RawResourceAndroidNotificationSound('fajr_prayer_voice'),
             vibrationPattern: Int64List.fromList([0, 5000]),

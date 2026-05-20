@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- crescent finial -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2 C12.8,2 13.5,2.4 13.9,3.1 C13.5,2.9 13.1,2.8 12.7,2.8 C11.5,2.8 10.6,3.7 10.6,4.9 C10.6,5.3 10.7,5.7 10.9,6 C10.2,5.6 9.8,4.9 9.8,4.1 C9.8,2.9 10.8,2 12,2 Z"/>
+    <!-- onion dome + body with arched doorway -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,6 C9.2,6 7,8.2 7,11 L7,12 L6,12 L6,21 L9,21 L9,17 C9,15.3 10.3,14 12,14 C13.7,14 15,15.3 15,17 L15,21 L18,21 L18,12 L17,12 L17,11 C17,8.2 14.8,6 12,6 Z"/>
+</vector>

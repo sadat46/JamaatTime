@@ -46,6 +46,7 @@ class FcmForegroundRenderer {
           channelDescription: broadcastChannelDescription,
           importance: Importance.high,
           priority: Priority.high,
+          icon: '@drawable/ic_stat_notification',
           styleInformation: BigPictureStyleInformation(
             FilePathAndroidBitmap(path),
             contentTitle: title,
@@ -83,6 +84,7 @@ class FcmForegroundRenderer {
       channelDescription: broadcastChannelDescription,
       importance: Importance.high,
       priority: Priority.high,
+      icon: '@drawable/ic_stat_notification',
       styleInformation: BigTextStyleInformation(body),
     );
   }
