@@ -24,6 +24,7 @@ export const NOTICE_STATUSES = [
   'failed',
   'cancelled',
   'expired',
+  'removed',
 ] as const;
 
 export const NOTICE_PRIORITIES = ['normal', 'high', 'critical'] as const;

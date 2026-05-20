@@ -11,6 +11,7 @@ export { createNotificationImageUploadUrl } from './broadcast/createNotification
 export { getNotificationDiagnostics } from './broadcast/getNotificationDiagnostics';
 export { scheduleBroadcast } from './broadcast/scheduleBroadcast';
 export { cancelScheduledBroadcast } from './broadcast/cancelScheduledBroadcast';
+export { removeBroadcast } from './broadcast/removeBroadcast';
 export { dispatchScheduledNotifications } from './scheduled/dispatchScheduledNotifications';
 export { expireNotices } from './scheduled/expireNotices';
 export { archiveOldNotices } from './scheduled/archiveOldNotices';

@@ -13,6 +13,7 @@ class NotificationHistoryRow extends StatelessWidget {
     required this.legacy,
     required this.onRetry,
     required this.onCancel,
+    required this.onRemove,
     required this.onViewRaw,
     required this.busy,
   });
@@ -22,6 +23,7 @@ class NotificationHistoryRow extends StatelessWidget {
   final bool legacy;
   final Future<void> Function(String notifId)? onRetry;
   final Future<void> Function(String notifId)? onCancel;
+  final Future<void> Function(String notifId)? onRemove;
   final VoidCallback? onViewRaw;
   final bool busy;
 
@@ -160,6 +162,21 @@ class NotificationHistoryRow extends StatelessWidget {
         ),
       );
     }
+    if (status != 'removed' && onRemove != null) {
+      buttons.add(
+        OutlinedButton.icon(
+          onPressed: busy ? null : () => onRemove!(notifId),
+          icon: const Icon(Icons.visibility_off),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+          label: Text(
+            context.tr(
+              bn: 'নোটিশ বোর্ড থেকে সরান',
+              en: 'Remove from notice board',
+            ),
+          ),
+        ),
+      );
+    }
     if (onViewRaw != null) {
       buttons.add(
         TextButton.icon(
@@ -199,6 +216,7 @@ class _StatusChip extends StatelessWidget {
       'failed' => Colors.red,
       'queued' => Colors.blue,
       'cancelled' => Colors.grey,
+      'removed' => Colors.grey,
       'sending' => Colors.amber,
       'expired' => Colors.blueGrey,
       _ => Colors.blueGrey,
