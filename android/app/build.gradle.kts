@@ -112,6 +112,15 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 }
 
+configurations.all {
+    resolutionStrategy {
+        // home_widget 0.9.0 declares androidx.glance:glance-appwidget:1.+, a dynamic
+        // range that now resolves to 1.3.0-alpha01 and demands AGP 9.1 / compileSdk 37.
+        // Pin to the latest stable glance that builds on the current AGP 8.9.1 / SDK 36.
+        force("androidx.glance:glance-appwidget:1.1.1")
+    }
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {
         jvmTarget = "11"
