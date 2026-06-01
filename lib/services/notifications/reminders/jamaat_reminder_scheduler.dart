@@ -17,22 +17,28 @@ class JamaatReminderScheduler {
     required NotificationScheduleGateway scheduleGateway,
     required Future<Locale> Function() localeResolver,
     required tz.Location Function() locationResolver,
+    required String? Function() scopeResolver,
     JamaatScheduleCache? cache,
   }) : _scheduleGateway = scheduleGateway,
        _localeResolver = localeResolver,
        _locationResolver = locationResolver,
+       _scopeResolver = scopeResolver,
        _cache = cache ?? JamaatScheduleCache.instance;
 
   final NotificationScheduleGateway _scheduleGateway;
   final Future<Locale> Function() _localeResolver;
   final tz.Location Function() _locationResolver;
+  final String? Function() _scopeResolver;
   final JamaatScheduleCache _cache;
 
   static const Duration reminderOffset = Duration(minutes: 10);
 
   /// Read today's + tomorrow's jamaat times from the persistent cache and arm
   /// reminders for both date ranges. The home controller is responsible for
-  /// keeping the cache fresh.
+  /// keeping the cache fresh. Cache reads are scoped by the current Jamaat
+  /// source/city via [_scopeResolver]; if no scope is active (source=none) the
+  /// cache reads are skipped and only the explicitly-passed in-memory maps
+  /// (if any) drive scheduling.
   Future<void> schedule({
     Map<String, dynamic>? todayJamaatTimes,
     Map<String, dynamic>? tomorrowJamaatTimes,
@@ -58,19 +64,20 @@ class JamaatReminderScheduler {
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
 
+    final scope = _scopeResolver();
     Map<String, dynamic>? todayTimes = todayJamaatTimes;
-    if (todayTimes == null || todayTimes.isEmpty) {
+    if ((todayTimes == null || todayTimes.isEmpty) && scope != null) {
       try {
-        todayTimes = await _cache.readFor(today);
+        todayTimes = await _cache.readFor(scope: scope, date: today);
       } catch (e) {
         print('JT_NOTIFY jamaat_reminder cache_read_today_failed $e');
         todayTimes = null;
       }
     }
     Map<String, dynamic>? tomorrowTimes = tomorrowJamaatTimes;
-    if (tomorrowTimes == null || tomorrowTimes.isEmpty) {
+    if ((tomorrowTimes == null || tomorrowTimes.isEmpty) && scope != null) {
       try {
-        tomorrowTimes = await _cache.readFor(tomorrow);
+        tomorrowTimes = await _cache.readFor(scope: scope, date: tomorrow);
       } catch (e) {
         print('JT_NOTIFY jamaat_reminder cache_read_tomorrow_failed $e');
         tomorrowTimes = null;

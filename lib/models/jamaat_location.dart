@@ -33,6 +33,21 @@ class JamaatLocation {
 
   bool get hasServerMosque => source == JamaatSource.serverMosque && city != null;
 
+  /// Cache-namespace for the persistent Jamaat schedule cache. `null` means
+  /// "no Jamaat source — nothing to cache". Otherwise `"sourceName:city"`
+  /// with city empty for sources that don't carry one (local).
+  String? get scopeKey {
+    switch (source) {
+      case JamaatSource.serverMosque:
+        if (city == null || city!.isEmpty) return null;
+        return 'serverMosque:$city';
+      case JamaatSource.local:
+        return 'local:';
+      case JamaatSource.none:
+        return null;
+    }
+  }
+
   JamaatLocation copyWith({
     JamaatSource? source,
     String? city,

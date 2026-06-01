@@ -18,6 +18,7 @@ import '../../services/local_jamaat_service.dart';
 import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notifications/notification_service.dart';
+import '../../services/notifications/reminders/jamaat_schedule_cache.dart';
 import '../../services/notifications/reminders/jamaat_schedule_cache_writer.dart';
 import '../../services/prayer_aux_calculator.dart';
 import '../../services/prayer_time_cache.dart';
@@ -301,6 +302,7 @@ class HomeController extends ChangeNotifier {
     // has data even when no fetch / localOffset path runs this session.
     if (_jamaatTimes != null) {
       await _jamaatScheduleCacheWriter.writeForDate(
+        scope: _jamaatLocation.scopeKey,
         date: _selectedDate,
         jamaatTimes: _jamaatTimes!,
       );
@@ -372,6 +374,8 @@ class HomeController extends ChangeNotifier {
     _currentPlaceName = state.currentPlaceName;
     _madhab = state.madhab;
     _bangladeshHijriOffsetDays = state.bangladeshHijriOffsetDays;
+
+    _notificationService.setJamaatLocation(_jamaatLocation);
 
     final config = _locationConfig;
     if (config != null) {
@@ -537,6 +541,15 @@ class HomeController extends ChangeNotifier {
     await _settingsService.setJamaatLocation(_jamaatLocation);
     if (_isDisposed) return;
 
+    _notificationService.setJamaatLocation(_jamaatLocation);
+    // Drop persistent cache entries from the previous scope so reminders can
+    // never read stale times after a switch.
+    final scope = _jamaatLocation.scopeKey;
+    if (scope != null) {
+      await JamaatScheduleCache.instance.clearOtherScopes(scope);
+      if (_isDisposed) return;
+    }
+
     _notificationScheduler.invalidate();
     await fetchJamaatTimes(value);
   }
@@ -559,6 +572,13 @@ class HomeController extends ChangeNotifier {
 
     await _settingsService.setJamaatLocation(_jamaatLocation);
     if (_isDisposed) return;
+
+    _notificationService.setJamaatLocation(_jamaatLocation);
+    final scope = _jamaatLocation.scopeKey;
+    if (scope != null) {
+      await JamaatScheduleCache.instance.clearOtherScopes(scope);
+      if (_isDisposed) return;
+    }
 
     _notificationScheduler.invalidate();
     await refreshLocalJamaatTimes();
@@ -635,6 +655,7 @@ class HomeController extends ChangeNotifier {
       _writeCache();
 
       await _jamaatScheduleCacheWriter.writeForDate(
+        scope: _jamaatLocation.scopeKey,
         date: _selectedDate,
         jamaatTimes: completeJamaatTimes,
       );
@@ -657,6 +678,7 @@ class HomeController extends ChangeNotifier {
           tomorrowJamaat['maghrib'] = tomorrowMaghribJamaat;
         }
         await _jamaatScheduleCacheWriter.writeForDate(
+          scope: _jamaatLocation.scopeKey,
           date: tomorrow,
           jamaatTimes: tomorrowJamaat,
         );
@@ -850,6 +872,7 @@ class HomeController extends ChangeNotifier {
         _writeCache();
 
         await _jamaatScheduleCacheWriter.writeForDate(
+          scope: _jamaatLocation.scopeKey,
           date: _selectedDate,
           jamaatTimes: completeJamaatTimes,
         );
@@ -873,6 +896,7 @@ class HomeController extends ChangeNotifier {
         // before scheduling so today's reminders still arm.
         if (_jamaatTimes != null) {
           await _jamaatScheduleCacheWriter.writeForDate(
+            scope: _jamaatLocation.scopeKey,
             date: _selectedDate,
             jamaatTimes: _jamaatTimes!,
           );
@@ -953,7 +977,11 @@ class HomeController extends ChangeNotifier {
       if (jamaatSnapshot != null) {
         unawaited(
           _jamaatScheduleCacheWriter
-              .writeForDate(date: _selectedDate, jamaatTimes: jamaatSnapshot)
+              .writeForDate(
+                scope: _jamaatLocation.scopeKey,
+                date: _selectedDate,
+                jamaatTimes: jamaatSnapshot,
+              )
               .then((_) {
                 if (_isDisposed) return;
                 _notificationScheduler.invalidate();
@@ -1100,6 +1128,7 @@ class HomeController extends ChangeNotifier {
         complete['maghrib'] = tomorrowMaghribJamaat;
       }
       final wroteCache = await _jamaatScheduleCacheWriter.writeForDate(
+        scope: _jamaatLocation.scopeKey,
         date: tomorrow,
         jamaatTimes: complete,
       );

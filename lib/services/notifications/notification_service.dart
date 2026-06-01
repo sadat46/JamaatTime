@@ -9,6 +9,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../core/app_locale_controller.dart';
 import '../../core/locale_prefs.dart';
 import '../../core/timezone_bootstrap.dart';
+import '../../models/jamaat_location.dart';
 import '../../models/location_config.dart';
 import '../settings_service.dart';
 import 'notification_channel_service.dart';
@@ -33,6 +34,7 @@ class NotificationService {
   bool _isInitialized = false;
   Future<void>? _initializeFuture;
   LocationConfig? _currentLocationConfig;
+  JamaatLocation _currentJamaatLocation = JamaatLocation.empty;
 
   late final NotificationPermissionService _permissionService =
       NotificationPermissionService(flutterLocalNotificationsPlugin);
@@ -62,6 +64,7 @@ class NotificationService {
         scheduleGateway: _scheduleGateway,
         localeResolver: _resolveLocale,
         locationResolver: _getLocation,
+        scopeResolver: () => _currentJamaatLocation.scopeKey,
         cache: _jamaatCache,
       );
   late final TahajjudEndFajrStartNotificationScheduler
@@ -92,6 +95,13 @@ class NotificationService {
 
   void setLocationConfig(LocationConfig config) {
     _currentLocationConfig = config;
+  }
+
+  /// Update the active Jamaat scope used to read from [JamaatScheduleCache].
+  /// HomeController calls this on selectJamaatMosque / selectLocalMosque so
+  /// stale-scope reads can't slip through after a switch.
+  void setJamaatLocation(JamaatLocation location) {
+    _currentJamaatLocation = location;
   }
 
   String _getTimezone() {

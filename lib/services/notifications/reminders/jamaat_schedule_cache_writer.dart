@@ -8,15 +8,20 @@ class JamaatScheduleCacheWriter {
 
   final JamaatScheduleCache _cache;
 
+  /// Mirror jamaat times into the persistent scheduler cache scoped by
+  /// [scope] (e.g. `"serverMosque:Savar Cantt"` or `"local:"`). A null/empty
+  /// scope means "no Jamaat selection" and the write is silently skipped.
   Future<bool> writeForDate({
+    required String? scope,
     required DateTime date,
     required Map<String, dynamic> jamaatTimes,
   }) async {
+    if (scope == null || scope.isEmpty) return false;
     final stringified = stringifyTimes(jamaatTimes);
     if (stringified.isEmpty) return false;
 
     try {
-      await _cache.write(date: date, times: stringified);
+      await _cache.write(scope: scope, date: date, times: stringified);
       return true;
     } catch (e) {
       developer.log(
