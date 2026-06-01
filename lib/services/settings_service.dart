@@ -46,6 +46,7 @@ class SettingsService {
       'auto_vibration_minutes_before';
   static const String _keyAutoVibrationMinutesAfter =
       'auto_vibration_minutes_after';
+  static const String _keySetupComplete = 'setup_complete';
   static const int defaultAutoVibrationMinutesBefore = 5;
   static const int defaultAutoVibrationMinutesAfter = 15;
   static const int maxAutoVibrationMinutesBefore = 20;
@@ -283,6 +284,18 @@ class SettingsService {
   Future<void> setJamaatLocation(JamaatLocation location) async {
     final prefs = await _prefs;
     await location.writeToPrefs(prefs);
+    _controller.add(null);
+  }
+
+  /// First-run welcome screen has been dismissed at least once.
+  Future<bool> getSetupComplete() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_keySetupComplete) ?? false;
+  }
+
+  Future<void> setSetupComplete(bool value) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_keySetupComplete, value);
     _controller.add(null);
   }
 }

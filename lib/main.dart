@@ -7,6 +7,7 @@ import 'screens/home_screen.dart';
 import 'screens/ebadat/ebadat_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/notifications/notification_service.dart';
 import 'services/notifications/fcm/fcm_service.dart';
@@ -101,8 +102,50 @@ class MyApp extends StatelessWidget {
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const MainScaffold(),
+          home: const _AppRoot(),
         );
+      },
+    );
+  }
+}
+
+/// Decides between the first-run [WelcomeScreen] and the [MainScaffold] based
+/// on the `setup_complete` pref. Until the pref read resolves, shows a blank
+/// scaffold so the user doesn't flash the home screen before the welcome.
+class _AppRoot extends StatefulWidget {
+  const _AppRoot();
+
+  @override
+  State<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<_AppRoot> {
+  Future<bool>? _setupCompleteFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupCompleteFuture = SettingsService().getSetupComplete();
+  }
+
+  void _onSetupCompleted() {
+    setState(() {
+      _setupCompleteFuture = Future<bool>.value(true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _setupCompleteFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(body: SizedBox.shrink());
+        }
+        if (snapshot.data!) {
+          return const MainScaffold();
+        }
+        return WelcomeScreen(onCompleted: _onSetupCompleted);
       },
     );
   }

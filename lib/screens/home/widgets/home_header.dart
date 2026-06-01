@@ -291,25 +291,7 @@ class HomeHeader extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 4),
                                     Expanded(
-                                      child: controller.currentPlaceName != null
-                                          ? Text(
-                                              controller.currentPlaceName!,
-                                              style: const TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 12,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            )
-                                          : controller.isFetchingPlaceName
-                                          ? const SizedBox(
-                                              height: 14,
-                                              width: 14,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white70,
-                                              ),
-                                            )
-                                          : const SizedBox.shrink(),
+                                      child: _buildGpsRowChild(context),
                                     ),
                                   ],
                                 ),
@@ -408,6 +390,47 @@ class HomeHeader extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildGpsRowChild(BuildContext context) {
+    if (controller.currentPlaceName != null) {
+      return Text(
+        controller.currentPlaceName!,
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 12,
+        ),
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    if (controller.isFetchingPlaceName) {
+      return const SizedBox(
+        height: 14,
+        width: 14,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.white70,
+        ),
+      );
+    }
+    // Phase 3: when no prayer location has been resolved (fresh install or
+    // permission denied), prompt the user to tap rather than showing nothing.
+    if (controller.prayerLocation == null) {
+      return Text(
+        context.tr(
+          bn: 'অবস্থান চালু করতে ট্যাপ করুন',
+          en: 'Tap to enable location',
+        ),
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 12,
+          decoration: TextDecoration.underline,
+          decorationColor: Colors.white54,
+        ),
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Future<void> _fetchUserLocation(BuildContext context) async {
