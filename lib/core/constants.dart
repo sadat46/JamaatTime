@@ -31,9 +31,6 @@ class AppConstants {
   // Time zone - REMOVED to support global usage (device local time will be used)
   // static const String defaultTimeZone = 'Asia/Dhaka';
 
-  // Default city
-  static const String defaultCity = 'Savar Cantt';
-  
   // Prayer time adjustments
   static const Map<String, int> defaultAdjustments = {
     'asr': 1,

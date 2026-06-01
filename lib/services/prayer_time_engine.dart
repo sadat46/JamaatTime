@@ -123,14 +123,6 @@ class PrayerTimeEngine {
     );
   }
 
-  /// Get default coordinates (Dhaka, Bangladesh).
-  Coordinates getDefaultCoordinates() {
-    return Coordinates(
-      AppConstants.defaultLatitude,
-      AppConstants.defaultLongitude,
-    );
-  }
-
   /// Create prayer times map from [PrayerTimes] object.
   Map<String, DateTime?> createPrayerTimesMap(PrayerTimes prayerTimes) {
     return {
@@ -291,12 +283,9 @@ class PrayerTimeEngine {
 
   /// Null-safe variant of [getTimeToNextPrayer].
   ///
-  /// Behaviour mirrors the original `prayer_countdown_widget._getTimeToNextPrayer`:
-  ///   - If [coordinates] is null → use [AppConstants.defaultLatitude/defaultLongitude].
-  ///   - If [params] is null → return [Duration.zero] (do NOT invent a
-  ///     MuslimWorldLeague fallback — the widget doesn't do that today).
-  ///
-  /// Migrated from `prayer_countdown_widget._getTimeToNextPrayer`.
+  /// If [coordinates] or [params] is null, returns [Duration.zero] rather than
+  /// silently substituting Dhaka coordinates — without a real prayer location
+  /// the countdown should sit at `--:--:--` until the user enables GPS.
   Duration getTimeToNextPrayerSafe({
     required Map<String, DateTime?> times,
     required DateTime now,
@@ -308,23 +297,20 @@ class PrayerTimeEngine {
       if (t != null && now.isBefore(t)) return t.difference(now);
     }
 
-    // All prayers passed — calculate tomorrow's Fajr
-    final coords = coordinates ??
-        Coordinates(AppConstants.defaultLatitude, AppConstants.defaultLongitude);
-
-    if (params != null) {
-      final tomorrow = now.add(const Duration(days: 1));
-      final tomorrowPrayerTimes = PrayerTimes(
-        coordinates: coords,
-        date: tomorrow,
-        calculationParameters: params,
-        precision: true,
-      );
-      final tomorrowFajr = tomorrowPrayerTimes.fajr;
-      if (tomorrowFajr != null) return tomorrowFajr.difference(now);
+    // All prayers passed — calculate tomorrow's Fajr, but only when we have a
+    // real coordinate + params pair. No silent Dhaka substitution.
+    if (coordinates == null || params == null) {
+      return Duration.zero;
     }
-
-    return Duration.zero;
+    final tomorrow = now.add(const Duration(days: 1));
+    final tomorrowPrayerTimes = PrayerTimes(
+      coordinates: coordinates,
+      date: tomorrow,
+      calculationParameters: params,
+      precision: true,
+    );
+    final tomorrowFajr = tomorrowPrayerTimes.fajr;
+    return tomorrowFajr != null ? tomorrowFajr.difference(now) : Duration.zero;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
