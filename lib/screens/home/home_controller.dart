@@ -14,6 +14,7 @@ import '../../models/jamaat_location.dart';
 import '../../models/location_config.dart';
 import '../../models/prayer_location.dart';
 import '../../services/jamaat_service.dart';
+import '../../services/local_jamaat_service.dart';
 import '../../services/location_config_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notifications/notification_service.dart';
@@ -83,6 +84,7 @@ class HomeController extends ChangeNotifier {
     HomeWidgetSync? widgetSync,
     PrayerTimeCache? prayerTimeCache,
     JamaatScheduleCacheWriter? jamaatScheduleCacheWriter,
+    LocalJamaatService? localJamaatService,
   }) : _isHomeActive = isActive,
        _appLifecycleActive =
            lifecycleState == null ||
@@ -103,7 +105,8 @@ class HomeController extends ChangeNotifier {
        _widgetSync = widgetSync ?? HomeWidgetSync(),
        _prayerTimeCache = prayerTimeCache ?? PrayerTimeCache(),
        _jamaatScheduleCacheWriter =
-           jamaatScheduleCacheWriter ?? JamaatScheduleCacheWriter();
+           jamaatScheduleCacheWriter ?? JamaatScheduleCacheWriter(),
+       _localJamaatService = localJamaatService ?? LocalJamaatService();
 
   final SettingsService _settingsService;
   final LocationService _locationService;
@@ -116,6 +119,7 @@ class HomeController extends ChangeNotifier {
   final HomeWidgetSync _widgetSync;
   final PrayerTimeCache _prayerTimeCache;
   final JamaatScheduleCacheWriter _jamaatScheduleCacheWriter;
+  final LocalJamaatService _localJamaatService;
 
   Timer? _timer;
   DateTime _now = DateTime.now();
@@ -231,6 +235,9 @@ class HomeController extends ChangeNotifier {
 
     if (_jamaatLocation.hasServerMosque) {
       await fetchJamaatTimes(_jamaatLocation.city!, preserveExisting: true);
+      if (_isDisposed) return;
+    } else if (_jamaatLocation.source == JamaatSource.local) {
+      await refreshLocalJamaatTimes(preserveExisting: true);
       if (_isDisposed) return;
     }
 
@@ -539,8 +546,31 @@ class HomeController extends ChangeNotifier {
   /// location, which is GPS-driven.
   Future<void> selectCity(String value) => selectJamaatMosque(value);
 
+  /// Switch Jamaat source to Local Mosque. Writes only Jamaat state and
+  /// triggers a recompute from the local CSV + per-date overrides.
+  Future<void> selectLocalMosque() async {
+    if (_isDisposed) return;
+    if (_jamaatLocation.source == JamaatSource.local) return;
+
+    _jamaatLocation = const JamaatLocation(source: JamaatSource.local);
+    _jamaatTimes = null;
+    _jamaatError = null;
+    _notify();
+
+    await _settingsService.setJamaatLocation(_jamaatLocation);
+    if (_isDisposed) return;
+
+    _notificationScheduler.invalidate();
+    await refreshLocalJamaatTimes();
+  }
+
   Future<void> refreshJamaatTimes() async {
     if (_isDisposed) {
+      return;
+    }
+    if (_jamaatLocation.source == JamaatSource.local) {
+      await refreshLocalJamaatTimes();
+      updatePrayerTimes();
       return;
     }
     final city = _jamaatLocation.city;
@@ -549,6 +579,104 @@ class HomeController extends ChangeNotifier {
     }
     await fetchJamaatTimes(city, forceRefresh: true);
     updatePrayerTimes();
+  }
+
+  /// Resolve effective Local Mosque Jamaat times (override > CSV default) for
+  /// today and tomorrow, mirror them into the schedule cache, and re-arm
+  /// reminders. Maghrib stays calculated downstream from prayer Maghrib +
+  /// cantt offset (handled by PrayerAuxCalculator).
+  Future<void> refreshLocalJamaatTimes({bool preserveExisting = false}) async {
+    if (_isDisposed) return;
+    if (_jamaatLocation.source != JamaatSource.local) return;
+
+    final showLoading = !preserveExisting || _jamaatTimes == null;
+    _isLoadingJamaat = showLoading;
+    _jamaatError = null;
+    if (!preserveExisting) {
+      _jamaatTimes = null;
+    }
+    if (showLoading) _notify();
+
+    try {
+      final todayTimes =
+          await _localJamaatService.getEffectiveTimesForDate(_selectedDate);
+      if (_isDisposed) return;
+
+      if (todayTimes == null) {
+        if (!preserveExisting) _jamaatTimes = null;
+        _isLoadingJamaat = false;
+        _computePrayerTableData();
+        if (showLoading) _notify();
+        _writeCache();
+        _notificationScheduler.invalidate();
+        unawaited(_scheduleNotificationsIfNeeded());
+        return;
+      }
+
+      final completeJamaatTimes = todayTimes.toJamaatMap();
+      // Maghrib still derives from the prayer Maghrib + cantt offset. With no
+      // mosque city in Local mode, the calculator returns '-' and the table
+      // hides the value — matches the documented "Maghrib is calculated, not
+      // edited from the local CSV/settings page" rule.
+      final maghribJamaatTime = PrayerAuxCalculator.instance
+          .calculateMaghribJamaatTime(
+        maghribPrayerTime: _times['Maghrib'],
+        selectedCity: _jamaatLocation.city,
+      );
+      if (maghribJamaatTime != '-') {
+        completeJamaatTimes['maghrib'] = maghribJamaatTime;
+      }
+
+      _jamaatTimes = completeJamaatTimes;
+      _lastJamaatUpdate = DateTime.now();
+      _isLoadingJamaat = false;
+      _computePrayerTableData();
+      _notify();
+      _writeCache();
+
+      await _jamaatScheduleCacheWriter.writeForDate(
+        date: _selectedDate,
+        jamaatTimes: completeJamaatTimes,
+      );
+
+      // Prefetch tomorrow so reminders cover the day rollover window.
+      final tomorrow = _selectedDate.add(const Duration(days: 1));
+      final tomorrowTimes =
+          await _localJamaatService.getEffectiveTimesForDate(tomorrow);
+      if (_isDisposed) return;
+      Map<String, dynamic>? tomorrowJamaat;
+      if (tomorrowTimes != null) {
+        tomorrowJamaat = tomorrowTimes.toJamaatMap();
+        final tomorrowMaghribPrayer = _computeTomorrowPrayerTimes()?['Maghrib'];
+        final tomorrowMaghribJamaat = PrayerAuxCalculator.instance
+            .calculateMaghribJamaatTime(
+          maghribPrayerTime: tomorrowMaghribPrayer,
+          selectedCity: _jamaatLocation.city,
+        );
+        if (tomorrowMaghribJamaat != '-') {
+          tomorrowJamaat['maghrib'] = tomorrowMaghribJamaat;
+        }
+        await _jamaatScheduleCacheWriter.writeForDate(
+          date: tomorrow,
+          jamaatTimes: tomorrowJamaat,
+        );
+        if (_isDisposed) return;
+      }
+
+      _notificationScheduler.invalidate();
+      unawaited(
+        _scheduleNotificationsIfNeeded(tomorrowJamaatTimes: tomorrowJamaat),
+      );
+    } catch (_) {
+      if (_isDisposed) return;
+      _isLoadingJamaat = false;
+      _jamaatError = _trCurrent(
+        'লোকাল জামাত সময় লোড করতে সমস্যা হয়েছে',
+        'Failed to load Local Mosque jamaat times',
+      );
+      _computePrayerTableData();
+      if (showLoading) _notify();
+    }
   }
 
   Future<HomeLocationFetchResult?> fetchUserLocation() async {
@@ -873,6 +1001,8 @@ class HomeController extends ChangeNotifier {
       updatePrayerTimes();
       if (_jamaatLocation.hasServerMosque) {
         unawaited(fetchJamaatTimes(_jamaatLocation.city!));
+      } else if (_jamaatLocation.source == JamaatSource.local) {
+        unawaited(refreshLocalJamaatTimes());
       }
     } else if (_times.isNotEmpty) {
       final newPeriod = PrayerTimeEngine.instance.getCurrentPrayerPeriod(

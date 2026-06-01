@@ -16,6 +16,7 @@ import '../models/jamaat_location.dart';
 import '../models/location_config.dart';
 import '../services/hijri_date_converter.dart';
 import '../services/jamaat_service.dart';
+import '../services/local_jamaat_service.dart';
 import '../services/prayer_aux_calculator.dart';
 import '../services/location_config_service.dart';
 import '../services/prayer_time_engine.dart';
@@ -86,6 +87,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   final PrayerTimeEngine _prayerCalculationService = PrayerTimeEngine.instance;
   final JamaatService _jamaatService = JamaatService();
+  final LocalJamaatService _localJamaatService = LocalJamaatService();
   final PrayerAuxCalculator _jamaatTimeUtility = PrayerAuxCalculator.instance;
   final LocationConfigService _locationConfigService = LocationConfigService();
   final SettingsService _settingsService = SettingsService();
@@ -222,8 +224,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
           }
           break;
         case JamaatSource.local:
+          final localTimes =
+              await _localJamaatService.getEffectiveTimesForDate(normalizedDay);
+          if (localTimes != null) {
+            jamaatMap = localTimes.toJamaatMap();
+            // No mosque city for Local mode → Maghrib calculator returns '-'
+            // and the table hides it. Maghrib stays prayer-derived.
+            final maghribJamaat = _jamaatTimeUtility.calculateMaghribJamaatTime(
+              maghribPrayerTime: prayerMap['Maghrib'],
+              selectedCity: _jamaatLocation.city,
+            );
+            if (maghribJamaat != '-') {
+              jamaatMap['maghrib'] = maghribJamaat;
+            }
+          }
+          break;
         case JamaatSource.none:
-          // Local Mosque resolver lands in Phase 4.
           jamaatMap = null;
           break;
       }
@@ -461,10 +477,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _timesSourceCaption(BuildContext context) {
-    if (_jamaatLocation.source != JamaatSource.serverMosque) {
+    if (_jamaatLocation.source == JamaatSource.none) {
       return context.tr(
         bn: 'জামাতের জন্য একটি মসজিদ নির্বাচন করুন',
         en: 'Select a mosque for Jamaat times',
+      );
+    }
+    if (_jamaatLocation.source == JamaatSource.local &&
+        (_jamaatTimes == null || _jamaatTimes!.isEmpty)) {
+      return context.tr(
+        bn: 'এই তারিখে লোকাল জামাত সময় নেই — সেটিংসে যোগ করুন',
+        en: 'No Local Mosque times for this date — add one in Settings',
       );
     }
     if (_jamaatTimes == null || _jamaatTimes!.isEmpty) {

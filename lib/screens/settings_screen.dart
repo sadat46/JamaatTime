@@ -11,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auto_vibration_service.dart';
 import '../services/notifications/notification_service.dart';
 import '../services/settings_service.dart';
+import 'local_jamaat_edit_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1368,6 +1369,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                     'Prayer sound, Jamaat sound, Tahajjud/Fajr start',
                   ),
                   onTap: () => _openSettingsSubpage(_buildNotificationsPage),
+                ),
+                const SizedBox(height: 12),
+                _buildMenuCard(
+                  icon: Icons.home_work_outlined,
+                  color: const Color(0xFF00695C),
+                  title: _tr('লোকাল জামাত সময়', 'Local Mosque Times'),
+                  subtitle: _tr(
+                    'তারিখ অনুযায়ী জামাত সময় সম্পাদনা',
+                    'Edit Jamaat times by date',
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const LocalJamaatEditScreen(),
+                      ),
+                    );
+                  },
                 ),
                 if (Platform.isAndroid) ...[
                   const SizedBox(height: 12),

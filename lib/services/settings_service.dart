@@ -298,4 +298,26 @@ class SettingsService {
     await prefs.setBool(_keySetupComplete, value);
     _controller.add(null);
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Local Mosque Jamaat overrides (Phase 4). Stored as a single JSON string
+  // keyed by date (YYYY-MM-DD); device-local only, never uploaded.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  static const String _keyLocalJamaatOverrides = 'local_jamaat_overrides';
+
+  Future<String?> getLocalJamaatOverridesRaw() async {
+    final prefs = await _prefs;
+    return prefs.getString(_keyLocalJamaatOverrides);
+  }
+
+  Future<void> setLocalJamaatOverridesRaw(String? value) async {
+    final prefs = await _prefs;
+    if (value == null || value.isEmpty) {
+      await prefs.remove(_keyLocalJamaatOverrides);
+    } else {
+      await prefs.setString(_keyLocalJamaatOverrides, value);
+    }
+    _controller.add(null);
+  }
 }

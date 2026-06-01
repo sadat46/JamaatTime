@@ -205,7 +205,7 @@ class HomeHeader extends StatelessWidget {
                             children: [
                               DropdownButton<String>(
                                 isExpanded: true,
-                                value: controller.selectedCity,
+                                value: _dropdownValueFor(controller),
                                 hint: Text(
                                   context.tr(
                                     bn: 'মসজিদ নির্বাচন করুন',
@@ -216,7 +216,7 @@ class HomeHeader extends StatelessWidget {
                                     fontSize: 13,
                                   ),
                                 ),
-                                items: _buildCityDropdownItems(),
+                                items: _buildCityDropdownItems(context),
                                 dropdownColor: AppColors.primaryDark,
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -230,10 +230,16 @@ class HomeHeader extends StatelessWidget {
                                 isDense: true,
                                 padding: EdgeInsets.zero,
                                 onChanged: (value) async {
-                                  if (value == null ||
-                                      value == controller.selectedCity) {
+                                  if (value == null) return;
+                                  if (value == _localMosqueValue) {
+                                    if (controller.jamaatLocation.source ==
+                                        JamaatSource.local) {
+                                      return;
+                                    }
+                                    await controller.selectLocalMosque();
                                     return;
                                   }
+                                  if (value == controller.selectedCity) return;
                                   await controller.selectJamaatMosque(value);
                                 },
                               ),
@@ -456,16 +462,44 @@ class HomeHeader extends StatelessWidget {
     }
   }
 
-  List<DropdownMenuItem<String>> _buildCityDropdownItems() {
+  static const String _localMosqueValue = '__local_mosque__';
+
+  String? _dropdownValueFor(HomeController controller) {
+    if (controller.jamaatLocation.source == JamaatSource.local) {
+      return _localMosqueValue;
+    }
+    return controller.selectedCity;
+  }
+
+  List<DropdownMenuItem<String>> _buildCityDropdownItems(BuildContext context) {
     final items = <DropdownMenuItem<String>>[];
+
+    items.add(
+      DropdownMenuItem(
+        value: _localMosqueValue,
+        child: Row(
+          children: [
+            const Icon(Icons.home_work, size: 15, color: Colors.white70),
+            const SizedBox(width: 6),
+            Text(
+              context.tr(bn: 'লোকাল মসজিদ', en: 'Local Mosque'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
 
     items.add(
       const DropdownMenuItem(
         enabled: false,
         value: null,
-        child: Text(
-          '🇧🇩 Bangladesh',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        child: Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            '🇧🇩 Bangladesh',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
         ),
       ),
     );

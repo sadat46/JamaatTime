@@ -38,6 +38,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   String? _selectedMosque;
   bool _submitting = false;
 
+  static const String _localMosqueValue = '__local_mosque__';
+
   Future<void> _enableLocation() async {
     if (_gpsStatus == _GpsStatus.fetching) return;
     setState(() {
@@ -112,6 +114,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   Future<void> _onMosqueChanged(String? value) async {
     if (value == null) return;
+    if (value == _localMosqueValue) {
+      setState(() {
+        _selectedMosque = _localMosqueValue;
+      });
+      await _settingsService.setJamaatLocation(
+        const JamaatLocation(source: JamaatSource.local),
+      );
+      return;
+    }
     setState(() {
       _selectedMosque = value;
     });
@@ -319,13 +330,33 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   List<DropdownMenuItem<String>> _buildMosqueItems() {
-    final items = <DropdownMenuItem<String>>[
+    return <DropdownMenuItem<String>>[
+      DropdownMenuItem(
+        value: _localMosqueValue,
+        child: Row(
+          children: [
+            const Icon(Icons.home_work, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              // Localized via the parent context below; this DropdownMenuItem
+              // is built inside a context-aware closure but Material renders
+              // each item with the dropdown's own ancestor — fall back to
+              // English/Bangla concat so it's readable in both locales.
+              context.tr(bn: 'লোকাল মসজিদ', en: 'Local Mosque'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
       const DropdownMenuItem(
         enabled: false,
         value: null,
-        child: Text(
-          '🇧🇩 Bangladesh',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        child: Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            '🇧🇩 Bangladesh',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
         ),
       ),
       for (final city in AppConstants.bangladeshCities)
@@ -344,7 +375,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       for (final city in AppConstants.saudiCities)
         DropdownMenuItem(value: city, child: Text(city)),
     ];
-    return items;
   }
 }
 

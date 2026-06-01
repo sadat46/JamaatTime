@@ -12,6 +12,7 @@ import '../models/jamaat_location.dart';
 import '../models/location_config.dart';
 import '../models/prayer_location.dart';
 import '../services/jamaat_service.dart';
+import '../services/local_jamaat_service.dart';
 import '../services/prayer_aux_calculator.dart';
 import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
@@ -502,10 +503,22 @@ class WidgetService {
         }
         return resolved;
       case JamaatSource.local:
+        final localTimes =
+            await LocalJamaatService().getEffectiveTimesForDate(date);
+        if (localTimes == null) return null;
+        final resolved = localTimes.toJamaatMap();
+        // Local mode has no mosque city — Maghrib calculator returns '-' and
+        // the widget hides it. Maghrib stays derived from prayer Maghrib.
+        final maghribJamaat = PrayerAuxCalculator.instance
+            .calculateMaghribJamaatTime(
+          maghribPrayerTime: prayerTimes['Maghrib'],
+          selectedCity: jamaatLocation.city,
+        );
+        if (maghribJamaat != '-') {
+          resolved['maghrib'] = maghribJamaat;
+        }
+        return resolved;
       case JamaatSource.none:
-        // Local Mosque resolver lands in Phase 4. Until then both states show
-        // an empty Jamaat column rather than silently substituting another
-        // city's data.
         return null;
     }
   }
