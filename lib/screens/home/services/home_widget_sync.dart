@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:adhan_dart/adhan_dart.dart';
 
 import '../../../core/app_locale_controller.dart';
+import '../../../models/jamaat_location.dart';
 import '../../../models/location_config.dart';
 import '../../../services/prayer_time_engine.dart';
 import '../../../services/widget_service.dart';
@@ -12,6 +13,7 @@ class HomeWidgetSync {
     required Map<String, DateTime?> times,
     required DateTime selectedDate,
     required LocationConfig? locationConfig,
+    required JamaatLocation jamaatLocation,
     required CalculationParameters? calculationParameters,
     required Coordinates? coordinates,
     required String? currentPlaceName,
@@ -71,6 +73,7 @@ class HomeWidgetSync {
         times: times,
         date: selectedDate,
         locationConfig: locationConfig,
+        jamaatLocation: jamaatLocation,
         locationName: currentPlaceName ?? locationConfig.cityName,
         hijriOffsetDays: hijriOffset,
         tomorrow: tomorrow,
@@ -85,6 +88,7 @@ class HomeWidgetSync {
     required Map<String, DateTime?> times,
     required DateTime date,
     required LocationConfig locationConfig,
+    required JamaatLocation jamaatLocation,
     required String locationName,
     required int hijriOffsetDays,
     required DateTime tomorrow,
@@ -93,8 +97,7 @@ class HomeWidgetSync {
     required Map<String, dynamic>? jamaatTimes,
   }) async {
     final tomorrowJamaatTimes = await WidgetService.resolveWidgetJamaatTimes(
-      config: locationConfig,
-      cityForJamaat: locationConfig.cityName,
+      jamaatLocation: jamaatLocation,
       date: tomorrow,
       prayerTimes: tomorrowTimes,
     );

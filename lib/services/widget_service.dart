@@ -7,11 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import '../core/app_locale_controller.dart';
 import '../core/app_text.dart';
-import '../core/constants.dart';
 import '../core/locale_prefs.dart';
+import '../models/jamaat_location.dart';
 import '../models/location_config.dart';
+import '../models/prayer_location.dart';
 import '../services/jamaat_service.dart';
-import '../services/location_config_service.dart';
 import '../services/prayer_aux_calculator.dart';
 import '../services/prayer_time_engine.dart';
 import '../services/settings_service.dart';
@@ -40,29 +40,23 @@ Future<void> backgroundCallback(Uri? uri) async {
   try {
     final prefs = await SharedPreferences.getInstance();
     final locale = LocalePrefs.toLocale(LocalePrefs.readFromPrefs(prefs));
-    final isGpsMode = prefs.getBool('is_gps_mode') ?? false;
-    final savedCity = prefs.getString('selected_city');
-    final lastLat = prefs.getDouble('last_latitude');
-    final lastLng = prefs.getDouble('last_longitude');
+    final prayerLocation = PrayerLocation.readFromPrefs(prefs);
+    final jamaatLocation =
+        JamaatLocation.readFromPrefs(prefs) ?? JamaatLocation.empty;
+
+    // Phase 1: no implicit Savar fallback. Without a saved prayer location the
+    // widget cannot compute times; bail and leave the previous widget content.
+    if (prayerLocation == null) {
+      return;
+    }
+
     final madhabStr = prefs.getString('madhab') ?? 'hanafi';
     final hijriOffset =
         prefs.getInt('bangladesh_hijri_offset_days') ??
         SettingsService.defaultBangladeshHijriOffsetDays;
 
-    final configService = LocationConfigService();
-    LocationConfig config;
-    Coordinates coords;
-
-    if (isGpsMode && lastLat != null && lastLng != null) {
-      final locationName =
-          prefs.getString('last_location_name') ?? 'GPS Location';
-      config = LocationConfig.world(locationName, lastLat, lastLng);
-      coords = Coordinates(lastLat, lastLng);
-    } else {
-      final cityName = savedCity ?? AppConstants.defaultCity;
-      config = configService.getConfigForCity(cityName);
-      coords = Coordinates(config.latitude, config.longitude);
-    }
+    final config = prayerLocation.toLocationConfig();
+    final coords = Coordinates(prayerLocation.latitude, prayerLocation.longitude);
 
     final calcService = PrayerTimeEngine.instance;
     final params = calcService.getCalculationParametersForConfig(config);
@@ -107,25 +101,21 @@ Future<void> backgroundCallback(Uri? uri) async {
       dayAfterTomorrowTimes,
     );
 
-    final cityForJamaat = savedCity ?? config.cityName;
     final widgetJamaatTimes = await WidgetService.resolveWidgetJamaatTimes(
-      config: config,
-      cityForJamaat: cityForJamaat,
+      jamaatLocation: jamaatLocation,
       date: now,
       prayerTimes: times,
     );
     final tomorrowJamaatTimes = await WidgetService.resolveWidgetJamaatTimes(
-      config: config,
-      cityForJamaat: cityForJamaat,
+      jamaatLocation: jamaatLocation,
       date: tomorrow,
       prayerTimes: tomorrowMap,
     );
 
-    final placeName = prefs.getString('last_location_name');
     await WidgetService.updateWidgetData(
       times: times,
       locale: locale,
-      locationName: placeName ?? config.cityName,
+      locationName: prayerLocation.locationName,
       date: now,
       hijriOffsetDays: effectiveHijriOffset,
       tomorrowFajr: tomorrowMap['Fajr'],
@@ -489,19 +479,14 @@ class WidgetService {
   }
 
   static Future<Map<String, dynamic>?> resolveWidgetJamaatTimes({
-    required LocationConfig config,
-    required String? cityForJamaat,
+    required JamaatLocation jamaatLocation,
     required DateTime date,
     required Map<String, DateTime?> prayerTimes,
   }) async {
-    switch (config.jamaatSource) {
-      case JamaatSource.localOffset:
-        return PrayerAuxCalculator.instance.buildOffsetJamaatTimes(
-          prayerTimes: prayerTimes,
-          offsets: config.jamaatOffsets,
-        );
-      case JamaatSource.server:
-        final city = cityForJamaat ?? config.cityName;
+    switch (jamaatLocation.source) {
+      case JamaatSource.serverMosque:
+        final city = jamaatLocation.city;
+        if (city == null || city.isEmpty) return null;
         final serverTimes = await JamaatService()
             .getJamaatTimes(city: city, date: date)
             .timeout(const Duration(seconds: 5), onTimeout: () => null);
@@ -516,7 +501,11 @@ class WidgetService {
           resolved['maghrib'] = maghribJamaat;
         }
         return resolved;
+      case JamaatSource.local:
       case JamaatSource.none:
+        // Local Mosque resolver lands in Phase 4. Until then both states show
+        // an empty Jamaat column rather than silently substituting another
+        // city's data.
         return null;
     }
   }

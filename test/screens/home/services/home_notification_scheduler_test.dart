@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jamaat_time/core/app_locale_controller.dart';
+import 'package:jamaat_time/models/jamaat_location.dart';
 import 'package:jamaat_time/models/location_config.dart';
 import 'package:jamaat_time/screens/home/services/home_notification_scheduler.dart';
 import 'package:jamaat_time/services/notifications/notification_service.dart';
@@ -48,7 +49,7 @@ void main() {
         prayerTimes: _prayerTimes(today),
         tomorrowPrayerTimes: null,
         jamaatTimes: null,
-        selectedCity: 'Dhaka',
+        jamaatLocation: _serverJamaatLocation,
         currentPlaceName: null,
         locationConfig: _serverLocation,
       );
@@ -64,7 +65,7 @@ void main() {
         prayerTimes: _prayerTimes(today),
         tomorrowPrayerTimes: null,
         jamaatTimes: secondJamaat,
-        selectedCity: 'Dhaka',
+        jamaatLocation: _serverJamaatLocation,
         currentPlaceName: null,
         locationConfig: _serverLocation,
       );
@@ -107,7 +108,7 @@ void main() {
         prayerTimes: _prayerTimes(today),
         tomorrowPrayerTimes: null,
         jamaatTimes: null,
-        selectedCity: 'Dhaka',
+        jamaatLocation: _serverJamaatLocation,
         currentPlaceName: null,
         locationConfig: _serverLocation,
       );
@@ -121,7 +122,7 @@ void main() {
           prayerTimes: _prayerTimes(today),
           tomorrowPrayerTimes: null,
           jamaatTimes: {'dhuhr': '16:40'},
-          selectedCity: 'Dhaka',
+          jamaatLocation: _serverJamaatLocation,
           currentPlaceName: null,
           locationConfig: _serverLocation,
         ),
@@ -136,7 +137,7 @@ void main() {
         prayerTimes: _prayerTimes(today),
         tomorrowPrayerTimes: null,
         jamaatTimes: newestJamaat,
-        selectedCity: 'Dhaka',
+        jamaatLocation: _serverJamaatLocation,
         currentPlaceName: null,
         locationConfig: _serverLocation,
       );
@@ -173,7 +174,7 @@ void main() {
       prayerTimes: prayerTimes,
       tomorrowPrayerTimes: null,
       jamaatTimes: {'dhuhr': '16:40'},
-      selectedCity: 'Dhaka',
+      jamaatLocation: _serverJamaatLocation,
       currentPlaceName: null,
       locationConfig: _serverLocation,
     );
@@ -182,7 +183,7 @@ void main() {
       prayerTimes: prayerTimes,
       tomorrowPrayerTimes: null,
       jamaatTimes: {'dhuhr': '16:40'},
-      selectedCity: 'Dhaka',
+      jamaatLocation: _serverJamaatLocation,
       currentPlaceName: null,
       locationConfig: _serverLocation,
     );
@@ -217,7 +218,7 @@ void main() {
       tomorrowPrayerTimes: _prayerTimes(today.add(const Duration(days: 1))),
       jamaatTimes: todayJamaat,
       tomorrowJamaatTimes: tomorrowJamaat,
-      selectedCity: 'Dhaka',
+      jamaatLocation: _serverJamaatLocation,
       currentPlaceName: null,
       locationConfig: _serverLocation,
     );
@@ -262,7 +263,11 @@ const _serverLocation = LocationConfig(
   country: Country.bangladesh,
   timezone: 'Asia/Dhaka',
   calculationMethodType: PrayerCalculationMethodType.muslimWorldLeague,
-  jamaatSource: JamaatSource.server,
   latitude: 23.8103,
   longitude: 90.4125,
+);
+
+const _serverJamaatLocation = JamaatLocation(
+  source: JamaatSource.serverMosque,
+  city: 'Dhaka',
 );

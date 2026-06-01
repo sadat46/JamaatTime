@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../../core/app_locale_controller.dart';
 import '../../../core/timezone_bootstrap.dart';
+import '../../../models/jamaat_location.dart';
 import '../../../models/location_config.dart';
 import '../../../services/auto_vibration_service.dart';
 import '../../../services/notifications/notification_service.dart';
@@ -66,7 +67,7 @@ class HomeNotificationScheduler {
     required Map<String, DateTime?>? tomorrowPrayerTimes,
     required Map<String, dynamic>? jamaatTimes,
     Map<String, dynamic>? tomorrowJamaatTimes,
-    required String? selectedCity,
+    required JamaatLocation jamaatLocation,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
   }) async {
@@ -77,7 +78,7 @@ class HomeNotificationScheduler {
       tomorrowPrayerTimes: tomorrowPrayerTimes,
       jamaatTimes: jamaatTimes,
       tomorrowJamaatTimes: tomorrowJamaatTimes,
-      selectedCity: selectedCity,
+      jamaatLocation: jamaatLocation,
       currentPlaceName: currentPlaceName,
       locationConfig: locationConfig,
     );
@@ -89,7 +90,7 @@ class HomeNotificationScheduler {
     required Map<String, DateTime?>? tomorrowPrayerTimes,
     required Map<String, dynamic>? jamaatTimes,
     Map<String, dynamic>? tomorrowJamaatTimes,
-    required String? selectedCity,
+    required JamaatLocation jamaatLocation,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
   }) async {
@@ -110,7 +111,7 @@ class HomeNotificationScheduler {
       today: today,
       prayerTimes: prayerTimes,
       tomorrowPrayerTimes: tomorrowPrayerTimes,
-      selectedCity: selectedCity,
+      jamaatLocation: jamaatLocation,
       currentPlaceName: currentPlaceName,
       locationConfig: locationConfig,
     );
@@ -208,7 +209,7 @@ class HomeNotificationScheduler {
     required DateTime today,
     required Map<String, DateTime?> prayerTimes,
     required Map<String, DateTime?>? tomorrowPrayerTimes,
-    required String? selectedCity,
+    required JamaatLocation jamaatLocation,
     required String? currentPlaceName,
     required LocationConfig? locationConfig,
   }) {
@@ -234,9 +235,13 @@ class HomeNotificationScheduler {
             locationConfig.longitude,
             locationConfig.timezone,
           ].join(':');
+    final jamaatPart = [
+      jamaatLocation.source.name,
+      jamaatLocation.city ?? '',
+    ].join(':');
     return [
       today.millisecondsSinceEpoch,
-      selectedCity ?? 'gps',
+      jamaatPart,
       currentPlaceName ?? '',
       AppLocaleController.instance.current.languageCode,
       _scheduleVersion,

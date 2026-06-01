@@ -6,13 +6,13 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../core/app_locale_controller.dart';
 import '../core/constants.dart';
 import '../core/locale_text.dart';
 import '../l10n/app_localizations.dart';
+import '../models/jamaat_location.dart';
 import '../models/location_config.dart';
 import '../services/hijri_date_converter.dart';
 import '../services/jamaat_service.dart';
@@ -98,9 +98,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   String? _errorMessage;
 
   LocationConfig? _locationConfig;
+  JamaatLocation _jamaatLocation = JamaatLocation.empty;
   Coordinates? _coordinates;
   CalculationParameters? _calculationParameters;
-  String _locationLabel = AppConstants.defaultCity;
+  String _locationLabel = '';
   int _bangladeshHijriOffsetDays =
       SettingsService.defaultBangladeshHijriOffsetDays;
 
@@ -159,10 +160,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
 
       final normalizedDay = DateTime(day.year, day.month, day.day);
+      final coords = _coordinates;
+      final params = _calculationParameters;
+      if (coords == null || params == null) {
+        if (!mounted) return;
+        setState(() {
+          _selectedDay = normalizedDay;
+          _prayerTimes = <String, DateTime?>{};
+          _jamaatTimes = null;
+          _errorMessage = _trCurrent(
+            'লোকেশন সেট করা নেই। হোম স্ক্রিন থেকে GPS চালু করুন।',
+            'No prayer location yet. Turn on GPS from the home screen.',
+          );
+        });
+        return;
+      }
       final prayerTimes = PrayerTimes(
-        coordinates: _coordinates!,
+        coordinates: coords,
         date: normalizedDay,
-        calculationParameters: _calculationParameters!,
+        calculationParameters: params,
         precision: true,
       );
       final prayerMap = _prayerCalculationService.createPrayerTimesMap(
@@ -172,11 +188,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
       String? errorMessage;
       Map<String, dynamic>? jamaatMap;
 
-      switch (_locationConfig!.jamaatSource) {
-        case JamaatSource.server:
+      switch (_jamaatLocation.source) {
+        case JamaatSource.serverMosque:
+          final city = _jamaatLocation.city;
+          if (city == null || city.isEmpty) {
+            jamaatMap = null;
+            break;
+          }
           try {
             final serverTimes = await _jamaatService.getJamaatTimes(
-              city: _locationConfig!.cityName,
+              city: city,
               date: normalizedDay,
               forceRefresh: forceRefreshServer,
             );
@@ -186,7 +207,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               final maghribJamaat = _jamaatTimeUtility
                   .calculateMaghribJamaatTime(
                     maghribPrayerTime: prayerMap['Maghrib'],
-                    selectedCity: _locationConfig!.cityName,
+                    selectedCity: city,
                   );
               if (maghribJamaat != '-') {
                 jamaatMap['maghrib'] = maghribJamaat;
@@ -200,13 +221,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             jamaatMap = null;
           }
           break;
-        case JamaatSource.localOffset:
-          jamaatMap = PrayerAuxCalculator.instance.buildOffsetJamaatTimes(
-            prayerTimes: prayerMap,
-            offsets: _locationConfig!.jamaatOffsets,
-          );
-          break;
+        case JamaatSource.local:
         case JamaatSource.none:
+          // Local Mosque resolver lands in Phase 4.
           jamaatMap = null;
           break;
       }
@@ -230,28 +247,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _loadLocationContext() async {
-    final prefs = await SharedPreferences.getInstance();
     _bangladeshHijriOffsetDays = await _settingsService
         .getBangladeshHijriOffsetDays();
 
-    LocationConfig? activeConfig = _locationConfigService.currentConfig;
+    final prayerLocation = await _settingsService.getPrayerLocation();
+    final jamaatLocation = await _settingsService.getJamaatLocation();
 
-    if (activeConfig == null) {
-      final isGpsMode = prefs.getBool('is_gps_mode') ?? false;
-      final savedCity = prefs.getString('selected_city');
-      final lastLat = prefs.getDouble('last_latitude');
-      final lastLng = prefs.getDouble('last_longitude');
-
-      if (isGpsMode && lastLat != null && lastLng != null) {
-        final locationName = prefs.getString('last_location_name') ?? 'GPS';
-        activeConfig = LocationConfig.world(locationName, lastLat, lastLng);
-      } else {
-        activeConfig = _locationConfigService.getConfigForCity(
-          savedCity ?? AppConstants.defaultCity,
-        );
-      }
+    if (prayerLocation == null) {
+      _locationConfig = null;
+      _coordinates = null;
+      _calculationParameters = null;
+      _jamaatLocation = jamaatLocation;
+      _locationLabel = _trCurrent('লোকেশন সেট করা নেই', 'Location not set');
+      return;
     }
 
+    final activeConfig = prayerLocation.toLocationConfig();
     final params = _prayerCalculationService.getCalculationParametersForConfig(
       activeConfig,
     );
@@ -263,20 +274,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     _locationConfigService.setCurrentConfig(activeConfig);
     _locationConfig = activeConfig;
+    _jamaatLocation = jamaatLocation;
     _coordinates = Coordinates(activeConfig.latitude, activeConfig.longitude);
     _calculationParameters = params;
-    _locationLabel = _resolveLocationLabel(activeConfig, prefs);
-  }
-
-  String _resolveLocationLabel(
-    LocationConfig activeConfig,
-    SharedPreferences prefs,
-  ) {
-    if (activeConfig.country == Country.other) {
-      return prefs.getString('last_location_name') ??
-          _trCurrent('GPS লোকেশন', 'GPS Location');
-    }
-    return activeConfig.cityName;
+    _locationLabel = prayerLocation.locationName;
   }
 
   Future<void> _refreshCalendarData() async {
@@ -460,10 +461,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _timesSourceCaption(BuildContext context) {
-    if (_locationConfig?.jamaatSource == JamaatSource.none) {
+    if (_jamaatLocation.source != JamaatSource.serverMosque) {
       return context.tr(
-        bn: 'GPS মোডে জামাত পাওয়া যায় না',
-        en: 'Jamaat unavailable in GPS mode',
+        bn: 'জামাতের জন্য একটি মসজিদ নির্বাচন করুন',
+        en: 'Select a mosque for Jamaat times',
       );
     }
     if (_jamaatTimes == null || _jamaatTimes!.isEmpty) {

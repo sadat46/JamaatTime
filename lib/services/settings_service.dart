@@ -2,6 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 import '../core/locale_prefs.dart';
+import '../models/jamaat_location.dart';
+import '../models/prayer_location.dart';
 
 class SettingsService {
   SettingsService._();
@@ -253,6 +255,34 @@ class SettingsService {
     final clamped = minutes.clamp(0, maxAutoVibrationMinutesAfter);
     final prefs = await _prefs;
     await prefs.setInt(_keyAutoVibrationMinutesAfter, clamped);
+    _controller.add(null);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Split prayer / Jamaat location state (Phase 1 of PRAYER_LOCATION_FIX_PLAN).
+  // Old keys (selected_city, is_gps_mode, last_latitude/longitude) are
+  // intentionally not read here — Phase 1 ships a fresh-start migration.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  Future<PrayerLocation?> getPrayerLocation() async {
+    final prefs = await _prefs;
+    return PrayerLocation.readFromPrefs(prefs);
+  }
+
+  Future<void> setPrayerLocation(PrayerLocation location) async {
+    final prefs = await _prefs;
+    await location.writeToPrefs(prefs);
+    _controller.add(null);
+  }
+
+  Future<JamaatLocation> getJamaatLocation() async {
+    final prefs = await _prefs;
+    return JamaatLocation.readFromPrefs(prefs) ?? JamaatLocation.empty;
+  }
+
+  Future<void> setJamaatLocation(JamaatLocation location) async {
+    final prefs = await _prefs;
+    await location.writeToPrefs(prefs);
     _controller.add(null);
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/app_theme_tokens.dart';
 import '../../../core/constants.dart';
 import '../../../core/locale_text.dart';
+import '../../../models/jamaat_location.dart';
 import '../../../models/location_config.dart';
 import '../../../services/hijri_date_converter.dart';
 import '../../../utils/bangla_calendar.dart';
@@ -202,49 +203,40 @@ class HomeHeader extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (controller.locationConfig == null ||
-                                  controller.locationConfig!.jamaatSource !=
-                                      JamaatSource.none)
-                                DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: controller.selectedCity,
-                                  items: _buildCityDropdownItems(),
-                                  dropdownColor: AppColors.primaryDark,
+                              DropdownButton<String>(
+                                isExpanded: true,
+                                value: controller.selectedCity,
+                                hint: Text(
+                                  context.tr(
+                                    bn: 'মসজিদ নির্বাচন করুন',
+                                    en: 'Select Mosque',
+                                  ),
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: Colors.white70,
                                     fontSize: 13,
                                   ),
-                                  iconEnabledColor: Colors.white70,
-                                  underline: Container(
-                                    height: 1,
-                                    color: Colors.white38,
-                                  ),
-                                  isDense: true,
-                                  padding: EdgeInsets.zero,
-                                  onChanged: (value) async {
-                                    if (value == null ||
-                                        value == controller.selectedCity) {
-                                      return;
-                                    }
-                                    await controller.selectCity(value);
-                                  },
                                 ),
-                              if (controller.locationConfig != null &&
-                                  controller.locationConfig!.jamaatSource ==
-                                      JamaatSource.none)
-                                Text(
-                                  controller.currentPlaceName ??
-                                      context.tr(
-                                        bn: 'সনাক্ত করা হচ্ছে...',
-                                        en: 'Detecting...',
-                                      ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                                items: _buildCityDropdownItems(),
+                                dropdownColor: AppColors.primaryDark,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
                                 ),
+                                iconEnabledColor: Colors.white70,
+                                underline: Container(
+                                  height: 1,
+                                  color: Colors.white38,
+                                ),
+                                isDense: true,
+                                padding: EdgeInsets.zero,
+                                onChanged: (value) async {
+                                  if (value == null ||
+                                      value == controller.selectedCity) {
+                                    return;
+                                  }
+                                  await controller.selectJamaatMosque(value);
+                                },
+                              ),
                               const SizedBox(height: 6),
                               Row(
                                 children: [
@@ -374,8 +366,7 @@ class HomeHeader extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                              if (controller.locationConfig != null &&
-                                  controller.locationConfig!.jamaatSource ==
+                              if (controller.jamaatLocation.source ==
                                       JamaatSource.none &&
                                   !controller.isLoadingJamaat &&
                                   controller.jamaatError == null)
@@ -392,8 +383,8 @@ class HomeHeader extends StatelessWidget {
                                       Flexible(
                                         child: Text(
                                           context.tr(
-                                            bn: 'GPS মোড: জামাত সময় নেই',
-                                            en: 'GPS Mode: No jamaat times',
+                                            bn: 'জামাতের জন্য একটি মসজিদ নির্বাচন করুন',
+                                            en: 'Select a mosque for Jamaat times',
                                           ),
                                           style: const TextStyle(
                                             fontSize: 11,
