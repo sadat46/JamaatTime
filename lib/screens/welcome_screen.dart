@@ -416,22 +416,64 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         bn: 'জামাতের সময়ের জন্য একটি মসজিদ বেছে নিন।',
         en: 'Pick a mosque to receive its Jamaat times.',
       ),
-      child: DropdownButtonFormField<String>(
-        initialValue: _selectedMosque,
-        isExpanded: true,
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          hintText: context.tr(
-            bn: 'মসজিদ নির্বাচন করুন',
-            en: 'Select Mosque',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: _selectedMosque,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              hintText: context.tr(
+                bn: 'মসজিদ নির্বাচন করুন',
+                en: 'Select Mosque',
+              ),
+            ),
+            items: _buildMosqueItems(),
+            onChanged: _onMosqueChanged,
           ),
-        ),
-        items: _buildMosqueItems(),
-        onChanged: _onMosqueChanged,
+          _buildJamaatNotice(context),
+        ],
       ),
     );
+  }
+
+  /// Contextual disclosure under the mosque picker:
+  /// - nothing picked → warn that no Jamaat times / notifications will show;
+  /// - Local Mosque → declare the bundled times are placeholders that must be
+  ///   edited to the real local-mosque schedule for accurate times/reminders.
+  Widget _buildJamaatNotice(BuildContext context) {
+    if (_selectedMosque == null) {
+      return _NoticeBox(
+        icon: Icons.info_outline,
+        color: Colors.orange,
+        text: context.tr(
+          bn: 'কোনো মসজিদ নির্বাচন না করলে আপনি কোনো জামাতের সময় দেখতে পাবেন '
+              'না এবং জামাত সম্পর্কিত কোনো নোটিফিকেশনও পাবেন না।',
+          en: 'If no mosque is selected, you will not see any Jamaat times '
+              'and will not receive any Jamaat-related notifications.',
+        ),
+      );
+    }
+    if (_selectedMosque == _localMosqueValue) {
+      return _NoticeBox(
+        icon: Icons.warning_amber_rounded,
+        color: Colors.deepOrange,
+        text: context.tr(
+          bn: 'লোকাল মসজিদের জন্য একটি ডিফল্ট (নমুনা) জামাত সময় সংরক্ষণ করা হয়, '
+              'যা আপনার মসজিদের প্রকৃত সময় নয়। সঠিক সময় ও নোটিফিকেশন পেতে '
+              'সেটিংস → লোকাল জামাত সময় থেকে আপনার মসজিদের সঠিক সময় দিয়ে এটি '
+              'সম্পাদনা করুন।',
+          en: 'A default (sample) Jamaat schedule is stored for Local Mosque — '
+              'these are not your mosque\'s real times. To get accurate times '
+              'and notifications, edit them with your mosque\'s actual schedule '
+              'in Settings → Local Mosque Times.',
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   List<DropdownMenuItem<String>> _buildMosqueItems() {
@@ -480,6 +522,49 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       for (final city in AppConstants.saudiCities)
         DropdownMenuItem(value: city, child: Text(city)),
     ];
+  }
+}
+
+/// Small inline disclosure banner used under the mosque picker.
+class _NoticeBox extends StatelessWidget {
+  const _NoticeBox({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.grey.shade800,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
