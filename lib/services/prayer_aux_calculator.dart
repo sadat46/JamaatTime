@@ -57,6 +57,9 @@ class PrayerAuxCalculator {
       case 'Jashore Cantt':
       case 'Bogra Cantt':
         return 10;
+      case null:
+        // Local Mosque mode has no server city: sunset + 10 min.
+        return 10;
       default:
         return 7;
     }
@@ -70,10 +73,9 @@ class PrayerAuxCalculator {
   /// cantonment-specific offset applied.
   ///
   /// Returns `'-'` only when [maghribPrayerTime] is null. A null
-  /// [selectedCity] (e.g. Local Mosque mode, which has no mosque city) falls
-  /// back to the default offset so Maghrib jamaat still shows. Callers that
-  /// must suppress Maghrib entirely (Jamaat source `none`) guard before
-  /// calling.
+  /// [selectedCity] means Local Mosque mode (no server city) and uses the
+  /// +10 min offset so Maghrib jamaat still shows. Callers that must suppress
+  /// Maghrib entirely (Jamaat source `none`) guard before calling.
   ///
   /// Previously duplicated in `home_screen._calculateMaghribJamaatTime` and
   /// (with hardcoded coords) `admin_jamaat_panel._calculateMaghribJamaatTime`.
