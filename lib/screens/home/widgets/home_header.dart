@@ -354,35 +354,6 @@ class HomeHeader extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                              if (controller.jamaatLocation.source ==
-                                      JamaatSource.none &&
-                                  !controller.isLoadingJamaat &&
-                                  controller.jamaatError == null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.info_outline,
-                                        size: 14,
-                                        color: Colors.white70,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Flexible(
-                                        child: Text(
-                                          context.tr(
-                                            bn: 'জামাতের জন্য একটি মসজিদ নির্বাচন করুন',
-                                            en: 'Select a mosque for Jamaat times',
-                                          ),
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                             ],
                           ),
                         ),
