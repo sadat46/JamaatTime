@@ -62,6 +62,14 @@ class LocationService {
     }
   }
 
+  /// Whether the device's location services (GPS) are turned on.
+  ///
+  /// Distinct from app permission: the user can grant the app permission yet
+  /// still have the system GPS toggle off.
+  Future<bool> isLocationServiceEnabled() async {
+    return Geolocator.isLocationServiceEnabled();
+  }
+
   /// Opens the device's location settings page.
   Future<void> openLocationSettings() async {
     await Geolocator.openLocationSettings();

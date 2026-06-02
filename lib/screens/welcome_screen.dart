@@ -26,7 +26,7 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-enum _GpsStatus { idle, fetching, success, denied, failed }
+enum _GpsStatus { idle, fetching, success, denied, serviceOff, failed }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
   final LocationService _locationService = LocationService();
@@ -104,10 +104,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         _gpsLabel = place ?? 'Current Location';
       });
     } catch (error) {
+      // GPS toggled off at the system level is distinct from a denied app
+      // permission — re-check the service state so we can guide the user to the
+      // right place instead of a generic "try again".
+      final serviceEnabled = await _locationService.isLocationServiceEnabled();
       if (!mounted) return;
       final isPermission = error.toString().toLowerCase().contains('permission');
       setState(() {
-        _gpsStatus = isPermission ? _GpsStatus.denied : _GpsStatus.failed;
+        if (!serviceEnabled) {
+          _gpsStatus = _GpsStatus.serviceOff;
+        } else if (isPermission) {
+          _gpsStatus = _GpsStatus.denied;
+        } else {
+          _gpsStatus = _GpsStatus.failed;
+        }
       });
     }
   }
@@ -279,6 +289,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
           ],
         );
+      case _GpsStatus.serviceOff:
+        return _buildLocationOffGuidance(context);
       case _GpsStatus.denied:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -301,6 +313,99 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ],
         );
     }
+  }
+
+  /// Shown when the device's location services (GPS) are switched off. Carries
+  /// a plain-language privacy declaration plus step-by-step guidance and a
+  /// shortcut into the system location settings.
+  Widget _buildLocationOffGuidance(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_off, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  context.tr(
+                    bn: 'ডিভাইসের লোকেশন (GPS) বন্ধ আছে',
+                    en: 'Location (GPS) is turned off',
+                  ),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.tr(
+              bn: 'আপনার এলাকার সঠিক নামাজের সময় গণনা করতে ডিভাইসের লোকেশন '
+                  'চালু করা প্রয়োজন। আপনার অবস্থান শুধু এই ডিভাইসেই নামাজের সময় '
+                  'গণনায় ব্যবহৃত হয় — কখনো শেয়ার বা সার্ভারে সংরক্ষণ করা হয় না।',
+              en: 'Turning on your device location lets us calculate accurate '
+                  'prayer times for where you are. Your location is used only '
+                  'on this device for prayer-time calculation — it is never '
+                  'shared or stored on our servers.',
+            ),
+            style: TextStyle(
+              color: Colors.grey.shade800,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            context.tr(
+              bn: 'করণীয়:\n১. নিচের বোতামে চাপ দিন\n'
+                  '২. লোকেশন / অবস্থান চালু করুন\n'
+                  '৩. এই স্ক্রিনে ফিরে এসে “আবার চেষ্টা করুন” চাপুন',
+              en: 'Steps:\n1. Tap the button below\n'
+                  '2. Turn on Location\n'
+                  '3. Come back here and tap “Try Again”',
+            ),
+            style: TextStyle(
+              color: Colors.grey.shade800,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => _locationService.openLocationSettings(),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(44),
+              backgroundColor: AppColors.primaryGreen,
+            ),
+            icon: const Icon(Icons.location_on, size: 18),
+            label: Text(
+              context.tr(
+                bn: 'লোকেশন সেটিংস খুলুন',
+                en: 'Open Location Settings',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _enableLocation,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(
+              context.tr(bn: 'আবার চেষ্টা করুন', en: 'Try Again'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildJamaatCard(BuildContext context) {
