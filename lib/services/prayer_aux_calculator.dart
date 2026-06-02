@@ -47,7 +47,7 @@ class PrayerAuxCalculator {
   ///
   /// Previously duplicated verbatim in `home_screen._getMaghribOffset` and
   /// `admin_jamaat_panel._getMaghribOffset`.
-  int getMaghribOffset(String city) {
+  int getMaghribOffset(String? city) {
     switch (city) {
       case 'Savar Cantt':
       case 'Dhaka Cantt':
@@ -69,7 +69,11 @@ class PrayerAuxCalculator {
   /// Calculate Maghrib jamaat time from a UTC/local prayer time with the
   /// cantonment-specific offset applied.
   ///
-  /// Returns `'-'` when either argument is null.
+  /// Returns `'-'` only when [maghribPrayerTime] is null. A null
+  /// [selectedCity] (e.g. Local Mosque mode, which has no mosque city) falls
+  /// back to the default offset so Maghrib jamaat still shows. Callers that
+  /// must suppress Maghrib entirely (Jamaat source `none`) guard before
+  /// calling.
   ///
   /// Previously duplicated in `home_screen._calculateMaghribJamaatTime` and
   /// (with hardcoded coords) `admin_jamaat_panel._calculateMaghribJamaatTime`.
@@ -77,7 +81,7 @@ class PrayerAuxCalculator {
     required DateTime? maghribPrayerTime,
     required String? selectedCity,
   }) {
-    if (maghribPrayerTime != null && selectedCity != null) {
+    if (maghribPrayerTime != null) {
       final offset = getMaghribOffset(selectedCity);
       final localMaghribTime = maghribPrayerTime.toLocal();
       final maghribJamaatTime =

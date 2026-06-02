@@ -507,8 +507,8 @@ class WidgetService {
             await LocalJamaatService().getEffectiveTimesForDate(date);
         if (localTimes == null) return null;
         final resolved = localTimes.toJamaatMap();
-        // Local mode has no mosque city — Maghrib calculator returns '-' and
-        // the widget hides it. Maghrib stays derived from prayer Maghrib.
+        // Local mode has no mosque city — the calculator uses the default
+        // offset so Maghrib stays derived from prayer Maghrib.
         final maghribJamaat = PrayerAuxCalculator.instance
             .calculateMaghribJamaatTime(
           maghribPrayerTime: prayerTimes['Maghrib'],

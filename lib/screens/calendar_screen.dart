@@ -228,8 +228,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               await _localJamaatService.getEffectiveTimesForDate(normalizedDay);
           if (localTimes != null) {
             jamaatMap = localTimes.toJamaatMap();
-            // No mosque city for Local mode → Maghrib calculator returns '-'
-            // and the table hides it. Maghrib stays prayer-derived.
+            // No mosque city for Local mode → calculator uses the default
+            // offset. Maghrib stays prayer-derived.
             final maghribJamaat = _jamaatTimeUtility.calculateMaghribJamaatTime(
               maghribPrayerTime: prayerMap['Maghrib'],
               selectedCity: _jamaatLocation.city,

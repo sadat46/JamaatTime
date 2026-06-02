@@ -634,10 +634,10 @@ class HomeController extends ChangeNotifier {
       }
 
       final completeJamaatTimes = todayTimes.toJamaatMap();
-      // Maghrib still derives from the prayer Maghrib + cantt offset. With no
-      // mosque city in Local mode, the calculator returns '-' and the table
-      // hides the value — matches the documented "Maghrib is calculated, not
-      // edited from the local CSV/settings page" rule.
+      // Maghrib derives from the prayer Maghrib + offset, not the local CSV.
+      // Local mode has no mosque city, so the calculator uses the default
+      // offset — matches "Maghrib is calculated, not edited from the local
+      // CSV/settings page".
       final maghribJamaatTime = PrayerAuxCalculator.instance
           .calculateMaghribJamaatTime(
         maghribPrayerTime: _times['Maghrib'],
@@ -1189,7 +1189,8 @@ class HomeController extends ChangeNotifier {
       };
 
       var jamaatStr = '-';
-      if (name == 'Maghrib') {
+      if (name == 'Maghrib' &&
+          _jamaatLocation.source != JamaatSource.none) {
         jamaatStr = PrayerAuxCalculator.instance.calculateMaghribJamaatTime(
           maghribPrayerTime: _times['Maghrib'],
           selectedCity: _jamaatLocation.city,
