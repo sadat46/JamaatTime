@@ -455,11 +455,134 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Location error: ${result.error}')),
-      );
+      return;
     }
+
+    switch (result.errorKind) {
+      case HomeLocationFetchError.serviceDisabled:
+        await _showLocationOffDialog(context);
+        break;
+      case HomeLocationFetchError.permissionDenied:
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'অবস্থানের অনুমতি প্রয়োজন। অ্যাপ সেটিংসে চালু করুন।',
+                en: 'Location permission is required. Enable it in Settings.',
+              ),
+            ),
+            action: SnackBarAction(
+              label: context.tr(bn: 'সেটিংস', en: 'Settings'),
+              onPressed: () => controller.openLocationSettings(),
+            ),
+          ),
+        );
+        break;
+      case HomeLocationFetchError.unknown:
+      case null:
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr(
+                bn: 'অবস্থান পাওয়া যায়নি। আবার চেষ্টা করুন।',
+                en: 'Could not get location. Please try again.',
+              ),
+            ),
+          ),
+        );
+        break;
+    }
+  }
+
+  /// Modal shown when the device's location services (GPS) are off. Carries a
+  /// plain-language privacy declaration plus step-by-step guidance and a
+  /// shortcut into the system location settings — mirrors the welcome screen.
+  Future<void> _showLocationOffDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.location_off, color: Colors.orange, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  context.tr(
+                    bn: 'লোকেশন (GPS) বন্ধ আছে',
+                    en: 'Location (GPS) is turned off',
+                  ),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.tr(
+                  bn: 'আপনার এলাকার সঠিক নামাজের সময় গণনা করতে ডিভাইসের লোকেশন '
+                      'চালু করা প্রয়োজন। আপনার অবস্থান শুধু এই ডিভাইসেই নামাজের '
+                      'সময় গণনায় ব্যবহৃত হয় — কখনো শেয়ার বা সার্ভারে সংরক্ষণ '
+                      'করা হয় না।',
+                  en: 'Turning on your device location lets us calculate '
+                      'accurate prayer times for where you are. Your location '
+                      'is used only on this device for prayer-time calculation '
+                      '— it is never shared or stored on our servers.',
+                ),
+                style: TextStyle(
+                  color: Colors.grey.shade800,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                context.tr(
+                  bn: 'করণীয়:\n১. “লোকেশন সেটিংস খুলুন” চাপুন\n'
+                      '২. লোকেশন / অবস্থান চালু করুন\n'
+                      '৩. ফিরে এসে আবার অবস্থানে ট্যাপ করুন',
+                  en: 'Steps:\n1. Tap “Open Location Settings”\n'
+                      '2. Turn on Location\n'
+                      '3. Come back and tap the location again',
+                ),
+                style: TextStyle(
+                  color: Colors.grey.shade800,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(context.tr(bn: 'বন্ধ করুন', en: 'Close')),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                controller.openLocationSettings();
+              },
+              icon: const Icon(Icons.location_on, size: 18),
+              label: Text(
+                context.tr(bn: 'লোকেশন সেটিংস খুলুন', en: 'Open Location Settings'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   static const String _localMosqueValue = '__local_mosque__';

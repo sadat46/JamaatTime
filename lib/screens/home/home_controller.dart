@@ -28,14 +28,19 @@ import 'models/prayer_row_data.dart';
 import 'services/home_notification_scheduler.dart';
 import 'services/home_widget_sync.dart';
 
+/// Why a GPS fetch failed, so the UI can guide the user to the right fix
+/// (turn on the system GPS toggle vs. grant app permission).
+enum HomeLocationFetchError { permissionDenied, serviceDisabled, unknown }
+
 class HomeLocationFetchResult {
   const HomeLocationFetchResult.success({
     required this.latitude,
     required this.longitude,
     required this.placeName,
-  }) : error = null;
+  }) : error = null,
+       errorKind = null;
 
-  const HomeLocationFetchResult.error(this.error)
+  const HomeLocationFetchResult.error(this.error, {required this.errorKind})
     : latitude = null,
       longitude = null,
       placeName = null;
@@ -44,6 +49,7 @@ class HomeLocationFetchResult {
   final double? longitude;
   final String? placeName;
   final Object? error;
+  final HomeLocationFetchError? errorKind;
 
   bool get isSuccess => error == null;
 }
@@ -800,9 +806,20 @@ class HomeController extends ChangeNotifier {
         placeName: place,
       );
     } catch (error) {
-      if (error.toString().contains('permission')) {
-        await _locationService.openLocationSettings();
+      // GPS toggled off at the system level is distinct from a denied app
+      // permission — re-check the service state so the UI can guide the user to
+      // the right fix instead of a raw error. Settings are opened by the UI
+      // (with a declaration), not silently here.
+      final serviceEnabled = await _locationService.isLocationServiceEnabled();
+      final HomeLocationFetchError kind;
+      if (!serviceEnabled) {
+        kind = HomeLocationFetchError.serviceDisabled;
+      } else if (error.toString().toLowerCase().contains('permission')) {
+        kind = HomeLocationFetchError.permissionDenied;
+      } else {
+        kind = HomeLocationFetchError.unknown;
       }
+      if (_isDisposed) return null;
 
       // On failure, fall back to whatever PrayerLocation was already saved.
       final saved = _prayerLocation;
@@ -817,8 +834,14 @@ class HomeController extends ChangeNotifier {
       _computePrayerTableData();
       _notify();
 
-      return HomeLocationFetchResult.error(error);
+      return HomeLocationFetchResult.error(error, errorKind: kind);
     }
+  }
+
+  /// Opens the device's system location settings (GPS toggle). Exposed so the
+  /// home header can offer it from its GPS-off guidance dialog.
+  Future<void> openLocationSettings() {
+    return _locationService.openLocationSettings();
   }
 
   Future<void> fetchJamaatTimes(
