@@ -93,7 +93,8 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             }
 
             val state = WidgetState.compute(now, raw)
-            val islamicDate = prefs.getString("islamic_date", "-") ?: "-"
+            // Read from `raw` (not prefs) so a rollover-promoted date is rendered.
+            val islamicDate = raw.islamicDate
             val location = prefs.getString("location", "-") ?: "-"
             val rowLabels = WidgetState.rowLabels(now, raw)
             val rowTimes = WidgetState.rowTimes(now, raw)
@@ -335,6 +336,8 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             jamaatTomorrow = jamaatTomorrow,
             nextComputeDay = readEpoch(prefs, "next_compute_day_epoch"),
             fajrDayAfterTomorrow = readEpoch(prefs, "epoch_fajr_day_after_tomorrow"),
+            islamicDate = prefs.getString("islamic_date", "-") ?: "-",
+            islamicDateTomorrow = prefs.getString("islamic_date_tomorrow", "-") ?: "-",
         )
     }
 

@@ -187,15 +187,25 @@ class WidgetService {
         jamaatTimes: jamaatTimes,
       );
 
-      final hijriDate = HijriDateConverter.formatHijriDate(
-        date,
-        dayOffset: hijriOffsetDays,
-        languageCode: localeCode,
+      String buildIslamicDate(DateTime d) {
+        final hijriDate = HijriDateConverter.formatHijriDate(
+          d,
+          dayOffset: hijriOffsetDays,
+          languageCode: localeCode,
+        );
+        final banglaDate = BanglaCalendar.fromGregorian(d);
+        return localeCode == 'bn'
+            ? LocaleDigits.localize('$hijriDate  |  $banglaDate', locale)
+            : '$hijriDate  |  $banglaDate';
+      }
+
+      final islamicDate = buildIslamicDate(date);
+      // Tomorrow's date string lets the native widget advance the date on a day
+      // rollover without waiting for a background Dart refresh (see
+      // WidgetState.promoteNextDayIfAvailable).
+      final islamicDateTomorrow = buildIslamicDate(
+        DateTime(date.year, date.month, date.day).add(const Duration(days: 1)),
       );
-      final banglaDate = BanglaCalendar.fromGregorian(date);
-      final islamicDate = localeCode == 'bn'
-          ? LocaleDigits.localize('$hijriDate  |  $banglaDate', locale)
-          : '$hijriDate  |  $banglaDate';
       final localizedLocation = _localizedLocationName(locationName, locale);
 
       final strings = AppText.of(locale);
@@ -290,6 +300,10 @@ class WidgetService {
         ),
         HomeWidget.saveWidgetData<String>('row_time_4', widgetData.rowTimes[3]),
         HomeWidget.saveWidgetData<String>('islamic_date', islamicDate),
+        HomeWidget.saveWidgetData<String>(
+          'islamic_date_tomorrow',
+          islamicDateTomorrow,
+        ),
         HomeWidget.saveWidgetData<String>('location', localizedLocation),
         HomeWidget.saveWidgetData<String>('locale_code', localeCode),
         // Raw epoch keys consumed by the native Kotlin state machine.

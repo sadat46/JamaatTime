@@ -68,6 +68,8 @@ class WidgetStateTest {
         computeDay: Long? = null,
         nextComputeDay: Long = 0L,
         fajrDayAfterTomorrow: Long = 0L,
+        islamicDate: String = "13 Ramadan 1447 AH  |  30 Choitro 1432",
+        islamicDateTomorrow: String = "14 Ramadan 1447 AH  |  31 Choitro 1432",
     ): RawSchedule {
         val todaySchedule = today ?: prayerDay(2026, 4, 13)
         return RawSchedule(
@@ -82,6 +84,8 @@ class WidgetStateTest {
             jamaatTomorrow = jamaatTomorrow,
             nextComputeDay = nextComputeDay,
             fajrDayAfterTomorrow = fajrDayAfterTomorrow,
+            islamicDate = islamicDate,
+            islamicDateTomorrow = islamicDateTomorrow,
         )
     }
 
@@ -219,6 +223,37 @@ class WidgetStateTest {
         val raw = rawEn(nextComputeDay = todayMidnight)
 
         assertNull(WidgetState.promoteNextDayIfAvailable(raw, todayMidnight))
+    }
+
+    @Test
+    fun promoteNextDay_advancesIslamicDateToTomorrow() {
+        val todayMidnight = WidgetState.localMidnightEpoch(epoch(2026, 4, 14, 0, 1))
+        val raw = rawEn(
+            tomorrow = prayerDay(2026, 4, 14),
+            jamaatTomorrow = jamaatDay(2026, 4, 14),
+            nextComputeDay = todayMidnight,
+            fajrDayAfterTomorrow = epoch(2026, 4, 15, 5, 2),
+            islamicDate = "13 Ramadan 1447 AH",
+            islamicDateTomorrow = "14 Ramadan 1447 AH",
+        )
+        val promoted = WidgetState.promoteNextDayIfAvailable(raw, todayMidnight)!!
+
+        assertEquals("14 Ramadan 1447 AH", promoted.islamicDate)
+    }
+
+    @Test
+    fun promoteNextDay_unavailable_keepsTodayIslamicDate() {
+        val todayMidnight = WidgetState.localMidnightEpoch(epoch(2026, 4, 14, 0, 1))
+        // No tomorrow payload -> promotion returns null, so the caller keeps
+        // rendering today's (stale) date until a Dart refresh lands.
+        val raw = rawEn(
+            nextComputeDay = todayMidnight,
+            islamicDate = "13 Ramadan 1447 AH",
+            islamicDateTomorrow = "14 Ramadan 1447 AH",
+        )
+
+        assertNull(WidgetState.promoteNextDayIfAvailable(raw, todayMidnight))
+        assertEquals("13 Ramadan 1447 AH", raw.islamicDate)
     }
 
     @Test

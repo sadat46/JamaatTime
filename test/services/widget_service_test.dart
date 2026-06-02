@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:jamaat_time/core/app_text.dart';
+import 'package:jamaat_time/services/hijri_date_converter.dart';
 import 'package:jamaat_time/services/widget_service.dart';
 import 'package:jamaat_time/utils/bangla_calendar.dart';
 
@@ -497,6 +498,29 @@ void main() {
         isTrue,
       );
       expect(capturedSaves['locale_code'], 'bn');
+    });
+
+    test('publishes tomorrow\'s islamic date for native rollover', () async {
+      final date = DateTime(2026, 4, 13, 8, 30);
+      final tomorrow = DateTime(2026, 4, 14);
+      await WidgetService.updateWidgetData(
+        times: buildTimes(),
+        locale: const Locale('en'),
+        locationName: 'Dhaka',
+        date: date,
+        hijriOffsetDays: 0,
+      );
+
+      final expectedTomorrow =
+          '${HijriDateConverter.formatHijriDate(tomorrow, dayOffset: 0, languageCode: 'en')}'
+          '  |  ${BanglaCalendar.fromGregorian(tomorrow)}';
+
+      expect(capturedSaves['islamic_date_tomorrow'], expectedTomorrow);
+      // It must be the next day, not a copy of today's string.
+      expect(
+        capturedSaves['islamic_date_tomorrow'],
+        isNot(equals(capturedSaves['islamic_date'])),
+      );
     });
 
     test('writes 0 for missing jamaat entries', () async {

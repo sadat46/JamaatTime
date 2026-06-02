@@ -21,6 +21,8 @@ data class RawSchedule(
     val jamaatTomorrow: Map<String, Long> = emptyMap(),
     val nextComputeDay: Long = 0L,
     val fajrDayAfterTomorrow: Long = 0L,
+    val islamicDate: String = "-",
+    val islamicDateTomorrow: String = "-",
 )
 
 data class Localization(
@@ -135,6 +137,7 @@ object WidgetState {
             fajrTomorrow = raw.fajrDayAfterTomorrow,
             jamaatToday = raw.jamaatTomorrow,
             computeDay = raw.nextComputeDay,
+            islamicDate = raw.islamicDateTomorrow,
         )
     }
 
